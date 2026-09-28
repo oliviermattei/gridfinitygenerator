@@ -1,0 +1,126 @@
+[
+  {
+    "file": "out/manifold-batch-2x2-nomag",
+    "numTri": 1596,
+    "manifold3d": "NoError",
+    "volume": 5656.1125346206645,
+    "genus": 4
+  },
+  {
+    "file": "out/manifold-batch-2x2-mag",
+    "numTri": 5884,
+    "manifold3d": "NoError",
+    "volume": 14188.808762065933,
+    "genus": 4
+  },
+  {
+    "file": "out/manifold-batch-5x5-nomag",
+    "numTri": 9240,
+    "manifold3d": "NoError",
+    "volume": 35690.176635249874,
+    "genus": 25
+  },
+  {
+    "file": "out/manifold-batch-5x5-mag",
+    "numTri": 36040,
+    "manifold3d": "NoError",
+    "volume": 89226.16502395357,
+    "genus": 25
+  },
+  {
+    "file": "out/manifold-direct-2x2-nomag",
+    "numTri": 1596,
+    "manifold3d": "NoError",
+    "volume": 5656.112529214502,
+    "genus": 4
+  },
+  {
+    "file": "out/manifold-direct-2x2-mag",
+    "numTri": 6024,
+    "manifold3d": "NoError",
+    "volume": 14188.808749250362,
+    "genus": 4
+  },
+  {
+    "file": "out/manifold-direct-5x5-nomag",
+    "numTri": 9240,
+    "manifold3d": "NoError",
+    "volume": 35690.176656375355,
+    "genus": 25
+  },
+  {
+    "file": "out/manifold-direct-5x5-mag",
+    "numTri": 36612,
+    "manifold3d": "NoError",
+    "volume": 89226.16501793894,
+    "genus": 25
+  },
+  {
+    "file": "out/manifold-brickMesh-2x2-nomag",
+    "numTri": 1616,
+    "manifold3d": "NoError",
+    "volume": 5656.112141260294,
+    "genus": 4
+  },
+  {
+    "file": "out/manifold-brickMesh-2x2-mag",
+    "numTri": 5904,
+    "manifold3d": "NoError",
+    "volume": 14188.80851312951,
+    "genus": 4
+  },
+  {
+    "file": "out/manifold-brickMesh-5x5-nomag",
+    "numTri": 9368,
+    "manifold3d": "NoError",
+    "volume": 35690.176767134544,
+    "genus": 25
+  },
+  {
+    "file": "out/manifold-brickMesh-5x5-mag",
+    "numTri": 36168,
+    "manifold3d": "NoError",
+    "volume": 89226.1648205397,
+    "genus": 25
+  },
+  {
+    "file": "out/jscad-batch-2x2-nomag",
+    "numTri": 1700,
+    "manifold3d": "THROW: Not manifold"
+  },
+  {
+    "file": "out/jscad-batch-2x2-mag",
+    "numTri": 6912,
+    "manifold3d": "THROW: Not manifold"
+  },
+  {
+    "file": "out/jscad-batch-5x5-nomag",
+    "numTri": 9392,
+    "manifold3d": "THROW: Not manifold"
+  },
+  {
+    "file": "out/jscad-batch-5x5-mag",
+    "numTri": 42157,
+    "manifold3d": "THROW: Not manifold"
+  },
+  {
+    "file": "out/jscad-brickMesh-2x2-nomag",
+    "numTri": 1864,
+    "manifold3d": "THROW: Not manifold"
+  },
+  {
+    "file": "out/jscad-brickMesh-2x2-mag",
+    "numTri": 7020,
+    "manifold3d": "THROW: Not manifold"
+  },
+  {
+    "file": "out/jscad-brickMesh-5x5-nomag",
+    "numTri": 10960,
+    "manifold3d": "THROW: Not manifold"
+  },
+  {
+    "file": "out/jscad-brickMesh-5x5-mag",
+    "numTri": 43164,
+    "manifold3d": "THROW: Not manifold"
+  }
+]

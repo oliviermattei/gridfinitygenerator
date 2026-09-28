@@ -1,0 +1,782 @@
+[
+ {
+  "file": "jscad-batch-2x2-mag.stl",
+  "tri": 8368,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 14189.4,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   -0.0,
+   -0.0,
+   -0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "jscad-batch-2x2-nomag.stl",
+  "tri": 1868,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 5655.9,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.001
+  ]
+ },
+ {
+  "file": "jscad-batch-5x5-mag.stl",
+  "tri": 50815,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 89218.1,
+  "bbox": [
+   209.999,
+   209.999,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.001,
+   0.001,
+   -0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.499
+ },
+ {
+  "file": "jscad-batch-5x5-nomag.stl",
+  "tri": 9944,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 35693.2,
+  "bbox": [
+   209.999,
+   209.999,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   -0.0,
+   -0.001,
+   0.001
+  ]
+ },
+ {
+  "file": "jscad-brickMesh-2x2-mag.stl",
+  "tri": 7020,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 14188.8,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "jscad-brickMesh-2x2-nomag.stl",
+  "tri": 1864,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 5656.1,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ]
+ },
+ {
+  "file": "jscad-brickMesh-5x5-mag.stl",
+  "tri": 43164,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 89226.2,
+  "bbox": [
+   210.0,
+   210.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "jscad-brickMesh-5x5-nomag.stl",
+  "tri": 10960,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 35690.2,
+  "bbox": [
+   210.0,
+   210.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ]
+ },
+ {
+  "file": "manifold-batch-2x2-mag.stl",
+  "tri": 5884,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 14188.8,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-batch-2x2-nomag.stl",
+  "tri": 1596,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 5656.1,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ]
+ },
+ {
+  "file": "manifold-batch-5x5-mag.stl",
+  "tri": 36040,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 89226.2,
+  "bbox": [
+   210.0,
+   210.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-batch-5x5-nomag.stl",
+  "tri": 9240,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 35690.2,
+  "bbox": [
+   210.0,
+   210.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ]
+ },
+ {
+  "file": "manifold-brickMesh-2x2-mag.stl",
+  "tri": 5904,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 14188.8,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-brickMesh-2x2-nomag.stl",
+  "tri": 1616,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 5656.1,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ]
+ },
+ {
+  "file": "manifold-brickMesh-5x5-mag.stl",
+  "tri": 36168,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 89226.2,
+  "bbox": [
+   210.0,
+   210.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-brickMesh-5x5-nomag.stl",
+  "tri": 9368,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 35690.2,
+  "bbox": [
+   210.0,
+   210.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ]
+ },
+ {
+  "file": "manifold-direct-2x2-mag.stl",
+  "tri": 6024,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 14188.8,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-direct-2x2-nomag.stl",
+  "tri": 1596,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 5656.1,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ]
+ },
+ {
+  "file": "manifold-direct-5x5-mag.stl",
+  "tri": 36612,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 89226.2,
+  "bbox": [
+   210.0,
+   210.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-direct-5x5-nomag.stl",
+  "tri": 9240,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 35690.2,
+  "bbox": [
+   210.0,
+   210.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   -0.0
+  ]
+ },
+ {
+  "file": "jscad-batch-2x2-mag.3mf",
+  "tri": 8368,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 14189.4,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   -0.0,
+   -0.0,
+   -0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "jscad-batch-2x2-nomag.3mf",
+  "tri": 1868,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 5655.9,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.001
+  ]
+ },
+ {
+  "file": "jscad-batch-5x5-mag.3mf",
+  "tri": 50815,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 89218.0,
+  "bbox": [
+   209.999,
+   209.999,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.001,
+   0.001,
+   -0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.499
+ },
+ {
+  "file": "jscad-batch-5x5-nomag.3mf",
+  "tri": 9944,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 35693.2,
+  "bbox": [
+   209.999,
+   209.999,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   -0.0,
+   -0.001,
+   0.001
+  ]
+ },
+ {
+  "file": "jscad-brickMesh-2x2-mag.3mf",
+  "tri": 7020,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 14188.8,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "jscad-brickMesh-2x2-nomag.3mf",
+  "tri": 1864,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 5656.1,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "file": "jscad-brickMesh-5x5-mag.3mf",
+  "tri": 43164,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 89226.1,
+  "bbox": [
+   210.0,
+   210.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "jscad-brickMesh-5x5-nomag.3mf",
+  "tri": 10960,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 35690.1,
+  "bbox": [
+   210.0,
+   210.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.0
+  ]
+ },
+ {
+  "file": "manifold-batch-2x2-mag.3mf",
+  "tri": 5884,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 14188.8,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-batch-2x2-nomag.3mf",
+  "tri": 1596,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 5656.1,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "file": "manifold-batch-5x5-mag.3mf",
+  "tri": 36040,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 89226.1,
+  "bbox": [
+   210.0,
+   210.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-batch-5x5-nomag.3mf",
+  "tri": 9240,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 35690.1,
+  "bbox": [
+   210.0,
+   210.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.0
+  ]
+ },
+ {
+  "file": "manifold-brickMesh-2x2-mag.3mf",
+  "tri": 5904,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 14188.8,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-brickMesh-2x2-nomag.3mf",
+  "tri": 1616,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 5656.1,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "file": "manifold-brickMesh-5x5-mag.3mf",
+  "tri": 36168,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 89226.1,
+  "bbox": [
+   210.0,
+   210.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-brickMesh-5x5-nomag.3mf",
+  "tri": 9368,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 35690.1,
+  "bbox": [
+   210.0,
+   210.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.0
+  ]
+ },
+ {
+  "file": "manifold-direct-2x2-mag.3mf",
+  "tri": 6024,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 14188.8,
+  "bbox": [
+   84.0,
+   84.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-direct-2x2-nomag.3mf",
+  "tri": 1596,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 5656.1,
+  "bbox": [
+   84.0,
+   84.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "file": "manifold-direct-5x5-mag.3mf",
+  "tri": 36612,
+  "watertight": false,
+  "winding_ok": true,
+  "volume": 89226.1,
+  "bbox": [
+   210.0,
+   210.0,
+   7.4
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.0
+  ],
+  "magnet_hole_dia@z=mb-1": 6.5
+ },
+ {
+  "file": "manifold-direct-5x5-nomag.3mf",
+  "tri": 9240,
+  "watertight": true,
+  "winding_ok": true,
+  "volume": 35690.1,
+  "bbox": [
+   210.0,
+   210.0,
+   4.6
+  ],
+  "bbox_ok": true,
+  "pocket_width_err_mm@z0.1/0.7/2.0/4.5": [
+   0.0,
+   0.0,
+   -0.0,
+   0.0
+  ]
+ }
+]
