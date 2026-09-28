@@ -1,0 +1,3 @@
+# Monorepo : moteur de géométrie séparé de l'interface
+
+Le site doit accueillir de nombreux générateurs (baseplates, bacs, shadowbox, séparateurs, étiquettes…) qui partagent le même moteur, le même aperçu 3D et le même export. On organise donc le code en monorepo (pnpm workspaces + Turborepo) : `packages/geometry` (TypeScript pur + Manifold, sans dépendance à React, testable seul et réutilisable plus tard par un CLI ou un serveur MCP), `packages/viewer`, `packages/ui` et `apps/web` (Next.js). Une application unique avec des dossiers internes aurait été plus simple au départ, mais elle laisse le moteur se coupler à l'interface.
