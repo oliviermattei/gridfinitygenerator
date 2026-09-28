@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* PROTOTYPE JETABLE — chaque direction pose ses propres jetons sur sa racine (.dir-a / .dir-b / .dir-c). */
+
+@theme inline {
+  --font-a: var(--font-onest), system-ui, sans-serif;
+  --font-b: var(--font-archivo), system-ui, sans-serif;
+  --font-c-display: var(--font-unbounded), system-ui, sans-serif;
+  --font-c: var(--font-figtree), system-ui, sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: #fff;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fluide : pas d'animations pour qui les refuse. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Masquer les flèches natives des champs nombre (NumberField a ses propres boutons). */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
