@@ -3,11 +3,14 @@
 import { Popover } from "@base-ui/react/popover";
 import { BASEPLATE_SETTINGS, type BaseplateSettings } from "@repo/geometry";
 import { NumberStepper, Segmented, Swatches, focusRing, glass } from "@repo/ui";
-import { Coffee, Link2, RotateCcw, Settings } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { ChevronDown, Coffee, Link2, RotateCcw, Settings } from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
+import { LANGUAGE_NAMES, LOCALES, isLocale, type Locale } from "@/lib/i18n";
 import { DONATION_URL } from "@/lib/links";
+import { useFormats, useLocale, useStrings } from "@/lib/locale";
 import { BUILD_PLATE_RANGE, NOZZLES, PREVIEW_COLORS, type Nozzle, type Preferences, type PreviewColor } from "@/lib/preferences";
-import { strings as t } from "@/lib/strings";
+import type { Strings } from "@/lib/strings";
+import { UNITS, type Unit } from "@/lib/units";
 
 interface Action {
   key: string;
@@ -26,7 +29,7 @@ export interface TopBarActions {
 }
 
 // The donation link is configured at build time.
-function actionsOf({ onShare, onReset }: TopBarActions): Action[] {
+function actionsOf({ onShare, onReset }: TopBarActions, t: Strings): Action[] {
   return [
     { key: "share", label: t.share, icon: <Link2 className="size-4" aria-hidden />, onSelect: onShare },
     { key: "reset", label: t.reset, icon: <RotateCcw className="size-4" aria-hidden />, onSelect: onReset },
@@ -35,6 +38,7 @@ function actionsOf({ onShare, onReset }: TopBarActions): Action[] {
 }
 
 function ActionControl({ action, className }: { action: Action; className: string }) {
+  const t = useStrings();
   if (action.href) {
     return (
       <a href={action.href} target="_blank" rel="noreferrer" className={className}>
@@ -63,10 +67,11 @@ function ActionControl({ action, className }: { action: Action; className: strin
 
 /** Desktop actions of the top bar: share, reset, donate. On mobile they live in the menu. */
 export function TopActions(handlers: TopBarActions) {
+  const t = useStrings();
   const pill = `flex h-11 items-center gap-2 rounded-full px-4 text-[13.5px] font-medium text-ink-soft transition-colors hover:text-ink ${glass} ${focusRing}`;
   return (
     <div className="hidden items-center gap-2 md:flex">
-      {actionsOf(handlers).map((action) => (
+      {actionsOf(handlers, t).map((action) => (
         <ActionControl key={action.key} action={action} className={pill} />
       ))}
     </div>
@@ -83,21 +88,26 @@ export interface SettingsMenuProps {
   onSettingsChange: (patch: Partial<PrintSettings>) => void;
   /** Mobile: the menu also holds the top bar actions, run with these handlers. */
   actions: TopBarActions | null;
+  /** Shows the generator in another language, keeping the settings on screen. */
+  onLanguageChange: (language: Locale) => void;
 }
 
 /** Drops the floating-point noise of a stepped value (0.2 + 0.04 = 0.24000000000000002). */
 const toThousandths = (value: number) => Math.round(value * 1000) / 1000;
-const nozzleFormat = new Intl.NumberFormat(t.locale, { minimumFractionDigits: 1 });
 
 /**
  * Gear menu. On desktop it holds parameters only; on mobile it also holds the actions.
- * The parameters are the print (nozzle, layer height, line width), the build plate and the
- * preview colour. Layer height and line width are baseplate settings, shared in the link;
- * the others are preferences of this browser. Language and units join them with #14.
+ * The parameters are the language, the units, the print (nozzle, layer height, line width),
+ * the build plate and the preview colour. Layer height and line width are baseplate
+ * settings, shared in the link; the others are preferences of this browser.
  */
-export function SettingsMenu({ preferences, onPreferencesChange, settings, onSettingsChange, actions }: SettingsMenuProps) {
+export function SettingsMenu({ preferences, onPreferencesChange, settings, onSettingsChange, actions, onLanguageChange }: SettingsMenuProps) {
+  const t = useStrings();
+  const f = useFormats();
+  const locale = useLocale();
+  const languageId = useId();
   const [open, setOpen] = useState(false);
-  const { previewColor, nozzle, buildPlate } = preferences;
+  const { unit, previewColor, nozzle, buildPlate } = preferences;
   const withActions = actions !== null;
   // An action closes the menu first: the reset confirmation or the notification replaces it.
   const closingMenu = (run: () => void) => () => {
@@ -120,7 +130,42 @@ export function SettingsMenu({ preferences, onPreferencesChange, settings, onSet
           <Popover.Popup className="popup flex max-h-[calc(100dvh-5rem)] w-[min(20.5rem,calc(100vw-1.5rem))] flex-col overflow-y-auto">
             <Popover.Title className="px-4 pt-4 pb-1 text-[15px] font-semibold tracking-[-0.01em]">{label}</Popover.Title>
 
-            <section className="flex flex-col gap-3 px-4 py-3.5" aria-labelledby="print-title">
+            <section className="grid grid-cols-2 gap-2.5 px-4 py-3.5">
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <label htmlFor={languageId} className="w-fit text-[13px] font-medium text-muted">
+                  {t.language}
+                </label>
+                <div className="relative">
+                  <select
+                    id={languageId}
+                    value={locale}
+                    onChange={(event) => {
+                      if (isLocale(event.target.value)) onLanguageChange(event.target.value);
+                    }}
+                    className={`h-10 w-full cursor-pointer appearance-none rounded-ctl border border-line bg-surface pr-8 pl-3 text-[14px] font-semibold text-ink transition-colors hover:border-line-strong ${focusRing} focus-visible:ring-offset-0`}
+                  >
+                    {LOCALES.map((language) => (
+                      <option key={language} value={language} lang={language}>
+                        {LANGUAGE_NAMES[language]}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown aria-hidden className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted" />
+                </div>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <span className="text-[13px] font-medium text-muted">{t.units}</span>
+                <Segmented<Unit>
+                  label={t.units}
+                  value={unit}
+                  onChange={(next) => onPreferencesChange({ unit: next })}
+                  options={UNITS.map((value) => ({ value, label: t.unitNames[value] }))}
+                />
+              </div>
+              <p className="col-span-2 text-[12px] leading-snug text-muted">{t.unitsHint}</p>
+            </section>
+
+            <section className="flex flex-col gap-3 border-t border-line px-4 py-3.5" aria-labelledby="print-title">
               <h3 id="print-title" className="text-[13.5px] font-semibold">
                 {t.print}
               </h3>
@@ -134,7 +179,7 @@ export function SettingsMenu({ preferences, onPreferencesChange, settings, onSet
                     onPreferencesChange({ nozzle: next });
                     onSettingsChange({ lineWidth: next });
                   }}
-                  options={NOZZLES.map((value) => ({ value: String(value), label: nozzleFormat.format(value) }))}
+                  options={NOZZLES.map((value) => ({ value: String(value), label: f.nozzles.format(value) }))}
                 />
                 <p className="text-[12px] leading-snug text-muted">{t.nozzleHint}</p>
               </div>
@@ -224,7 +269,7 @@ export function SettingsMenu({ preferences, onPreferencesChange, settings, onSet
 
             {actions && (
               <section aria-label={t.actions} className="flex flex-col border-t border-line p-1.5">
-                {actionsOf({ onShare: closingMenu(actions.onShare), onReset: closingMenu(actions.onReset) }).map((action) => (
+                {actionsOf({ onShare: closingMenu(actions.onShare), onReset: closingMenu(actions.onReset) }, t).map((action) => (
                   <ActionControl key={action.key} action={action} className={row} />
                 ))}
               </section>

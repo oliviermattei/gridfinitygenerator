@@ -5,7 +5,7 @@ import { focusRing } from "@repo/ui";
 import { SlidersHorizontal, X } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
-import { strings as t } from "@/lib/strings";
+import { useStrings } from "@/lib/locale";
 import { DockReadout, Readout } from "./settings-panel";
 
 /** Distance between the dock and the edges of the screen, in CSS pixels. */
@@ -33,6 +33,7 @@ export interface MobileDockProps {
  * can be orbited.
  */
 export function MobileDock({ summary, fits, stats, open, onOpenChange, download, children, dockRef, sheetRef }: MobileDockProps) {
+  const t = useStrings();
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange} modal={false} disablePointerDismissal>
       {/* Hidden under the open sheet, which repeats its dimensions. */}

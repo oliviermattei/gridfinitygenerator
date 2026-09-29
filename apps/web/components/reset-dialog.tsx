@@ -3,7 +3,7 @@
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { focusRing } from "@repo/ui";
 import { useRef } from "react";
-import { strings as t } from "@/lib/strings";
+import { useStrings } from "@/lib/locale";
 
 export interface ResetDialogProps {
   open: boolean;
@@ -16,6 +16,7 @@ export interface ResetDialogProps {
  * nothing. Focus starts on Cancel, the safe choice.
  */
 export function ResetDialog({ open, onOpenChange, onConfirm }: ResetDialogProps) {
+  const t = useStrings();
   const cancel = useRef<HTMLButtonElement>(null);
   const button = `flex h-10 items-center justify-center rounded-ctl px-4 text-[14px] font-semibold transition-colors ${focusRing}`;
   return (

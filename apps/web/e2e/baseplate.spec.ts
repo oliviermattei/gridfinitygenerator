@@ -17,11 +17,6 @@ test("the French baseplate page opens in the project colours", async ({ page }) 
   await expect(page.getByRole("button", { name: "Télécharger le 3MF" })).toHaveCSS("background-color", "rgb(196, 80, 47)");
 });
 
-test("the site root leads to the baseplate generator", async ({ page }) => {
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/fr\/baseplate$/);
-});
-
 test("cell counts drive the 3D preview and the 3MF and STL downloads", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);

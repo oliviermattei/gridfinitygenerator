@@ -3,6 +3,7 @@
 import { NumberField } from "@base-ui/react/number-field";
 import { Minus, Plus } from "lucide-react";
 import { useId } from "react";
+import { decimalInputProps, numberFieldFormat } from "./decimal-input";
 
 export interface NumberStepperProps {
   label: string;
@@ -17,12 +18,14 @@ export interface NumberStepperProps {
   unit: string;
   /** Number conventions of the interface language (decimal comma in French). */
   locale: string;
+  /** Most decimals shown and kept (3 by default); a typed value is rounded to them. */
+  fractionDigits?: number;
   onChange: (value: number) => void;
 }
 
 /**
- * Length or count with −/+ buttons. Typing accepts a comma or a point, the arrow keys
- * step, and the value is brought back into [min, max].
+ * Length or count with −/+ buttons. Typing accepts a comma or a point in every language,
+ * the arrow keys step, and the value is brought back into [min, max].
  */
 export function NumberStepper({
   label,
@@ -34,6 +37,7 @@ export function NumberStepper({
   step,
   unit,
   locale,
+  fractionDigits,
   onChange,
 }: NumberStepperProps) {
   const id = useId();
@@ -47,6 +51,7 @@ export function NumberStepper({
       max={max}
       step={step}
       locale={locale}
+      format={numberFieldFormat(fractionDigits)}
       onValueChange={(next) => {
         if (next !== null && Number.isFinite(next)) onChange(next);
       }}
@@ -60,7 +65,7 @@ export function NumberStepper({
           <Minus className="size-3.5" aria-hidden />
         </NumberField.Decrement>
         <div className="flex min-w-0 flex-1 items-baseline justify-center gap-1">
-          <NumberField.Input className="w-full min-w-0 bg-transparent text-right text-[15px] font-semibold tabular-nums text-ink outline-none" />
+          <NumberField.Input {...decimalInputProps(locale)} className="w-full min-w-0 bg-transparent text-right text-[15px] font-semibold tabular-nums text-ink outline-none" />
           <span aria-hidden className="flex-1 text-[12px] text-muted">
             {unit}
           </span>

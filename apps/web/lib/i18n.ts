@@ -1,7 +1,23 @@
-/** Interface languages served under /{lang}/. English arrives with #14. */
-export const LOCALES = ["fr"] as const;
+/**
+ * Interface languages, each served under /{lang}/ (ADR 0007). The language of a page is the
+ * one of its address; the choice made in the menu is a local preference, which only the
+ * redirection of the site root reads.
+ */
+export const LOCALES = ["fr", "en"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
-/** Language used until first-visit detection arrives with #14. */
-export const DEFAULT_LOCALE: Locale = "fr";
+/** Language of a first visit whose browser asks for neither French nor English. */
+export const FALLBACK_LOCALE: Locale = "en";
+
+/** Names of the languages in the menu, each in its own language. */
+export const LANGUAGE_NAMES: Record<Locale, string> = { fr: "Français", en: "English" };
+
+export function isLocale(value: unknown): value is Locale {
+  return LOCALES.includes(value as Locale);
+}
+
+/** The page of the baseplate generator in a language. */
+export function baseplatePath(locale: Locale): `/${Locale}/baseplate` {
+  return `/${locale}/baseplate`;
+}

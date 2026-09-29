@@ -3,10 +3,13 @@
 import type { BuildPlate } from "@repo/geometry";
 import { BRAND_ACCENT } from "@repo/ui";
 import { useCallback, useSyncExternalStore } from "react";
+import { isLocale, type Locale } from "./i18n";
+import { PREFERENCES_STORAGE_KEY } from "./storage-keys";
+import { isUnit, type Unit } from "./units";
 
 /**
  * Local preferences: kept in this browser only, never in the share link, and left alone
- * by a reset of the baseplate settings. Language and units join them with #14.
+ * by a reset of the baseplate settings.
  */
 
 /** Plastic colours of the 3D preview: the brand accent first (the default), then four neutrals. */
@@ -29,6 +32,13 @@ export type Nozzle = (typeof NOZZLES)[number];
 export const BUILD_PLATE_RANGE = { min: 50, max: 1000 } as const;
 
 export interface Preferences {
+  /**
+   * Language chosen in the menu, null until then. Only the redirection of the site root
+   * reads it (app/route.ts): a page shows the language of its address.
+   */
+  language: Locale | null;
+  /** Unit of the lengths of the drawer and the margins; everything else stays in millimetres. */
+  unit: Unit;
   previewColor: PreviewColor;
   /** Nozzle of the printer, in millimetres: the line width follows it when it changes. */
   nozzle: Nozzle;
@@ -37,12 +47,12 @@ export interface Preferences {
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
+  language: null,
+  unit: "mm",
   previewColor: "brand",
   nozzle: 0.4,
   buildPlate: { width: 256, depth: 256 },
 };
-
-const STORAGE_KEY = "preferences";
 
 function isPreviewColor(value: unknown): value is PreviewColor {
   return typeof value === "string" && Object.hasOwn(PREVIEW_COLORS, value);
@@ -68,6 +78,8 @@ function parse(raw: string | null): Preferences {
   }
   const plate = (stored.buildPlate ?? {}) as Partial<Record<keyof BuildPlate, unknown>>;
   return {
+    language: isLocale(stored.language) ? stored.language : DEFAULT_PREFERENCES.language,
+    unit: isUnit(stored.unit) ? stored.unit : DEFAULT_PREFERENCES.unit,
     previewColor: isPreviewColor(stored.previewColor) ? stored.previewColor : DEFAULT_PREFERENCES.previewColor,
     nozzle: isNozzle(stored.nozzle) ? stored.nozzle : DEFAULT_PREFERENCES.nozzle,
     buildPlate: {
@@ -84,7 +96,7 @@ let cache: { raw: string | null; preferences: Preferences } | null = null;
 
 function readStorage(): string | null {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    return localStorage.getItem(PREFERENCES_STORAGE_KEY);
   } catch {
     return null; // storage blocked
   }
@@ -125,7 +137,7 @@ export function usePreferences(): [Preferences, (patch: Partial<Preferences>) =>
       } catch {
         // Corrupted preferences: start again from these.
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...others, ...next }));
+      localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify({ ...others, ...next }));
       unsaved = null;
     } catch {
       unsaved = next; // storage unavailable or full: the choices last until the page is closed

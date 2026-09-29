@@ -3,7 +3,7 @@
 import { Toast } from "@base-ui/react/toast";
 import { focusRing } from "@repo/ui";
 import { X } from "lucide-react";
-import { strings as t } from "@/lib/strings";
+import { useStrings } from "@/lib/locale";
 
 const manager = Toast.createToastManager();
 
@@ -14,6 +14,7 @@ export function notify(title: string, description?: string) {
 }
 
 function NotificationList() {
+  const t = useStrings();
   const { toasts } = Toast.useToastManager();
   return toasts.map((toast) => (
     <Toast.Root

@@ -22,7 +22,7 @@ Marche à suivre des étapes humaines de la v1 : la mise en ligne sur Vercel (#1
    - que l'option **Include files outside the root directory in the Build Step** est activée (c'est le défaut) : l'application en a besoin pour lire `packages/*` ;
    - que **Node.js Version** vaut 22.x.
 5. Dans **Settings → Git**, vérifier que la branche de production est `main`. Chaque push sur `main` redéploie la production ; chaque PR reçoit un déploiement de prévisualisation.
-6. Contrôler que `https://<domaine>/fr/baseplate` répond et que `https://<domaine>/` y redirige.
+6. Contrôler que `https://<domaine>/fr/baseplate` et `https://<domaine>/en/baseplate` répondent, et que `https://<domaine>/` redirige vers l'une des deux selon la langue du navigateur.
 7. Noter l'URL de production en commentaire de #15.
 
 ## 2. Activer Umami (#17)

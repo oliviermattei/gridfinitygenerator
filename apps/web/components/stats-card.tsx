@@ -4,10 +4,10 @@ import { fitsOnBuildPlate, narrowMargin, type BuildPlate, type Margins } from "@
 import { TriangleAlert } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
-import { fine, footprint, lengths } from "@/lib/format";
-import { strings as t } from "@/lib/strings";
-
-const volumes = new Intl.NumberFormat(t.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+import type { Formats } from "@/lib/format";
+import { useFormats, useStrings } from "@/lib/locale";
+import type { Strings } from "@/lib/strings";
+import type { Unit } from "@/lib/units";
 
 /** Whether the baseplate shown fits on the build plate, in either orientation; null until it is known. */
 export function fitsOn(summary: BaseplateSummary | null, plate: BuildPlate): boolean | null {
@@ -28,6 +28,8 @@ export interface StatsCardProps {
   fits: boolean | null;
   /** Whether an advanced setting differs from its default: standard bins may no longer fit. */
   advancedChanged: boolean;
+  /** Unit of the margins, like the drawer they come from. */
+  unit: Unit;
   className?: string;
 }
 
@@ -36,7 +38,9 @@ export interface StatsCardProps {
  * exactly, never estimated. The volume of material is measured on the final mesh, "…"
  * until it answers for the current settings.
  */
-export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, advancedChanged, className = "" }: StatsCardProps) {
+export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, advancedChanged, unit, className = "" }: StatsCardProps) {
+  const t = useStrings();
+  const f = useFormats();
   const stats = summary?.stats;
   const narrowest = summary ? narrowMargin(summary.layout.margins, lineWidth) : null;
   const volume = final ? stats?.volume : null;
@@ -49,19 +53,19 @@ export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, 
       <dl className="px-4 pb-3 text-[13px]">
         <Stat label={t.dimensions} id="dimensions">
           {stats &&
-            `${lengths.format(stats.dimensions.width)} × ${lengths.format(stats.dimensions.depth)} × ${fine.format(stats.dimensions.height)} mm`}
+            `${f.lengths.format(stats.dimensions.width)} × ${f.lengths.format(stats.dimensions.depth)} × ${f.fine.format(stats.dimensions.height)} mm`}
         </Stat>
         <Stat label={t.statCells} id="cells">
           {summary && `${summary.layout.columns} × ${summary.layout.rows}`}
         </Stat>
         <Stat label={t.statMargin} id="margin">
-          {summary && marginText(summary.layout.margins)}
+          {summary && marginText(summary.layout.margins, unit, t, f)}
         </Stat>
         <Stat label={t.statHeight} id="layers">
-          {stats && t.layers(stats.layers, fine.format(layerHeight))}
+          {stats && t.layers(stats.layers, f.fine.format(layerHeight))}
         </Stat>
         <Stat label={t.statVolume} id="volume">
-          {volume != null && `${volumes.format(volume / 1000)} cm³`}
+          {volume != null && `${f.volumes.format(volume / 1000)} cm³`}
         </Stat>
         <Stat label={t.statScrews} id="screws">
           {stats && (stats.screws === 0 ? t.none : String(stats.screws))}
@@ -75,8 +79,8 @@ export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, 
           )}
         </Stat>
       </dl>
-      {fits === false && <Warning>{t.plateTooSmall(footprint(buildPlate))}</Warning>}
-      {narrowest !== null && <Warning>{t.narrowMargin(fine.format(narrowest), fine.format(2 * lineWidth))}</Warning>}
+      {fits === false && <Warning>{t.plateTooSmall(f.footprint(buildPlate))}</Warning>}
+      {narrowest !== null && <Warning>{t.narrowMargin(f.fine.format(narrowest), f.fine.format(2 * lineWidth))}</Warning>}
       {advancedChanged && <Warning>{t.advancedWarning}</Warning>}
     </section>
   );
@@ -92,14 +96,17 @@ function Warning({ children }: { children: ReactNode }) {
   );
 }
 
-function marginText(margins: Margins): string {
+/** The margin on each side, in the unit of the drawer. */
+function marginText(margins: Margins, unit: Unit, t: Strings, f: Formats): string {
   const { left, right, back, front } = margins;
   if (left === 0 && right === 0 && back === 0 && front === 0) return t.none;
-  return t.margins(fine.format(left), fine.format(right), fine.format(back), fine.format(front));
+  const length = (mm: number) => f.length(mm, unit);
+  return t.margins(length(left), length(right), length(back), length(front), unit);
 }
 
 /** One statistic; "…" while its value is being computed. */
 function Stat({ label, id, children }: { label: string; id: string; children: ReactNode }) {
+  const t = useStrings();
   const pending = children === null || children === undefined || children === false || children === "";
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-line/70 py-[5px] last:border-b-0">

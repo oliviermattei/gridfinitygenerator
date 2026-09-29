@@ -4,7 +4,7 @@ import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
 import { ALIGNMENTS, type Alignment } from "@repo/geometry";
 import { focusRing } from "@repo/ui";
-import { strings as t } from "@/lib/strings";
+import { useStrings } from "@/lib/locale";
 import { AlignArt } from "./illustrations";
 
 export interface AlignmentPadProps {
@@ -17,6 +17,7 @@ export interface AlignmentPadProps {
  * the top: a radio group, the arrow keys move between them.
  */
 export function AlignmentPad({ value, onChange }: AlignmentPadProps) {
+  const t = useStrings();
   return (
     <div className="flex items-center gap-4">
       <RadioGroup

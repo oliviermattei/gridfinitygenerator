@@ -12,8 +12,10 @@ import { ChoiceGroup, NumberStepper, Segmented, SliderField, ToggleSwitch, focus
 import { ChevronDown, Download, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
-import { fine, footprint as footprintOf, lengths } from "@/lib/format";
-import { strings as t } from "@/lib/strings";
+import type { Formats } from "@/lib/format";
+import { useFormats, useStrings } from "@/lib/locale";
+import type { Strings } from "@/lib/strings";
+import { LENGTH_DECIMALS, LENGTH_STEP, fromMillimetres, toMillimetres, type Unit } from "@/lib/units";
 import { AlignmentPad } from "./alignment-pad";
 import { AdvancedIcon, AlignIcon, ProfileArt, ProfileIcon, ScrewArt, ScrewIcon, SizeIcon, TestKitArt } from "./illustrations";
 
@@ -24,8 +26,8 @@ import { AdvancedIcon, AlignIcon, ProfileArt, ProfileIcon, ScrewArt, ScrewIcon, 
 export type Family = "size" | "alignment" | "profile" | "screws" | "advanced";
 
 /** "Valeurs par défaut", or the advanced settings changed: "Cellule 30 mm, chanfrein 0,6 mm". */
-function advancedSummary(settings: BaseplateSettings): string {
-  const changes = changedAdvancedSettings(settings).map((key) => t.advancedChanges[key](fine.format(settings[key])));
+function advancedSummary(settings: BaseplateSettings, t: Strings, f: Formats): string {
+  const changes = changedAdvancedSettings(settings).map((key) => t.advancedChanges[key](f.fine.format(settings[key])));
   if (changes.length === 0) return t.advancedDefaults;
   const text = changes.join(", ");
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -35,21 +37,24 @@ function advancedSummary(settings: BaseplateSettings): string {
 const toHundredths = (value: number) => Math.round(value * 100) / 100;
 
 /** "168 × 126 mm", measured on the mesh. */
-function footprint(summary: BaseplateSummary): string {
-  return footprintOf(summary.stats.dimensions);
+function footprint(summary: BaseplateSummary, f: Formats): string {
+  return f.footprint(summary.stats.dimensions);
 }
 
-function cellCount(summary: BaseplateSummary): string {
+function cellCount(summary: BaseplateSummary, t: Strings): string {
   return t.cells(summary.layout.columns, summary.layout.rows);
 }
 
-/** "9 × 6 cellules, marge 21 × 27 mm": what the size settings give, as laid out by the engine. */
-function sizeResult(summary: BaseplateSummary): string {
+/**
+ * "9 × 6 cellules, marge 21 × 27 mm": what the size settings give, as laid out by the
+ * engine, with the margin in the unit of the drawer.
+ */
+function sizeResult(summary: BaseplateSummary, unit: Unit, t: Strings, f: Formats): string {
   const { left, right, back, front } = summary.layout.margins;
   const width = left + right;
   const depth = back + front;
-  const margin = width === 0 && depth === 0 ? t.withoutMargin : t.withMargin(lengths.format(width), lengths.format(depth));
-  return `${cellCount(summary)}, ${margin}`;
+  const margin = width === 0 && depth === 0 ? t.withoutMargin : t.withMargin(f.length(width, unit), f.length(depth, unit), unit);
+  return `${cellCount(summary, t)}, ${margin}`;
 }
 
 /**
@@ -57,17 +62,19 @@ function sizeResult(summary: BaseplateSummary): string {
  * shown, "…" until its first computation answers.
  */
 export function Readout({ summary, live = false }: { summary: BaseplateSummary | null; live?: boolean }) {
+  const t = useStrings();
+  const f = useFormats();
   return (
     <div className="px-5 pt-5 pb-4" aria-live={live ? "polite" : undefined}>
       <p className="flex items-baseline gap-1.5 text-[28px] leading-tight font-semibold tracking-[-0.04em] tabular-nums">
-        <span className="sr-only">{t.dimensions} : </span>
-        <span data-testid="dimensions">{summary ? footprint(summary) : "…"}</span>
+        <span className="sr-only">{t.dimensionsPrefix}</span>
+        <span data-testid="dimensions">{summary ? footprint(summary, f) : "…"}</span>
       </p>
       <p className="mt-1 text-[12.5px] text-muted tabular-nums">
-        <span data-testid="cells">{summary ? cellCount(summary) : "…"}</span>
+        <span data-testid="cells">{summary ? cellCount(summary, t) : "…"}</span>
         {summary && (
           <>
-            , {t.height} <span data-testid="height">{fine.format(summary.stats.dimensions.height)} mm</span>
+            , {t.height} <span data-testid="height">{f.fine.format(summary.stats.dimensions.height)} mm</span>
           </>
         )}
       </p>
@@ -77,13 +84,15 @@ export function Readout({ summary, live = false }: { summary: BaseplateSummary |
 
 /** Short lines above the dock's buttons (mobile), with a warning when the build plate is too small. */
 export function DockReadout({ summary, fits }: { summary: BaseplateSummary | null; fits: boolean | null }) {
+  const t = useStrings();
+  const f = useFormats();
   return (
     <div className="px-2.5 pt-1.5 pb-2.5" aria-live="polite">
       <p className="text-[18px] font-semibold tracking-[-0.03em] tabular-nums" data-testid="dimensions">
-        {summary ? footprint(summary) : "…"}
+        {summary ? footprint(summary, f) : "…"}
       </p>
       <p className="truncate text-[12px] text-muted tabular-nums" data-testid="cells">
-        {summary ? cellCount(summary) : "…"}
+        {summary ? cellCount(summary, t) : "…"}
       </p>
       {fits === false && (
         <p className="mt-1 flex items-center gap-1.5 text-[12px] font-semibold text-accent-strong">
@@ -98,6 +107,8 @@ export function DockReadout({ summary, fits }: { summary: BaseplateSummary | nul
 export interface FamiliesProps {
   settings: BaseplateSettings;
   onSettingsChange: (patch: Partial<BaseplateSettings>) => void;
+  /** Unit of the drawer and the margins, typed and read. */
+  unit: Unit;
   summary: BaseplateSummary | null;
   /** The only open family (exclusive accordion), or null when all are closed. */
   open: Family | null;
@@ -114,6 +125,7 @@ export interface FamiliesProps {
 export function Families({
   settings,
   onSettingsChange,
+  unit,
   summary,
   open,
   onOpenChange,
@@ -121,6 +133,8 @@ export function Families({
   exportingTestKit,
   downloadBusy,
 }: FamiliesProps) {
+  const t = useStrings();
+  const f = useFormats();
   const bind = (family: Family) => ({
     open: open === family,
     onOpenChange: (isOpen: boolean) => onOpenChange(isOpen ? family : null),
@@ -131,11 +145,11 @@ export function Families({
         {...bind("size")}
         icon={<SizeIcon className="size-[18px]" />}
         title={t.size}
-        summary={summary ? `${footprint(summary)}, ${cellCount(summary)}` : "…"}
+        summary={summary ? `${footprint(summary, f)}, ${cellCount(summary, t)}` : "…"}
       >
-        <SizeFields settings={settings} onSettingsChange={onSettingsChange} />
+        <SizeFields settings={settings} onSettingsChange={onSettingsChange} unit={unit} />
         <p className="mt-3 text-[12.5px] text-muted tabular-nums" data-testid="size-result">
-          {summary ? sizeResult(summary) : "…"}
+          {summary ? sizeResult(summary, unit, t, f) : "…"}
         </p>
       </FamilyItem>
       <FamilyItem
@@ -183,7 +197,7 @@ export function Families({
         {...bind("screws")}
         icon={<ScrewIcon className="size-[18px]" />}
         title={t.screws}
-        summary={settings.screws ? screwsSummary(settings, summary) : t.screwsOff}
+        summary={settings.screws ? screwsSummary(settings, summary, t, f) : t.screwsOff}
         on={settings.screws}
         control={
           <ToggleSwitch
@@ -203,7 +217,7 @@ export function Families({
         {...bind("advanced")}
         icon={<AdvancedIcon className="size-[18px]" />}
         title={t.advanced}
-        summary={advancedSummary(settings)}
+        summary={advancedSummary(settings, t, f)}
       >
         <AdvancedFields settings={settings} onSettingsChange={onSettingsChange} />
         <div className="mt-5 grid grid-cols-2 gap-2.5">
@@ -244,6 +258,7 @@ export function Families({
  * may no longer fit, shows with the statistics as long as one of the family is changed.
  */
 function AdvancedFields({ settings, onSettingsChange }: FieldsProps) {
+  const t = useStrings();
   const field = (key: "cellSize" | "outerRadius" | "bottomChamfer", step: number) => ({
     value: settings[key],
     min: BASEPLATE_SETTINGS[key].min,
@@ -278,6 +293,8 @@ function TestKit({
   exporting: boolean;
   disabled: boolean;
 }) {
+  const t = useStrings();
+  const f = useFormats();
   return (
     <div className="mt-3 flex items-start gap-3 rounded-card border border-line bg-surface p-3">
       <span className="grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-sunken text-muted [--art:var(--accent)]">
@@ -286,7 +303,7 @@ function TestKit({
       <div className="min-w-0 flex-1">
         <p className="text-[13.5px] font-semibold">{t.testKit}</p>
         <p className="mt-0.5 text-[12px] leading-snug text-muted">
-          {t.testKitHint(footprintOf({ width: cellSize, depth: 2 * cellSize }))}
+          {t.testKitHint(f.footprint({ width: cellSize, depth: 2 * cellSize }))}
         </p>
         <button
           type="button"
@@ -303,13 +320,14 @@ function TestKit({
 }
 
 /** "40 vis, tige 3 mm, tête 6 mm": the count as laid out by the engine, "…" until it answers. */
-function screwsSummary(settings: BaseplateSettings, summary: BaseplateSummary | null): string {
+function screwsSummary(settings: BaseplateSettings, summary: BaseplateSummary | null, t: Strings, f: Formats): string {
   const count = summary ? String(summary.stats.screws) : "…";
-  return t.screwsSummary(count, fine.format(settings.screwShank), fine.format(settings.screwHead));
+  return t.screwsSummary(count, f.fine.format(settings.screwShank), f.fine.format(settings.screwHead));
 }
 
 /** The diameters of the screws, or what they are for while they are off. */
 function ScrewFields({ settings, onSettingsChange }: FieldsProps) {
+  const t = useStrings();
   if (!settings.screws) {
     return (
       <div className="flex items-center gap-3">
@@ -359,16 +377,25 @@ interface FieldsProps {
 
 type LengthSetting = "drawerWidth" | "drawerDepth" | "marginWidth" | "marginDepth";
 
-/** The size mode, then the drawer, or the cells and their margins. */
-function SizeFields({ settings, onSettingsChange }: FieldsProps) {
+/**
+ * The size mode, then the drawer, or the cells and their margins. Their lengths are typed and
+ * shown in the unit chosen, and kept in millimetres (lib/units.ts).
+ */
+function SizeFields({ settings, onSettingsChange, unit }: FieldsProps & { unit: Unit }) {
+  const t = useStrings();
   const length = (key: LengthSetting) => ({
-    value: settings[key],
-    min: BASEPLATE_SETTINGS[key].min,
-    max: BASEPLATE_SETTINGS[key].max,
-    step: 1,
-    unit: "mm",
+    value: fromMillimetres(settings[key], unit),
+    min: fromMillimetres(BASEPLATE_SETTINGS[key].min, unit),
+    max: fromMillimetres(BASEPLATE_SETTINGS[key].max, unit),
+    step: LENGTH_STEP[unit],
+    unit,
     locale: t.locale,
-    onChange: (value: number) => onSettingsChange({ [key]: toHundredths(value) }),
+    fractionDigits: LENGTH_DECIMALS[unit],
+    onChange: (value: number) => {
+      const mm = toMillimetres(value, unit);
+      // The same length once rounded (a field left as it was): nothing changes.
+      if (mm !== settings[key]) onSettingsChange({ [key]: mm });
+    },
   });
   return (
     <div className="flex flex-col gap-3.5">

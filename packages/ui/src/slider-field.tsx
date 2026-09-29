@@ -3,6 +3,7 @@
 import { NumberField } from "@base-ui/react/number-field";
 import { Slider } from "@base-ui/react/slider";
 import { useId } from "react";
+import { decimalInputProps, numberFieldFormat } from "./decimal-input";
 
 export interface SliderFieldProps {
   label: string;
@@ -20,7 +21,7 @@ export interface SliderFieldProps {
 
 /**
  * Slider paired with a free text field: drag for a rough value, type for an exact one
- * (comma or point), arrow keys to step. Both stay within [min, max].
+ * (comma or point, in every language), arrow keys to step. Both stay within [min, max].
  */
 export function SliderField({ label, hint, value, min, max, step, unit, locale, onChange, disabled }: SliderFieldProps) {
   const id = useId();
@@ -42,11 +43,12 @@ export function SliderField({ label, hint, value, min, max, step, unit, locale, 
         max={max}
         step={step}
         locale={locale}
+        format={numberFieldFormat()}
         disabled={disabled}
         onValueChange={change}
       >
         <NumberField.Group className="flex h-8 w-[84px] items-center rounded-ctl border border-line bg-surface pr-2 transition-colors hover:border-line-strong focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-ring">
-          <NumberField.Input className="h-full w-full min-w-0 bg-transparent pl-2.5 text-right text-[13.5px] font-medium tabular-nums text-ink outline-none" />
+          <NumberField.Input {...decimalInputProps(locale)} className="h-full w-full min-w-0 bg-transparent pl-2.5 text-right text-[13.5px] font-medium tabular-nums text-ink outline-none" />
           <span aria-hidden className="pl-1 text-[12px] text-muted">
             {unit}
           </span>

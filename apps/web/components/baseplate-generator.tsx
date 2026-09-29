@@ -4,13 +4,15 @@ import { changedAdvancedSettings, type Baseplate, type BaseplateSettings, type Q
 import { focusRing, glass } from "@repo/ui";
 import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
 import type { ExportFormat, ExportPiece } from "@/lib/engine/protocol";
 import { MEDIA_TYPES } from "@/lib/export-file";
+import { baseplatePath, type Locale } from "@/lib/i18n";
+import { useStrings } from "@/lib/locale";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
 import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
-import { strings as t } from "@/lib/strings";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { DownloadButton } from "./download-button";
 import { PocketMark } from "./illustrations";
@@ -43,6 +45,8 @@ interface OnScreen {
   settings: BaseplateSettings;
 }
 
+/** A failure shown to the user, by the key of its message. */
+type Failure = "computeFailed" | "exportFailed";
 
 function download(bytes: Uint8Array<ArrayBuffer>, fileName: string, type: string) {
   const url = URL.createObjectURL(new Blob([bytes], { type }));
@@ -69,13 +73,15 @@ function useElementSize(element: HTMLElement | null): { width: number; height: n
 }
 
 export function BaseplateGenerator() {
+  const t = useStrings();
+  const router = useRouter();
   const engine = useRef<EngineClient | null>(null);
   // Restored from a shared link or this browser once hydrated; the server renders the defaults.
   const [settings, setSettings] = useSavedSettings();
   const hydrated = useHydrated();
   const [resetOpen, setResetOpen] = useState(false);
   const [shown, setShown] = useState<OnScreen | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Failure | null>(null);
   const [exporting, setExporting] = useState<Exporting | null>(null);
   const [openFamily, setOpenFamily] = useState<Family | null>("size");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -100,7 +106,7 @@ export function BaseplateGenerator() {
       },
       onError(reason) {
         console.error(reason);
-        setError(t.computeFailed);
+        setError("computeFailed");
       },
     });
     engine.current = client;
@@ -129,6 +135,7 @@ export function BaseplateGenerator() {
       buildPlate={preferences.buildPlate}
       fits={fits}
       advancedChanged={changedAdvancedSettings(settings).length > 0}
+      unit={preferences.unit}
       className={className}
     />
   );
@@ -148,6 +155,17 @@ export function BaseplateGenerator() {
   const actions: TopBarActions = { onShare: share, onReset: () => setResetOpen(true) };
 
   /**
+   * Shows the generator in another language and remembers the choice, which the site root
+   * follows from then on. A navigation without reload: the settings on screen stay, and a
+   * shared link still in the address comes along.
+   */
+  function changeLanguage(language: Locale) {
+    setPreferences({ language });
+    const { search, hash } = window.location;
+    router.replace(`${baseplatePath(language)}${search}${hash}`, { scroll: false });
+  }
+
+  /**
    * Downloads the baseplate of the settings, or the test kit (always a single 3MF). The 3MF
    * carries the share link of the settings: the page that generates it again (the test kit
    * from its button, since it takes the cell size, the outline and the print settings).
@@ -162,7 +180,7 @@ export function BaseplateGenerator() {
       download(bytes as Uint8Array<ArrayBuffer>, `${name}.${format}`, MEDIA_TYPES[format]);
     } catch (reason) {
       console.error(reason);
-      setError(t.exportFailed);
+      setError("exportFailed");
     } finally {
       setExporting(null);
     }
@@ -192,6 +210,7 @@ export function BaseplateGenerator() {
     <Families
       settings={settings}
       onSettingsChange={updateSettings}
+      unit={preferences.unit}
       summary={baseplate}
       open={openFamily}
       onOpenChange={setOpenFamily}
@@ -227,6 +246,7 @@ export function BaseplateGenerator() {
           settings={settings}
           onSettingsChange={updateSettings}
           actions={desktop ? null : actions}
+          onLanguageChange={changeLanguage}
         />
       </div>
 
@@ -284,7 +304,7 @@ export function BaseplateGenerator() {
           role="alert"
           className="absolute top-18 left-1/2 z-50 w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-card bg-ink px-4 py-2.5 text-[13px] font-medium text-white shadow-pop"
         >
-          {error}
+          {t[error]}
         </p>
       )}
     </main>

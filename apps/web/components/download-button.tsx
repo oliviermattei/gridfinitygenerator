@@ -4,7 +4,7 @@ import { Menu } from "@base-ui/react/menu";
 import { focusRing } from "@repo/ui";
 import { ChevronDown, Download } from "lucide-react";
 import type { ExportFormat } from "@/lib/engine/protocol";
-import { strings as t } from "@/lib/strings";
+import { useStrings } from "@/lib/locale";
 
 export interface DownloadButtonProps {
   onDownload: (format: ExportFormat) => void;
@@ -16,9 +16,9 @@ export interface DownloadButtonProps {
   compact?: boolean;
 }
 
-const FORMATS: readonly { format: ExportFormat; description: string }[] = [
-  { format: "3mf", description: t.threeMfDescription },
-  { format: "stl", description: t.stlDescription },
+const FORMATS: readonly { format: ExportFormat; description: "threeMfDescription" | "stlDescription" }[] = [
+  { format: "3mf", description: "threeMfDescription" },
+  { format: "stl", description: "stlDescription" },
 ];
 
 /**
@@ -26,6 +26,7 @@ const FORMATS: readonly { format: ExportFormat; description: string }[] = [
  * slicer (named object, share link inside); its menu also offers the STL.
  */
 export function DownloadButton({ onDownload, exporting, disabled, compact = false }: DownloadButtonProps) {
+  const t = useStrings();
   const label = exporting ? t.preparing[exporting] : t.download["3mf"];
   const accent = `h-12 bg-accent text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-70 ${focusRing}`;
   return (
@@ -61,7 +62,7 @@ export function DownloadButton({ onDownload, exporting, disabled, compact = fals
                   <Download className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
                   <span className="min-w-0">
                     <span className="block text-[13.5px] font-semibold">{t.download[format]}</span>
-                    <span className="block text-[12px] leading-snug text-muted">{description}</span>
+                    <span className="block text-[12px] leading-snug text-muted">{t[description]}</span>
                   </span>
                 </Menu.Item>
               ))}

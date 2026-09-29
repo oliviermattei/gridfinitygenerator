@@ -1,20 +1,11 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
-import { chooseCells, closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings, readout } from "./support";
+import { chooseCells, chooseLanguage, closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings, readout, runAction } from "./support";
 
 // Share, memory of the last settings and reset (#8).
 
 // Share copies the link to the clipboard: allowed up front, so that no native prompt shows.
-test.use({ permissions: ["clipboard-read", "clipboard-write"] });
-
-/** Runs an action of the top bar: on the right of the top bar on desktop, in the menu on mobile. */
-async function runAction(page: Page, testInfo: TestInfo, name: "Partager" | "Réinitialiser") {
-  if (isMobile(testInfo)) {
-    await page.getByRole("button", { name: "Menu" }).click();
-    await page.getByRole("dialog", { name: "Menu" }).getByRole("button", { name }).click();
-  } else {
-    await page.getByRole("button", { name }).click();
-  }
-}
+// An English browser: a French page shows that the language comes from the address, or from the menu.
+test.use({ permissions: ["clipboard-read", "clipboard-write"], locale: "en-US" });
 
 async function setCells(page: Page, testInfo: TestInfo, columns: number, rows: number) {
   await openSettings(page, testInfo);
@@ -87,8 +78,12 @@ test("reloading keeps the settings, and a shared link wins over them", async ({ 
 
 test("reset asks for a confirmation, then brings back the defaults and keeps the preferences", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
+  // French chosen in the menu, over the English of the browser (#14).
+  await chooseLanguage(page, testInfo, "en");
+  await chooseLanguage(page, testInfo, "fr");
   await setCells(page, testInfo, 8, 2);
   const menu = await openMenu(page, testInfo);
+  await menu.getByRole("radio", { name: "pouces" }).click();
   await menu.getByRole("radio", { name: "Graphite" }).click();
   await numberField(page, "Largeur du plateau").fill("200");
   await numberField(page, "Hauteur de couche").fill("0,28");
@@ -112,15 +107,25 @@ test("reset asks for a confirmation, then brings back the defaults and keeps the
   await expect(readout(page, "dimensions")).toHaveText("399 × 279 mm");
 
   // The preferences are kept, and the layer height too: it describes the printer.
+  await expect(page).toHaveURL(/\/fr\/baseplate$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "fr");
   await expect(page.getByTestId("mesh-preview")).toHaveAttribute("data-color", "#2E3137");
-  await openMenu(page, testInfo);
+  const kept = await openMenu(page, testInfo);
+  await expect(kept.getByRole("radio", { name: "pouces" })).toBeChecked();
   await expect(numberField(page, "Largeur du plateau")).toHaveValue("200");
   await expect(numberField(page, "Hauteur de couche")).toHaveValue("0,28");
   await closeMenu(page);
+  // The default drawer of 400 × 280 mm, still in inches.
+  await openSettings(page, testInfo);
+  await expect(numberField(page, "Largeur")).toHaveValue("15,75");
+  await closeSettings(page, testInfo);
 
   // The reset is remembered like any other change.
   await page.reload();
   await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
+  // And the language chosen still leads the site root, over the English browser.
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/fr\/baseplate$/);
 });
 
 test("a drawer is shared by its dimensions, and links made before the drawer mode keep their cells", async ({ page, browser }, testInfo) => {

@@ -1,12 +1,17 @@
 import { BRAND_ACCENT_NAME } from "@repo/ui";
+import type { Locale } from "./i18n";
 
 /**
- * Interface copy, worded with the glossary (CONTEXT.md). French only for now: English and
- * language switching arrive with #14.
+ * Interface copy in French, worded with the glossary (CONTEXT.md). Its shape is the one
+ * every language must give (`Strings`): a key missing or added in another language fails
+ * the typecheck, and the test of the strings.
  */
-export const strings = {
+const fr = {
+  /** Number conventions of the language (Intl locale). */
   locale: "fr-FR",
   generator: "Générateur de baseplates",
+  description:
+    "Générateur gratuit et open source de baseplates Gridfinity à la mesure de votre tiroir, calculées dans le navigateur.",
   // Top bar and menu
   share: "Partager",
   reset: "Réinitialiser",
@@ -20,11 +25,15 @@ export const strings = {
   copyFailed: "Copie impossible : copiez le lien ci-dessous.",
   resetTitle: "Réinitialiser les réglages ?",
   resetDescription:
-    "La baseplate revient aux réglages par défaut. Vos paramètres sont conservés : buse, hauteur de couche, largeur de ligne, plateau et couleur de l'aperçu.",
+    "La baseplate revient aux réglages par défaut. Vos paramètres sont conservés : langue, unités, buse, hauteur de couche, largeur de ligne, plateau et couleur de l'aperçu.",
   cancel: "Annuler",
+  language: "Langue",
+  units: "Unités",
+  unitNames: { mm: "mm", in: "pouces" },
+  unitsHint: "Pour les cotes du tiroir et des marges. Les autres longueurs, vis comprises, restent en mm.",
   previewColor: "Couleur de l'aperçu",
   previewColors: {
-    brand: BRAND_ACCENT_NAME.fr,
+    brand: BRAND_ACCENT_NAME.fr as string,
     white: "Blanc",
     pebble: "Galet",
     graphite: "Graphite",
@@ -58,8 +67,8 @@ export const strings = {
   none: "aucune",
   computing: "calcul en cours",
   layers: (count: number, layerHeight: string) => `${count} couches de ${layerHeight} mm`,
-  margins: (left: string, right: string, back: string, front: string) =>
-    `gauche ${left}, droite ${right}, arrière ${back}, avant ${front} mm`,
+  margins: (left: string, right: string, back: string, front: string, unit: string) =>
+    `gauche ${left}, droite ${right}, arrière ${back}, avant ${front} ${unit}`,
   fits: "tient",
   doesNotFit: "ne tient pas",
   plateTooSmall: (plate: string) =>
@@ -74,6 +83,8 @@ export const strings = {
   settings: "Réglages",
   close: "Fermer",
   dimensions: "Dimensions",
+  /** Read by screen readers before the dimensions of the readout. */
+  dimensionsPrefix: "Dimensions : ",
   cells: (columns: number, rows: number) => `${columns} × ${rows} cellules`,
   height: "hauteur",
   size: "Taille",
@@ -93,7 +104,7 @@ export const strings = {
   marginDepth: "Marge en profondeur",
   lessMarginDepth: "Moins de marge en profondeur",
   moreMarginDepth: "Plus de marge en profondeur",
-  withMargin: (width: string, depth: string) => `marge ${width} × ${depth} mm`,
+  withMargin: (width: string, depth: string, unit: string) => `marge ${width} × ${depth} ${unit}`,
   withoutMargin: "sans marge",
   alignment: "Alignement",
   alignmentHint: "Où placer la grille quand la marge ne tombe pas juste : la marge prend le reste.",
@@ -168,3 +179,179 @@ export const strings = {
   computeFailed: "Le calcul de la baseplate a échoué. Modifiez un réglage pour réessayer.",
   exportFailed: "Le téléchargement a échoué. Réessayez.",
 };
+
+/** The interface copy of one language. */
+export type Strings = typeof fr;
+
+const en: Strings = {
+  locale: "en-US",
+  generator: "Baseplate generator",
+  description:
+    "Free and open-source generator of Gridfinity baseplates sized for your drawer, computed in your browser.",
+  // Top bar and menu
+  share: "Share",
+  reset: "Reset",
+  donate: "Buy me a coffee",
+  comingSoon: "Coming soon",
+  newTab: "opens in a new tab",
+  parameters: "Parameters",
+  menu: "Menu",
+  actions: "Actions",
+  linkCopied: "Link copied",
+  copyFailed: "Could not copy: copy the link below.",
+  resetTitle: "Reset the settings?",
+  resetDescription:
+    "The baseplate goes back to the default settings. Your parameters are kept: language, units, nozzle, layer height, line width, build plate and preview color.",
+  cancel: "Cancel",
+  language: "Language",
+  units: "Units",
+  unitNames: { mm: "mm", in: "inches" },
+  unitsHint: "For the drawer and the margins. Every other length, screws included, stays in mm.",
+  previewColor: "Preview color",
+  previewColors: {
+    brand: BRAND_ACCENT_NAME.en,
+    white: "White",
+    pebble: "Pebble",
+    graphite: "Graphite",
+    sand: "Sand",
+  },
+  print: "Print",
+  nozzle: "Nozzle",
+  nozzleHint: "Choosing a nozzle sets the line width to its diameter.",
+  layerHeight: "Layer height",
+  thinnerLayer: "Thinner layer",
+  thickerLayer: "Thicker layer",
+  lineWidth: "Line width",
+  narrowerLine: "Narrower line",
+  widerLine: "Wider line",
+  buildPlate: "Build plate",
+  buildPlateHint: "Usable area of your printer's build plate.",
+  buildPlateWidth: "Build plate width",
+  narrowerPlate: "Narrower build plate",
+  widerPlate: "Wider build plate",
+  buildPlateDepth: "Build plate depth",
+  shallowerPlate: "Shallower build plate",
+  deeperPlate: "Deeper build plate",
+  // Statistics
+  statistics: "Statistics",
+  statCells: "Cells",
+  statMargin: "Margin",
+  statHeight: "Height",
+  statVolume: "Material",
+  statScrews: "Screws",
+  statPieces: "Pieces",
+  none: "none",
+  computing: "computing",
+  layers: (count: number, layerHeight: string) => `${count} layers of ${layerHeight} mm`,
+  margins: (left: string, right: string, back: string, front: string, unit: string) =>
+    `left ${left}, right ${right}, back ${back}, front ${front} ${unit}`,
+  fits: "fits",
+  doesNotFit: "does not fit",
+  plateTooSmall: (plate: string) =>
+    `The baseplate is larger than your build plate (${plate}) both ways. Make it smaller, or correct the size of the build plate in the parameters.`,
+  plateTooSmallShort: "Does not fit on the build plate",
+  narrowMargin: (margin: string, lines: string) =>
+    `A margin of ${margin} mm is narrower than two line widths (${lines} mm): it will print poorly. Widen it or remove it.`,
+  // Preview
+  recenter: "Recenter the view",
+  webglUnavailable: "3D preview unavailable: WebGL is turned off in this browser.",
+  // Settings panel
+  settings: "Settings",
+  close: "Close",
+  dimensions: "Dimensions",
+  dimensionsPrefix: "Dimensions: ",
+  cells: (columns: number, rows: number) => `${columns} × ${rows} cells`,
+  height: "height",
+  size: "Size",
+  sizeMode: "Size mode",
+  sizeDrawer: "Drawer",
+  sizeCells: "Number of cells",
+  drawerHint: "Inside dimensions of the drawer: the baseplate fills it.",
+  drawerWidth: "Width",
+  narrowerDrawer: "Narrower drawer",
+  widerDrawer: "Wider drawer",
+  drawerDepth: "Depth",
+  shallowerDrawer: "Shallower drawer",
+  deeperDrawer: "Deeper drawer",
+  marginWidth: "Margin in width",
+  lessMarginWidth: "Less margin in width",
+  moreMarginWidth: "More margin in width",
+  marginDepth: "Margin in depth",
+  lessMarginDepth: "Less margin in depth",
+  moreMarginDepth: "More margin in depth",
+  withMargin: (width: string, depth: string, unit: string) => `margin ${width} × ${depth} ${unit}`,
+  withoutMargin: "no margin",
+  alignment: "Alignment",
+  alignmentHint: "Where the grid goes when the margin does not fall evenly: the margin takes the rest.",
+  alignments: {
+    tl: "Back left",
+    t: "Back",
+    tr: "Back right",
+    l: "Left",
+    c: "Center",
+    r: "Right",
+    bl: "Front left",
+    b: "Front",
+    br: "Front right",
+  },
+  screws: "Screws",
+  screwsOff: "Off",
+  screwsSummary: (count: string, shank: string, head: string) => `${count} screws, shank ${shank} mm, head ${head} mm`,
+  screwsOffHint: "Countersunk holes to screw the baseplate to the bottom of the drawer, one screw at each inner intersection of the grid.",
+  screwShank: "Shank Ø",
+  screwHead: "Head Ø",
+  screwsHint: "The head sits where the walls between pockets cross, under the slopes of the pockets. The hole gap is set in Advanced.",
+  advanced: "Advanced",
+  drawerGap: "Drawer gap",
+  lessGap: "Less gap",
+  moreGap: "More gap",
+  drawerGapHint: "Taken off the width and depth of the drawer, so that the baseplate goes in without forcing.",
+  holeGap: "Hole gap",
+  lessHoleGap: "Less gap at the holes",
+  moreHoleGap: "More gap at the holes",
+  holeGapHint: "Added to the shank and head Ø, so that the screws go in without forcing.",
+  advancedDefaults: "Default values",
+  advancedChanges: {
+    cellSize: (value: string) => `cell ${value} mm`,
+    outerRadius: (value: string) => `corners ${value} mm`,
+    bottomChamfer: (value: string) => `chamfer ${value} mm`,
+    drawerGap: (value: string) => `drawer gap ${value} mm`,
+    holeGap: (value: string) => `hole gap ${value} mm`,
+  },
+  advancedWarning: "Advanced settings changed: away from the default values, standard bins may no longer fit.",
+  cellSize: "Cell size",
+  cellSizeHint: "42 mm in the Gridfinity standard. The pocket keeps the profile of the standard: only its width follows the cell.",
+  outerRadius: "Corner radius",
+  outerRadiusHint: "Outer corners of the baseplate, never more than half its smallest side.",
+  bottomChamfer: "Bottom chamfer",
+  bottomChamferHint: "At 45° all around the bottom, margin included, against the elephant's foot of the first layer.",
+  columns: "Columns",
+  fewerColumns: "One column fewer",
+  moreColumns: "One column more",
+  rows: "Rows",
+  fewerRows: "One row fewer",
+  moreRows: "One row more",
+  pocketProfile: "Pocket profile",
+  hybrid: "Hybrid",
+  hybridDescription: "4.6 mm. A 0.35 mm step under the slopes: the bin is well seated, without play.",
+  flush: "Flush",
+  flushDescription: "4.25 mm, without the step: the bin rests on the bottom of the drawer, with slight play.",
+  recommended: "Recommended",
+  testKit: "Test kit",
+  testKitHint: (size: string) =>
+    `A 1 × 2 baseplate of ${size}: a hybrid cell at the front, a flush cell at the back, 0.35 mm lower. Try your bins in it before printing a large baseplate.`,
+  downloadTestKit: "Download the test kit",
+  preparingTestKit: "Preparing the kit…",
+  // Download
+  download: { "3mf": "Download the 3MF", stl: "Download the STL" },
+  preparing: { "3mf": "Preparing the 3MF…", stl: "Preparing the STL…" },
+  otherFormats: "Other formats",
+  threeMfDescription: "Recommended: opens in the slicer, with the link to its settings.",
+  stlDescription: "For the slicers that cannot read 3MF.",
+  // Errors
+  computeFailed: "The baseplate could not be computed. Change a setting to try again.",
+  exportFailed: "The download failed. Try again.",
+};
+
+/** The interface copy of every language. */
+export const STRINGS: Record<Locale, Strings> = { fr, en };

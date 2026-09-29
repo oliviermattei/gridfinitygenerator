@@ -9,7 +9,7 @@ Monorepo pnpm + Turborepo (voir `docs/adr/0003-monorepo-moteur-separe.md`) :
 - `packages/geometry` : moteur de géométrie, TypeScript pur sur manifold-3d, sans React ;
 - `packages/viewer` : aperçu 3D ;
 - `packages/ui` : design system (jetons, accent unique, typo Outfit) ;
-- `apps/web` : application Next.js (App Router), route `/fr/baseplate`.
+- `apps/web` : application Next.js (App Router), routes `/fr/baseplate` et `/en/baseplate` ; `/` redirige vers la langue choisie ou celle du navigateur (ADR 0007).
 
 Les dossiers `prototypes/*` sont du code jetable, hors du workspace.
 
