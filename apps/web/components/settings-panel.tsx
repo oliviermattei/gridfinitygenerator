@@ -1,24 +1,24 @@
 "use client";
 
 import { Collapsible } from "@base-ui/react/collapsible";
-import { CELLS_PER_AXIS, type BaseplateSettings } from "@repo/geometry";
+import { BASEPLATE_SETTINGS, type BaseplateSettings } from "@repo/geometry";
 import { ChoiceGroup, NumberStepper, focusRing } from "@repo/ui";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
+import { fine, footprint as footprintOf } from "@/lib/format";
 import { strings as t } from "@/lib/strings";
 import { ProfileArt, ProfileIcon, SizeIcon } from "./illustrations";
 
-/** Families of settings in the panel. Screws, advanced and print settings join with their tickets. */
+/**
+ * Families of settings in the panel. Screws and advanced settings join with their tickets;
+ * the print settings (layer height, line width) live in the gear menu.
+ */
 export type Family = "size" | "profile";
-
-const lengths = new Intl.NumberFormat(t.locale, { maximumFractionDigits: 1 });
-const heights = new Intl.NumberFormat(t.locale, { maximumFractionDigits: 2 });
 
 /** "168 × 126 mm", measured on the mesh. */
 function footprint(summary: BaseplateSummary): string {
-  const { width, depth } = summary.stats.dimensions;
-  return `${lengths.format(width)} × ${lengths.format(depth)} mm`;
+  return footprintOf(summary.stats.dimensions);
 }
 
 function cellCount(summary: BaseplateSummary): string {
@@ -40,7 +40,7 @@ export function Readout({ summary, live = false }: { summary: BaseplateSummary |
         <span data-testid="cells">{summary ? cellCount(summary) : "…"}</span>
         {summary && (
           <>
-            , {t.height} <span data-testid="height">{heights.format(summary.stats.dimensions.height)} mm</span>
+            , {t.height} <span data-testid="height">{fine.format(summary.stats.dimensions.height)} mm</span>
           </>
         )}
       </p>
@@ -48,8 +48,8 @@ export function Readout({ summary, live = false }: { summary: BaseplateSummary |
   );
 }
 
-/** Short line under the dock's buttons (mobile). */
-export function DockReadout({ summary }: { summary: BaseplateSummary | null }) {
+/** Short lines above the dock's buttons (mobile), with a warning when the build plate is too small. */
+export function DockReadout({ summary, fits }: { summary: BaseplateSummary | null; fits: boolean | null }) {
   return (
     <div className="px-2.5 pt-1.5 pb-2.5" aria-live="polite">
       <p className="text-[18px] font-semibold tracking-[-0.03em] tabular-nums" data-testid="dimensions">
@@ -58,6 +58,12 @@ export function DockReadout({ summary }: { summary: BaseplateSummary | null }) {
       <p className="truncate text-[12px] text-muted tabular-nums" data-testid="cells">
         {summary ? cellCount(summary) : "…"}
       </p>
+      {fits === false && (
+        <p className="mt-1 flex items-center gap-1.5 text-[12px] font-semibold text-accent-strong">
+          <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+          {t.plateTooSmallShort}
+        </p>
+      )}
     </div>
   );
 }
@@ -91,8 +97,8 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
             decrementLabel={t.fewerColumns}
             incrementLabel={t.moreColumns}
             value={settings.columns}
-            min={CELLS_PER_AXIS.min}
-            max={CELLS_PER_AXIS.max}
+            min={BASEPLATE_SETTINGS.columns.min}
+            max={BASEPLATE_SETTINGS.columns.max}
             step={1}
             unit="×"
             locale={t.locale}
@@ -103,8 +109,8 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
             decrementLabel={t.fewerRows}
             incrementLabel={t.moreRows}
             value={settings.rows}
-            min={CELLS_PER_AXIS.min}
-            max={CELLS_PER_AXIS.max}
+            min={BASEPLATE_SETTINGS.rows.min}
+            max={BASEPLATE_SETTINGS.rows.max}
             step={1}
             unit="×"
             locale={t.locale}

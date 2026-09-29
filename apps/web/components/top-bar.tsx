@@ -1,11 +1,12 @@
 "use client";
 
 import { Popover } from "@base-ui/react/popover";
-import { Swatches, focusRing, glass } from "@repo/ui";
+import { BASEPLATE_SETTINGS, type BaseplateSettings } from "@repo/geometry";
+import { NumberStepper, Segmented, Swatches, focusRing, glass } from "@repo/ui";
 import { Coffee, Link2, RotateCcw, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { DONATION_URL } from "@/lib/links";
-import { PREVIEW_COLORS, type PreviewColor } from "@/lib/preferences";
+import { BUILD_PLATE_RANGE, NOZZLES, PREVIEW_COLORS, type Nozzle, type Preferences, type PreviewColor } from "@/lib/preferences";
 import { strings as t } from "@/lib/strings";
 
 interface Action {
@@ -54,19 +55,30 @@ export function TopActions() {
   );
 }
 
+/** Print settings of the baseplate that the menu shows (they belong to the share link). */
+export type PrintSettings = Pick<BaseplateSettings, "layerHeight" | "lineWidth">;
+
 export interface SettingsMenuProps {
-  previewColor: PreviewColor;
-  onPreviewColorChange: (color: PreviewColor) => void;
+  preferences: Preferences;
+  onPreferencesChange: (patch: Partial<Preferences>) => void;
+  settings: PrintSettings;
+  onSettingsChange: (patch: Partial<PrintSettings>) => void;
   /** Mobile: the menu also holds the top bar actions. */
   withActions: boolean;
 }
 
+/** Drops the floating-point noise of a stepped value (0.2 + 0.04 = 0.24000000000000002). */
+const toThousandths = (value: number) => Math.round(value * 1000) / 1000;
+const nozzleFormat = new Intl.NumberFormat(t.locale, { minimumFractionDigits: 1 });
+
 /**
- * Gear menu. On desktop it holds parameters only (preferences of this browser); on
- * mobile it also holds the actions. Language, units, printer and build plate join the
- * parameters with #7 and #14.
+ * Gear menu. On desktop it holds parameters only; on mobile it also holds the actions.
+ * The parameters are the print (nozzle, layer height, line width), the build plate and the
+ * preview colour. Layer height and line width are baseplate settings, shared in the link;
+ * the others are preferences of this browser. Language and units join them with #14.
  */
-export function SettingsMenu({ previewColor, onPreviewColorChange, withActions }: SettingsMenuProps) {
+export function SettingsMenu({ preferences, onPreferencesChange, settings, onSettingsChange, withActions }: SettingsMenuProps) {
+  const { previewColor, nozzle, buildPlate } = preferences;
   const label = withActions ? t.menu : t.parameters;
   const row = `flex h-10 w-full items-center gap-3 rounded-[10px] px-2.5 text-[13.5px] font-medium text-ink-soft transition-colors hover:bg-sunken hover:text-ink ${focusRing} focus-visible:ring-offset-0`;
   return (
@@ -83,7 +95,88 @@ export function SettingsMenu({ previewColor, onPreviewColorChange, withActions }
           <Popover.Popup className="popup flex max-h-[calc(100dvh-5rem)] w-[min(20.5rem,calc(100vw-1.5rem))] flex-col overflow-y-auto">
             <Popover.Title className="px-4 pt-4 pb-1 text-[15px] font-semibold tracking-[-0.01em]">{label}</Popover.Title>
 
-            <section className="px-4 py-3.5" aria-labelledby="preview-color-title">
+            <section className="flex flex-col gap-3 px-4 py-3.5" aria-labelledby="print-title">
+              <h3 id="print-title" className="text-[13.5px] font-semibold">
+                {t.print}
+              </h3>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[13px] font-medium text-muted">{t.nozzle} (mm)</span>
+                <Segmented
+                  label={t.nozzle}
+                  value={String(nozzle)}
+                  onChange={(value) => {
+                    const next = Number(value) as Nozzle;
+                    onPreferencesChange({ nozzle: next });
+                    onSettingsChange({ lineWidth: next });
+                  }}
+                  options={NOZZLES.map((value) => ({ value: String(value), label: nozzleFormat.format(value) }))}
+                />
+                <p className="text-[12px] leading-snug text-muted">{t.nozzleHint}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <NumberStepper
+                  label={t.layerHeight}
+                  decrementLabel={t.thinnerLayer}
+                  incrementLabel={t.thickerLayer}
+                  value={settings.layerHeight}
+                  min={BASEPLATE_SETTINGS.layerHeight.min}
+                  max={BASEPLATE_SETTINGS.layerHeight.max}
+                  step={0.04}
+                  unit="mm"
+                  locale={t.locale}
+                  onChange={(layerHeight) => onSettingsChange({ layerHeight: toThousandths(layerHeight) })}
+                />
+                <NumberStepper
+                  label={t.lineWidth}
+                  decrementLabel={t.narrowerLine}
+                  incrementLabel={t.widerLine}
+                  value={settings.lineWidth}
+                  min={BASEPLATE_SETTINGS.lineWidth.min}
+                  max={BASEPLATE_SETTINGS.lineWidth.max}
+                  step={0.05}
+                  unit="mm"
+                  locale={t.locale}
+                  onChange={(lineWidth) => onSettingsChange({ lineWidth: toThousandths(lineWidth) })}
+                />
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-3 border-t border-line px-4 py-3.5" aria-labelledby="build-plate-title">
+              <div>
+                <h3 id="build-plate-title" className="text-[13.5px] font-semibold">
+                  {t.buildPlate}
+                </h3>
+                <p className="mt-0.5 text-[12px] leading-snug text-muted">{t.buildPlateHint}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <NumberStepper
+                  label={t.buildPlateWidth}
+                  decrementLabel={t.narrowerPlate}
+                  incrementLabel={t.widerPlate}
+                  value={buildPlate.width}
+                  min={BUILD_PLATE_RANGE.min}
+                  max={BUILD_PLATE_RANGE.max}
+                  step={1}
+                  unit="mm"
+                  locale={t.locale}
+                  onChange={(width) => onPreferencesChange({ buildPlate: { ...buildPlate, width } })}
+                />
+                <NumberStepper
+                  label={t.buildPlateDepth}
+                  decrementLabel={t.shallowerPlate}
+                  incrementLabel={t.deeperPlate}
+                  value={buildPlate.depth}
+                  min={BUILD_PLATE_RANGE.min}
+                  max={BUILD_PLATE_RANGE.max}
+                  step={1}
+                  unit="mm"
+                  locale={t.locale}
+                  onChange={(depth) => onPreferencesChange({ buildPlate: { ...buildPlate, depth } })}
+                />
+              </div>
+            </section>
+
+            <section className="border-t border-line px-4 py-3.5" aria-labelledby="preview-color-title">
               <div className="flex items-center justify-between gap-4">
                 <h3 id="preview-color-title" className="text-[13.5px] font-semibold">
                   {t.previewColor}
@@ -94,7 +187,7 @@ export function SettingsMenu({ previewColor, onPreviewColorChange, withActions }
                 <Swatches
                   label={t.previewColor}
                   value={previewColor}
-                  onChange={onPreviewColorChange}
+                  onChange={(color) => onPreferencesChange({ previewColor: color })}
                   swatches={(Object.keys(PREVIEW_COLORS) as PreviewColor[]).map((key) => ({
                     value: key,
                     name: t.previewColors[key],

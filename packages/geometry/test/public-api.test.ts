@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  CELLS_PER_AXIS,
+  BASEPLATE_SETTINGS,
+  DEFAULT_SETTINGS,
   STANDARD_CELL_SIZE_MM,
-  clampCellCount,
+  clampSettings,
+  fitsOnBuildPlate,
   generateBaseplate,
   loadEngine,
+  roundUpToLayer,
   serializeStl,
   type Quality,
 } from "../src/index";
@@ -203,10 +206,8 @@ describe("loadEngine", () => {
 
 describe("generateBaseplate settings", () => {
   it("accepts 1 to 24 cells per axis, rounding the others into range", () => {
-    expect(CELLS_PER_AXIS).toEqual({ min: 1, max: 24 });
-    expect([0, 1, 2.4, 2.6, 24, 25, -3, Number.NaN, Number.POSITIVE_INFINITY].map(clampCellCount)).toEqual([
-      1, 1, 2, 3, 24, 24, 1, 1, 24,
-    ]);
+    const columns = [0, 1, 2.4, 2.6, 24, 25, -3, Number.POSITIVE_INFINITY].map((value) => clampSettings({ columns: value }).columns);
+    expect(columns).toEqual([1, 1, 2, 3, 24, 24, 1, 24]);
   });
 
   it("brings out-of-range cell counts back into range", async () => {
@@ -218,8 +219,9 @@ describe("generateBaseplate settings", () => {
     const odd = await generateBaseplate({ columns: 2.6, rows: -3 }, "preview");
     expect([odd.layout.columns, odd.layout.rows]).toEqual([3, 1]);
 
+    // Not a number: the default count (4 × 3).
     const invalid = await generateBaseplate({ columns: Number.NaN, rows: Number.POSITIVE_INFINITY }, "preview");
-    expect([invalid.layout.columns, invalid.layout.rows]).toEqual([1, 24]);
+    expect([invalid.layout.columns, invalid.layout.rows]).toEqual([4, 24]);
   });
 
   it("uses fewer triangles for the preview than for the final quality", async () => {
@@ -244,5 +246,130 @@ describe("serializeStl", () => {
       expectWithin(reread.bounds.min[axis], original.bounds.min[axis]);
       expectWithin(reread.bounds.max[axis], original.bounds.max[axis]);
     }
+  });
+});
+
+describe("statistics", () => {
+  describe("volume of material", () => {
+    it.each<[number, number]>([
+      [1, 1],
+      [3, 2],
+      [10, 10],
+    ])("is measured on the final mesh of %i × %i cells, in mm³", async (columns, rows) => {
+      const baseplate = await generateBaseplate({ columns, rows }, "final");
+      const measured = (await checkMesh(baseplate.mesh)).volume;
+      // Same solid as manifold measures it: no density, no estimate, float32 rounding only.
+      expect(baseplate.stats.volume).not.toBeNull();
+      expectWithin(baseplate.stats.volume ?? Number.NaN, measured, measured * 1e-6);
+    });
+
+    it("is not given for the preview, whose mesh is coarser than the printed one", async () => {
+      const preview = await generateBaseplate({ columns: 3, rows: 2 }, "preview");
+      expect(preview.stats.volume).toBeNull();
+    });
+
+    it("matches the volume of a 1 × 1 cell worked out from the hybrid profile", async () => {
+      // ADR 0002, bottom to top: [z, inset] of the pocket wall; the pocket opening at a
+      // height is a rounded square of side 42 − 2·inset and radius 4 − inset.
+      const wall: [number, number][] = [
+        [0, 2.85],
+        [0.35, 2.85],
+        [1.05, 2.15],
+        [2.85, 2.15],
+        [4.6, 0.4],
+      ];
+      const opening = (inset: number) => roundedSquareArea(42 - 2 * inset, 4 - inset);
+      // The inset is linear on each segment, so the area is quadratic: Simpson's rule is exact.
+      let pocket = 0;
+      for (let i = 1; i < wall.length; i++) {
+        const [z0, i0] = wall[i - 1] as [number, number];
+        const [z1, i1] = wall[i] as [number, number];
+        pocket += ((z1 - z0) / 6) * (opening(i0) + 4 * opening((i0 + i1) / 2) + opening(i1));
+      }
+      const block = roundedSquareArea(42, 4) * 4.6;
+      const { stats } = await generateBaseplate({ columns: 1, rows: 1 }, "final");
+      // 32 segments per quarter circle fall short of the true arcs by well under 0.5 mm³.
+      expectWithin(stats.volume ?? Number.NaN, block - pocket, 0.5);
+    });
+  });
+});
+
+describe("rounding to the layer", () => {
+  it("rounds a thickness chosen by the generator up to a multiple of the layer height", () => {
+    expect(roundUpToLayer(0.4, 0.2)).toBe(0.4);
+    expect(roundUpToLayer(0.4, 0.28)).toBe(0.56);
+    expect(roundUpToLayer(0.6, 0.2)).toBe(0.6);
+    expect(roundUpToLayer(0.41, 0.2)).toBe(0.6);
+    expect(roundUpToLayer(1, 0.12)).toBe(1.08);
+    expect(roundUpToLayer(2.8, 0.28)).toBe(2.8);
+    expect(roundUpToLayer(0.05, 0.2)).toBe(0.2);
+  });
+
+  it("never rounds the pocket profile: the baseplate stays 4.60 mm high at any layer height", async () => {
+    for (const layerHeight of [0.12, 0.2, 0.28]) {
+      const { stats } = await generateBaseplate({ columns: 2, rows: 2, layerHeight }, "preview");
+      expectWithin(stats.dimensions.height, HEIGHT_MM);
+    }
+  });
+
+  it("gives the height in layers: the layers needed to print the 4.60 mm", async () => {
+    const layers = async (layerHeight: number) =>
+      (await generateBaseplate({ columns: 2, rows: 2, layerHeight }, "preview")).stats.layers;
+    expect(await layers(0.2)).toBe(23);
+    expect(await layers(0.12)).toBe(39); // 38.3 layers: the last one is partial
+    expect(await layers(0.28)).toBe(17); // 16.4 layers
+    // Without a layer height, the default one of the settings: 0.2 mm.
+    expect((await generateBaseplate({ columns: 2, rows: 2 }, "preview")).stats.layers).toBe(23);
+  });
+});
+
+describe("settings", () => {
+  it("keeps the defaults and ranges of every setting in one place", () => {
+    expect(DEFAULT_SETTINGS).toEqual({ columns: 4, rows: 3, layerHeight: 0.2, lineWidth: 0.4 });
+    expect(BASEPLATE_SETTINGS.layerHeight).toMatchObject({ min: 0.12, max: 0.28, default: 0.2 });
+    expect(BASEPLATE_SETTINGS.lineWidth).toMatchObject({ min: 0.1, max: 1.2, default: 0.4 });
+    expect(BASEPLATE_SETTINGS.columns).toMatchObject({ min: 1, max: 24, default: 4 });
+    expect(BASEPLATE_SETTINGS.rows).toMatchObject({ min: 1, max: 24, default: 3 });
+  });
+
+  it("brings every setting into its range, and fills the missing ones with their default", () => {
+    expect(clampSettings({ columns: 30, rows: 2.6, layerHeight: 0.05, lineWidth: 3 })).toEqual({
+      columns: 24,
+      rows: 3,
+      layerHeight: 0.12,
+      lineWidth: 1.2,
+    });
+    expect(clampSettings({ layerHeight: 0.5, lineWidth: 0 })).toEqual({
+      columns: 4,
+      rows: 3,
+      layerHeight: 0.28,
+      lineWidth: 0.1,
+    });
+    expect(clampSettings({ layerHeight: Number.NaN, lineWidth: 0.45 })).toMatchObject({ layerHeight: 0.2, lineWidth: 0.45 });
+  });
+
+  it("computes the settings as brought into range", async () => {
+    const { stats } = await generateBaseplate({ columns: 2, rows: 2, layerHeight: 1 }, "preview");
+    expect(stats.layers).toBe(17); // 0.28 mm, the thickest layer allowed
+  });
+});
+
+describe("build plate", () => {
+  it("counts one piece: cutting for the build plate is not in v1", async () => {
+    const { stats } = await generateBaseplate({ columns: 24, rows: 24 }, "preview");
+    expect(stats.pieces).toBe(1);
+  });
+
+  it("tells whether the baseplate fits on the build plate, in either orientation", async () => {
+    const { stats } = await generateBaseplate({ columns: 5, rows: 5 }, "preview"); // 210 × 210 mm
+    expect(fitsOnBuildPlate(stats.dimensions, { width: 200, depth: 200 })).toBe(false);
+    expect(fitsOnBuildPlate(stats.dimensions, { width: 256, depth: 256 })).toBe(true);
+    expect(fitsOnBuildPlate(stats.dimensions, { width: 210, depth: 210 })).toBe(true); // just fits
+
+    const long = { width: 300, depth: 200, height: 4.6 };
+    expect(fitsOnBuildPlate(long, { width: 310, depth: 210 })).toBe(true);
+    expect(fitsOnBuildPlate(long, { width: 210, depth: 310 })).toBe(true); // turned a quarter
+    expect(fitsOnBuildPlate(long, { width: 250, depth: 250 })).toBe(false);
+    expect(fitsOnBuildPlate(long, { width: 300, depth: 199 })).toBe(false);
   });
 });

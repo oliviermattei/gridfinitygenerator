@@ -4,8 +4,8 @@ import type { BaseplateSummary, EngineRequest, EngineResponse, EngineWarmUp } fr
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 export interface EngineClientEvents {
-  /** A baseplate for the latest settings shown: the preview first, then the final quality. */
-  onBaseplate(baseplate: Baseplate, quality: Quality): void;
+  /** A baseplate for the latest settings shown, which it gets with them: the preview first, then the final quality. */
+  onBaseplate(baseplate: Baseplate, quality: Quality, settings: BaseplateSettings): void;
   /** Computing the latest settings shown failed. */
   onError(error: Error): void;
 }
@@ -186,7 +186,7 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
           const baseplate = await generate(target.settings, quality);
           if (shown !== target) continue; // stale: dropped, the latest settings come next
           target.next = quality === "preview" ? "final" : null;
-          events.onBaseplate(baseplate, quality);
+          events.onBaseplate(baseplate, quality, target.settings);
         } catch (error) {
           if (shown !== target) continue;
           target.next = null;

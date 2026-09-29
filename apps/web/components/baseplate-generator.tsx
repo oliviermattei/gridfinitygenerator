@@ -1,22 +1,21 @@
 "use client";
 
-import type { Baseplate, BaseplateSettings } from "@repo/geometry";
+import { DEFAULT_SETTINGS, type Baseplate, type BaseplateSettings, type Quality } from "@repo/geometry";
 import { focusRing, glass } from "@repo/ui";
 import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
-import { PREVIEW_COLORS, usePreviewColor } from "@/lib/preferences";
+import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
 import { strings as t } from "@/lib/strings";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { DownloadButton } from "./download-button";
 import { PocketMark } from "./illustrations";
 import { DOCK_OFFSET, MobileDock } from "./mobile-dock";
 import { Families, Readout, type Family } from "./settings-panel";
+import { StatsCard, fitsOn } from "./stats-card";
 import { SettingsMenu, TopActions } from "./top-bar";
-
-const DEFAULT_SETTINGS: BaseplateSettings = { columns: 4, rows: 3 };
 
 /** Space kept between a floating panel and the framed model, in CSS pixels. */
 const GAP = 16;
@@ -24,6 +23,15 @@ const GAP = 16;
 const PANEL = { top: 72, edge: 16, width: 380 };
 /** Height of the mobile top bar area (brand, menu), in CSS pixels. */
 const MOBILE_TOP_BAR = 64;
+/** Desktop statistics frame, in CSS pixels: under the gear menu, on the right edge. */
+const STATS = { top: PANEL.top, edge: PANEL.edge, width: 272 };
+
+/** The baseplate on screen, with the quality and the settings it was computed for. */
+interface OnScreen {
+  baseplate: Baseplate;
+  quality: Quality;
+  settings: BaseplateSettings;
+}
 
 /** `baseplate-{nx}x{ny}-{W}x{D}mm.stl`, the naming of the spec (#9). */
 function stlFileName({ layout, stats }: BaseplateSummary): string {
@@ -59,13 +67,13 @@ function useElementSize(element: HTMLElement | null): { width: number; height: n
 export function BaseplateGenerator() {
   const engine = useRef<EngineClient | null>(null);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [baseplate, setBaseplate] = useState<Baseplate | null>(null);
+  const [shown, setShown] = useState<OnScreen | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [openFamily, setOpenFamily] = useState<Family | null>("size");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [recenter, setRecenter] = useState(0);
-  const [previewColor, setPreviewColor] = usePreviewColor();
+  const [preferences, setPreferences] = usePreferences();
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
   const [panel, setPanel] = useState<HTMLElement | null>(null);
@@ -79,8 +87,8 @@ export function BaseplateGenerator() {
   // settings, then their final quality, and drops whatever a newer setting made stale.
   useEffect(() => {
     const client = createEngineClient({
-      onBaseplate(next) {
-        setBaseplate(next);
+      onBaseplate(next, quality, computedFor) {
+        setShown({ baseplate: next, quality, settings: computedFor });
         setError(null);
       },
       onError(reason) {
@@ -98,6 +106,22 @@ export function BaseplateGenerator() {
   useEffect(() => {
     engine.current?.show(settings);
   }, [settings]);
+
+  const baseplate = shown?.baseplate ?? null;
+  // The volume is measured on the final mesh: "…" until it answers for the current settings.
+  const final = shown !== null && shown.quality === "final" && shown.settings === settings;
+  const updateSettings = (patch: Partial<BaseplateSettings>) => setSettings((previous) => ({ ...previous, ...patch }));
+  const fits = fitsOn(baseplate, preferences.buildPlate);
+  const renderStats = (className: string) => (
+    <StatsCard
+      summary={baseplate}
+      layerHeight={shown?.settings.layerHeight ?? settings.layerHeight}
+      final={final}
+      buildPlate={preferences.buildPlate}
+      fits={fits}
+      className={className}
+    />
+  );
 
   async function exportStl() {
     const client = engine.current;
@@ -117,7 +141,7 @@ export function BaseplateGenerator() {
 
   // Canvas area hidden by the floating panels: the model is framed in what remains.
   const insets: ViewInsets = desktop
-    ? { top: PANEL.top, right: GAP, bottom: GAP, left: PANEL.edge + (panelSize?.width ?? PANEL.width) + GAP }
+    ? { top: PANEL.top, right: STATS.edge + STATS.width + GAP, bottom: GAP, left: PANEL.edge + (panelSize?.width ?? PANEL.width) + GAP }
     : {
         top: MOBILE_TOP_BAR,
         right: 0,
@@ -128,7 +152,7 @@ export function BaseplateGenerator() {
   const families = (
     <Families
       settings={settings}
-      onSettingsChange={(patch) => setSettings((previous) => ({ ...previous, ...patch }))}
+      onSettingsChange={updateSettings}
       summary={baseplate}
       open={openFamily}
       onOpenChange={setOpenFamily}
@@ -139,7 +163,7 @@ export function BaseplateGenerator() {
     <main className="relative h-dvh overflow-hidden bg-bg text-[14px]">
       <MeshPreview
         mesh={baseplate?.mesh ?? null}
-        color={PREVIEW_COLORS[previewColor]}
+        color={PREVIEW_COLORS[preferences.previewColor]}
         insets={insets}
         recenter={recenter}
         className="absolute inset-0"
@@ -155,8 +179,23 @@ export function BaseplateGenerator() {
 
       <div className="absolute top-3 right-3 flex items-center gap-2 md:top-4 md:right-4">
         <TopActions />
-        <SettingsMenu previewColor={previewColor} onPreviewColorChange={setPreviewColor} withActions={!desktop} />
+        <SettingsMenu
+          preferences={preferences}
+          onPreferencesChange={setPreferences}
+          settings={settings}
+          onSettingsChange={updateSettings}
+          withActions={!desktop}
+        />
       </div>
+
+      {desktop && (
+        <div
+          style={{ top: STATS.top, right: STATS.edge, width: STATS.width }}
+          className={`absolute hidden overflow-hidden rounded-[18px] md:block ${glass}`}
+        >
+          {renderStats("")}
+        </div>
+      )}
 
       <aside
         ref={setPanel}
@@ -184,6 +223,8 @@ export function BaseplateGenerator() {
 
       <MobileDock
         summary={baseplate}
+        fits={fits}
+        stats={renderStats("mb-2 rounded-2xl bg-sunken")}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         download={<DownloadButton onDownload={exportStl} exporting={exporting} compact />}

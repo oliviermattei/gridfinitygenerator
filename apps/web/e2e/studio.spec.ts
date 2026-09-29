@@ -76,8 +76,16 @@ test.describe("desktop", () => {
     const menu = page.getByRole("dialog", { name: "Paramètres" });
     await expect(menu).toBeVisible();
     await expect(menu.getByRole("radiogroup", { name: "Couleur de l'aperçu" }).getByRole("radio")).toHaveCount(5);
-    // Nothing else to act on in the menu: no action button, no link.
-    await expect(menu.getByRole("button")).toHaveCount(0);
+    await expect(menu.getByRole("radiogroup", { name: "Buse" })).toBeVisible();
+    await expect(numberField(page, "Hauteur de couche")).toBeVisible();
+    await expect(numberField(page, "Largeur de ligne")).toBeVisible();
+    await expect(numberField(page, "Largeur du plateau")).toBeVisible();
+    // No action in the menu: its only buttons are the −/+ of its number fields, and no link.
+    for (const action of ["Partager", "Réinitialiser", "Offrir un café"]) {
+      await expect(menu.getByRole("button", { name: action })).toHaveCount(0);
+    }
+    const buttons = await menu.getByRole("button").evaluateAll((elements) => elements.map((element) => element.closest("[role=group]") !== null));
+    expect(buttons.every(Boolean), "every button of the menu steps a number field").toBe(true);
     await expect(menu.getByRole("link")).toHaveCount(0);
   });
 

@@ -13,6 +13,10 @@ export const DOCK_OFFSET = 12;
 
 export interface MobileDockProps {
   summary: BaseplateSummary | null;
+  /** Whether the baseplate fits on the build plate; null until it is known. */
+  fits: boolean | null;
+  /** The statistics frame, shown in the sheet under the dimensions. */
+  stats: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   download: ReactNode;
@@ -24,10 +28,11 @@ export interface MobileDockProps {
 
 /**
  * Mobile controls: a dock at the bottom (dimensions, Réglages, download) and a settings
- * sheet that rises over 58 % of the height. The sheet is not modal and only closes on
- * request, so the preview above it stays visible and can be orbited.
+ * sheet that rises over 58 % of the height, with the statistics under the dimensions. The
+ * sheet is not modal and only closes on request, so the preview above it stays visible and
+ * can be orbited.
  */
-export function MobileDock({ summary, open, onOpenChange, download, children, dockRef, sheetRef }: MobileDockProps) {
+export function MobileDock({ summary, fits, stats, open, onOpenChange, download, children, dockRef, sheetRef }: MobileDockProps) {
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange} modal={false} disablePointerDismissal>
       {/* Hidden under the open sheet, which repeats its dimensions. */}
@@ -37,7 +42,7 @@ export function MobileDock({ summary, open, onOpenChange, download, children, do
         className={`absolute md:hidden ${open ? "invisible" : ""}`}
       >
         <div className="rounded-[22px] border border-line bg-surface p-2 shadow-[0_18px_40px_-18px_rgb(18_19_25/0.35)]">
-          <DockReadout summary={summary} />
+          <DockReadout summary={summary} fits={fits} />
           <div className="flex gap-2">
             <Drawer.Trigger
               className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-[14px] bg-sunken text-[14px] font-semibold ${focusRing}`}
@@ -68,6 +73,7 @@ export function MobileDock({ summary, open, onOpenChange, download, children, do
               </Drawer.Close>
             </div>
             <Drawer.Content className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-6">
+              {stats}
               {children}
             </Drawer.Content>
           </Drawer.Popup>
