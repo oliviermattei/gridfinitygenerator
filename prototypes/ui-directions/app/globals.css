@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
-/* PROTOTYPE JETABLE v2 — une palette sobre par direction : neutres + UN accent.
-   Les briques de components/kit.tsx ne lisent que ces jetons. */
+/* PROTOTYPE JETABLE v3 — palette sobre : neutres + UN accent.
+   Les briques de components/kit.tsx ne lisent que ces jetons.
+   Les jetons --accent* ne sont PAS ici : ils viennent de lib/accents.ts (source unique). */
 
-/* B « Studio » : blanc cassé lumineux, bleu outremer, formes douces, panneaux flottants. */
+/* « Studio » : blanc cassé lumineux, formes douces, panneaux flottants. */
 .dir-b {
   --font: var(--font-outfit), system-ui, sans-serif;
   --bg: #f1f1f3;
@@ -16,11 +17,6 @@
   --ink-soft: #3b3d47;
   --muted: #6b6d78;
   --faint: #a0a2ad;
-  --accent: #2f4bf5;
-  --accent-strong: #2f4bf5;
-  --accent-ink: #ffffff;
-  --accent-tint: #eef1ff;
-  --accent-ring: rgb(47 75 245 / 0.25);
   --r-ctl: 10px;
   --r-card: 14px;
   --r-switch: 999px;

@@ -1,6 +1,8 @@
-// PROTOTYPE JETABLE — candidats pour l'accent unique de la direction Studio (l'outremer a été rejeté).
-// Chaque accent fixe les jetons CSS de l'interface et la couleur du plastique de l'aperçu 3D
+// PROTOTYPE JETABLE — accent unique de la direction Studio : SEULE source de sa couleur.
+// Pour changer l'accent du site : modifier BRAND_ACCENT (ou ajouter une entrée à ACCENTS).
+// Chaque accent fixe les jetons CSS de l'interface (--accent*) et la couleur du plastique de l'aperçu 3D
 // (par défaut, la baseplate a la couleur de la marque). `ink` = texte posé sur l'accent (contraste ≥ 4,5:1).
+// Test sans toucher au code : ?accent=<clé> dans l'URL.
 import type { CSSProperties } from "react";
 
 export type Accent = {
@@ -26,6 +28,10 @@ export const ACCENTS: Accent[] = [
   { key: "graphite", fr: "Graphite", en: "Graphite", hex: "#22242A", strong: "#22242A", ink: "#FFFFFF", tint: "#EDEEF1", plastic: "#F0F0EC" },
 ];
 
+/** Accent de la marque, choisi le 29/09/2026 (l'outremer a été rejeté). */
+export const BRAND_ACCENT = "terracotta";
+export const DEFAULT_ACCENT = Math.max(0, ACCENTS.findIndex((a) => a.key === BRAND_ACCENT));
+
 export function accentVars(a: Accent): CSSProperties {
   return {
     "--accent": a.hex,
@@ -34,4 +40,10 @@ export function accentVars(a: Accent): CSSProperties {
     "--accent-tint": a.tint,
     "--accent-ring": `color-mix(in srgb, ${a.hex} 28%, transparent)`,
   } as CSSProperties;
+}
+
+/** Règle CSS qui pose les jetons d'accent sur la racine de la direction et sur les popups portés hors de l'arbre. */
+export function accentCss(a: Accent) {
+  const vars = Object.entries(accentVars(a)).map(([k, v]) => `${k}: ${v};`).join(" ");
+  return `.dir-b, .kit-popup { ${vars} }`;
 }

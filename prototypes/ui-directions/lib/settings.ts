@@ -2,6 +2,7 @@
 // PROTOTYPE JETABLE — état des réglages partagé par les 3 directions visuelles.
 // Pas de vraie géométrie : seulement assez de logique pour que l'aperçu et les libellés vivent.
 import { useCallback, useMemo, useState } from "react";
+import { DEFAULT_ACCENT } from "./accents";
 
 export type Align = "tl" | "t" | "tr" | "l" | "c" | "r" | "bl" | "b" | "br";
 export const ALIGNS: Align[] = ["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"];
@@ -33,7 +34,7 @@ export type Settings = {
   lang: "fr" | "en";
   /** Couleur de filament de l'aperçu (index dans la palette de la variante). */
   filament: number;
-  /** Accent de l'interface (index dans lib/accents.ts) : choix de prototype, pas un réglage produit. */
+  /** Accent de l'interface (index dans lib/accents.ts), surchargeable par ?accent= : pas un réglage produit. */
   accent: number;
 };
 
@@ -63,7 +64,7 @@ export const DEFAULTS: Settings = {
   unit: "mm",
   lang: "fr",
   filament: 0,
-  accent: 0,
+  accent: DEFAULT_ACCENT,
 };
 
 export type Layout = {

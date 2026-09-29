@@ -5,8 +5,7 @@ import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSettings } from "@/lib/settings";
 import { DebugPanel } from "@/components/DebugPanel";
-import { AccentSwitcher } from "@/components/AccentSwitcher";
-import { ACCENTS } from "@/lib/accents";
+import { ACCENTS, accentCss } from "@/lib/accents";
 import Studio from "@/variants/VariantB";
 
 function Screen() {
@@ -15,7 +14,7 @@ function Screen() {
   const { set } = ctx;
   // Raccourcis de capture : ?accent=terracotta&magnets&screws&release&lang=en
   useEffect(() => {
-    const accent = ACCENTS.findIndex((a) => a.key === params.get("accent"));
+    const accent = ACCENTS.findIndex((a) => a.key === params.get("accent")); // test d'un autre accent
     set({
       ...(accent >= 0 ? { accent } : {}),
       ...(params.has("magnets") ? { magnets: true } : {}),
@@ -28,7 +27,7 @@ function Screen() {
     <>
       <Studio {...ctx} />
       <DebugPanel s={ctx.s} layout={ctx.layout} variant="Studio" />
-      <AccentSwitcher value={ctx.s.accent} onChange={(accent) => set({ accent, filament: 0 })} />
+      <style>{accentCss(ACCENTS[ctx.s.accent])}</style>
     </>
   );
 }
