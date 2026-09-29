@@ -7,6 +7,10 @@ const baseURL = `http://localhost:${PORT}`;
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // Every test loads the engine WASM and a WebGL preview in its own browser: beyond a few at
+  // once, a cold first computation can exceed the 5 s of an assertion on a many-core machine.
+  // CI keeps the default (half the cores of its small runner).
+  workers: process.env.CI ? undefined : 4,
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
