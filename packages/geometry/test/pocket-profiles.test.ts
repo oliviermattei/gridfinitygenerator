@@ -165,33 +165,43 @@ describe("flush profile, statistics", () => {
 });
 
 describe("flush profile with a margin", () => {
-  it("keeps the margin 2.00 mm high under the 4.25 mm grid", async () => {
+  it("carries the flush profile on into the margin, 4.25 mm high up to the outline", async () => {
     const { mesh } = await generateBaseplate({ pocketProfile: "flush" }, "preview");
-    const { sections, status, bounds } = await checkMesh(mesh, [1.9, 2.1, 4.2]);
+    const { sections, status, bounds } = await checkMesh(mesh, FLUSH_OPENINGS.map(({ z }) => z));
     expect(status).toBe("NoError");
     expectWithin(bounds.max[2], FLUSH_HEIGHT_MM);
-    const width = (z: number) => {
-      const box = sectionBox(sections.get(z) ?? []);
-      return [box.x1 - box.x0, box.y1 - box.y0];
-    };
-    // The default drawer less its gap, 399 × 279 mm; above the margin, the 9 × 6 grid.
-    expect(width(1.9).map((value) => Math.round(value * 1000) / 1000)).toEqual([399, 279]);
-    expect(width(2.1).map((value) => Math.round(value * 1000) / 1000)).toEqual([378, 252]);
-    expect(width(4.2).map((value) => Math.round(value * 1000) / 1000)).toEqual([378, 252]);
+    // The default drawer less its gap, 399 × 279 mm, up to the top.
+    const top = sectionBox(sections.get(4.24) ?? []);
+    expect([top.x1 - top.x0, top.y1 - top.y0].map((value) => Math.round(value * 1000) / 1000)).toEqual([399, 279]);
+    for (const { z, inset } of FLUSH_OPENINGS) {
+      // Left margin, first row: the cell from x = −231 to −189, cut by the outer wall at x = −198.3.
+      const opening = pocketOpening(sections.get(z) ?? [], [-194, -105]);
+      expectWithin(opening?.width, 198.3 - 189 - inset);
+      expectWithin(opening?.depth, 42 - 2 * inset);
+    }
   });
 });
 
-describe("flush profile with a margin, in thicker layers", () => {
-  it("rounds the margin up to the layer: 2.24 mm at 0.28 mm, still under the 4.25 mm grid", async () => {
-    const { mesh } = await generateBaseplate({ pocketProfile: "flush", layerHeight: 0.28 }, "preview");
-    const { sections, status } = await checkMesh(mesh, [2.23, 2.25]);
+describe("flush profile with a narrow margin", () => {
+  /** 3 × 2 cells with 3.2 mm of margin on every side: 2 mm between the grid and the outer wall. */
+  const narrow = (layerHeight: number) =>
+    flushCells(3, 2, { marginWidth: 6.4, marginDepth: 6.4, layerHeight });
+
+  it("gives a narrow truncated cell a floor on the upper slope of the flush profile", async () => {
+    // The upper slope is 0.8 mm off the line of the grid at 3.85 mm: a floor at 4.0 mm, 20 layers.
+    const { mesh } = await generateBaseplate(narrow(0.2), "final");
+    const { sections, status } = await checkMesh(mesh, [3.95, 4.1]);
     expect(status).toBe("NoError");
-    const width = (z: number) => {
-      const box = sectionBox(sections.get(z) ?? []);
-      return Math.round((box.x1 - box.x0) * 1000) / 1000;
-    };
-    expect(width(2.23)).toBe(399);
-    expect(width(2.25)).toBe(378);
+    expect(sections.get(3.95)).toHaveLength(1 + 6);
+    // The outline, the 6 pockets and a groove along each truncated cell of the sides.
+    expect(sections.get(4.1)).toHaveLength(1 + 6 + 2 + 2 + 3 + 3);
+  });
+
+  it("fills a groove that would be less than a layer deep: in layers of 0.24 mm, its floor would be at 4.08 mm", async () => {
+    const { mesh } = await generateBaseplate(narrow(0.24), "final");
+    const { sections, status } = await checkMesh(mesh, [4.2]);
+    expect(status).toBe("NoError");
+    expect(sections.get(4.2)).toHaveLength(1 + 6);
   });
 });
 

@@ -1,4 +1,5 @@
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
+import type { Margins } from "./layout";
 import type { TriangleMesh } from "./mesh";
 import { MARGIN } from "./margin";
 import { withArena, type Own } from "./manifold";
@@ -13,14 +14,47 @@ import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect,
  *
  * Kinds of cells: the inner cell, the edge cells of a side with a margin (the brick carries
  * its piece of margin), and the four corners (rounded like the outline, with their margin).
- * A corner is only a corner on both axes, so every axis needs at least two cells; single
- * rows and columns go through the boolean fallback, and so does a grid of mixed pocket
- * profiles (the test kit). With screws, a kind of cell is also told apart by its corners
+ * A corner is only a corner on both axes, so every axis of the lattice (below) needs at
+ * least two cells; single rows and columns without whole cells of margin go through the
+ * boolean fallback, and so does a grid of mixed pocket profiles (the test kit). With screws, a kind of cell is also told apart by its corners
  * that hold a screw: the brick carries a quarter of each of their holes, whose circles have
  * a vertex on the seams, so that neighbouring quarters weld.
+ *
+ * Bricks are laid on the lattice of the grid (`latticeOf`): the grid, and the whole cells
+ * the margin carries on beyond it, which are inner cells; the rest of the margin goes to
+ * the bricks along the outline.
  */
-export function canAssembleWithBricks({ columns, rows, lowerCells }: GridFrame): boolean {
-  return columns >= 2 && rows >= 2 && lowerCells.length === 0;
+export function canAssembleWithBricks(frame: GridFrame): boolean {
+  const { columns, rows } = latticeOf(frame);
+  return columns[1] - columns[0] >= 2 && rows[1] - rows[0] >= 2 && frame.lowerCells.length === 0;
+}
+
+/**
+ * Cells the bricks are laid on, in the indices of the grid (i along X, j along Y, negative
+ * before the grid): the grid, and the whole cells its margin carries on beyond each side,
+ * built exactly as the grid's inner cells (`MarginVariant.wholeCells`).
+ */
+interface Lattice {
+  /** First column, and the column past the last one. */
+  columns: readonly [first: number, end: number];
+  rows: readonly [first: number, end: number];
+  /** Margin left beyond the lattice on each side, carried by the bricks along that side. */
+  rests: Margins;
+}
+
+function latticeOf(frame: GridFrame): Lattice {
+  const { columns, rows, cellSize, margins } = frame;
+  const whole = MARGIN.wholeCells?.(frame) ?? { left: 0, right: 0, back: 0, front: 0 };
+  return {
+    columns: [-whole.left, columns + whole.right],
+    rows: [-whole.front, rows + whole.back],
+    rests: {
+      left: margins.left - whole.left * cellSize,
+      right: margins.right - whole.right * cellSize,
+      back: margins.back - whole.back * cellSize,
+      front: margins.front - whole.front * cellSize,
+    },
+  };
 }
 
 /**
@@ -31,10 +65,11 @@ export function canAssembleWithBricks({ columns, rows, lowerCells }: GridFrame):
 export function assembleWithBricks(wasm: ManifoldToplevel, frame: GridFrame, checked: boolean): TriangleMesh {
   if (!canAssembleWithBricks(frame)) {
     throw new RangeError(
-      `Cell bricks need at least 2 × 2 cells of a single pocket profile, not ${frame.columns} × ${frame.rows}`,
+      `Cell bricks need a lattice of at least 2 × 2 cells of a single pocket profile, not ${frame.columns} × ${frame.rows} cells and their margin`,
     );
   }
-  const mesh = joinBricks(cellBricks(wasm, frame), frame);
+  const lattice = latticeOf(frame);
+  const mesh = joinBricks(cellBricks(wasm, frame, lattice), frame, lattice);
   if (checked) assertManifold(wasm, mesh);
   return mesh;
 }
@@ -60,8 +95,14 @@ interface Brick extends TriangleMesh {
 /** Side of a cell on each axis: −1 on the first row or column, 1 on the last, 0 inside. */
 type Side = -1 | 0 | 1;
 
-/** Key of a kind of cell in the table of bricks: its sides, and its corners that hold a screw. */
-const kindKey = (sx: Side, sy: Side, screws: number) => `${sx},${sy},${screws}`;
+/**
+ * Key of a kind of cell in the table of bricks: its sides, its corners that hold a screw, and
+ * whether it is a cell of the margin on the outline: its pocket comes from the margin's cut,
+ * which may differ from the grid's pocket (along a side without margin, the outer wall cuts
+ * it). An inner cell of the margin is an inner cell of the grid.
+ */
+const kindKey = (sx: Side, sy: Side, screws: number, margin: boolean) =>
+  `${sx},${sy},${screws}${margin && (sx !== 0 || sy !== 0) ? ",margin" : ""}`;
 
 /** Corners of a cell, as offsets of the intersection of grid lines from the cell index. */
 const CORNERS: readonly (readonly [da: 0 | 1, db: 0 | 1])[] = [
@@ -77,32 +118,39 @@ function screwCorners(i: number, j: number, frame: GridFrame): number {
 }
 
 /** Key of the brick of cell (i, j). */
-function brickKey(i: number, j: number, frame: GridFrame): string {
-  return kindKey(...kindOf(i, j, frame), screwCorners(i, j, frame));
+function brickKey(i: number, j: number, frame: GridFrame, lattice: Lattice): string {
+  return kindKey(...kindOf(i, j, frame, lattice), screwCorners(i, j, frame), !inGrid(i, j, frame));
 }
 
 /**
- * Kind of cell (i, j): its sides on the outline. An edge cell on a side without margin is
- * an inner cell, unless the bottom of the outline is chamfered; a corner stays a corner,
- * since the outline rounds it.
+ * Kind of cell (i, j): its sides on the outline, at the ends of the lattice. An edge cell of
+ * the grid on a side without margin is an inner cell, unless the bottom of the outline is
+ * chamfered; a corner stays a corner, since the outline rounds it; and a cell of the margin
+ * stays an edge, since the margin cuts it along the whole outline.
  */
-function kindOf(i: number, j: number, frame: GridFrame): [sx: Side, sy: Side] {
-  const { columns, rows } = frame;
-  const sx: Side = i === columns - 1 ? 1 : i === 0 ? -1 : 0;
-  const sy: Side = j === rows - 1 ? 1 : j === 0 ? -1 : 0;
-  if ((sx !== 0 && sy !== 0) || frame.bottomChamfer > 0) return [sx, sy];
-  return [marginX(frame, sx) > 0 ? sx : 0, marginY(frame, sy) > 0 ? sy : 0];
+function kindOf(i: number, j: number, frame: GridFrame, lattice: Lattice): [sx: Side, sy: Side] {
+  const { columns, rows } = lattice;
+  const sx: Side = i === columns[1] - 1 ? 1 : i === columns[0] ? -1 : 0;
+  const sy: Side = j === rows[1] - 1 ? 1 : j === rows[0] ? -1 : 0;
+  if ((sx !== 0 && sy !== 0) || frame.bottomChamfer > 0 || !inGrid(i, j, frame)) return [sx, sy];
+  return [restX(lattice, sx) > 0 ? sx : 0, restY(lattice, sy) > 0 ? sy : 0];
+}
+
+/** Whether cell (i, j) of the lattice is a cell of the grid, not of the margin. */
+function inGrid(i: number, j: number, { columns, rows }: GridFrame): boolean {
+  return i >= 0 && i < columns && j >= 0 && j < rows;
 }
 
 /**
  * One brick per kind of cell present in the grid, centred on its cell centre: the inner
  * brick is a cell block minus the pocket tool; the others are the slab of their footprint
  * (cell plus margin, cut by the outline at the corners, less the margin's holes, with the
- * bottom chamfer of the outline) minus the pocket tool and the margin's solid cut. Then the
+ * bottom chamfer of the outline) minus the pocket tool and the margin's solid cut (which
+ * holds the pocket of a cell of the margin, cut by the outline). Then the
  * quarter of a screw hole is removed at each corner of the brick that holds a screw.
  */
-function cellBricks(wasm: ManifoldToplevel, frame: GridFrame): Map<string, Brick> {
-  const { columns, rows, cellSize, profile } = frame;
+function cellBricks(wasm: ManifoldToplevel, frame: GridFrame, lattice: Lattice): Map<string, Brick> {
+  const { cellSize, profile } = frame;
   const half = cellSize / 2;
   return withArena((own) => {
     const pocket = pocketTool(wasm, own, frame);
@@ -126,28 +174,30 @@ function cellBricks(wasm: ManifoldToplevel, frame: GridFrame): Map<string, Brick
         return own(block.subtract(pocket));
       }
       const [cx, cy] = cellCentre(i, j, frame);
-      const [x0, y0, x1, y1] = brickArea(frame, sx, sy);
+      const [x0, y0, x1, y1] = brickArea(frame, lattice, sx, sy);
       // Only the margin's cut around the brick, a little beyond it, so that no edge of the
       // cut lies on a face of the brick.
       const o = TOOL_OVERSHOOT_MM;
       const window = [cx + x0 - o, cy + y0 - o, cx + x1 + o, cy + y1 + o] as const;
-      let area = footprint(wasm, own, frame, sx, sy, cx, cy);
+      let area = footprint(wasm, own, frame, lattice, sx, sy, cx, cy);
       const holes = margin?.holes(window);
       if (holes) area = own(area.subtract(own(holes.translate([-cx, -cy]))));
-      const tools = [pocket];
+      // The pocket of a cell of the margin comes with the margin's cut, as the margin shapes it.
+      const tools = inGrid(i, j, frame) ? [pocket] : [];
       const cut = margin?.solid(window);
       if (cut) tools.push(own(cut.translate([-cx, -cy, 0])));
       const slab = slabOf(wasm, own, area, frame, [cx, cy]);
-      return own(slab.subtract(own(wasm.Manifold.compose(tools))));
+      return tools.length === 0 ? slab : own(slab.subtract(own(wasm.Manifold.compose(tools))));
     };
     const solids = new Map<string, Manifold>();
-    for (let i = 0; i < columns; i++)
-      for (let j = 0; j < rows; j++) {
-        const [sx, sy] = kindOf(i, j, frame);
+    for (let i = lattice.columns[0]; i < lattice.columns[1]; i++)
+      for (let j = lattice.rows[0]; j < lattice.rows[1]; j++) {
+        const [sx, sy] = kindOf(i, j, frame, lattice);
         const corners = screwCorners(i, j, frame);
-        const key = kindKey(sx, sy, corners);
+        const margin = !inGrid(i, j, frame);
+        const key = kindKey(sx, sy, corners, margin);
         if (solids.has(key)) continue;
-        const kind = kindKey(sx, sy, 0);
+        const kind = kindKey(sx, sy, 0, margin);
         const base = bases.get(kind) ?? baseOf(i, j, sx, sy);
         bases.set(kind, base);
         solids.set(key, withScrews(base, corners));
@@ -160,29 +210,38 @@ function cellBricks(wasm: ManifoldToplevel, frame: GridFrame): Map<string, Brick
  * Footprint of a brick around its cell centre (cx, cy): the cell, extended by the margins
  * on its sides on the outline, and cut by the outline's rounded corner for a corner cell.
  */
-function footprint(wasm: ManifoldToplevel, own: Own, frame: GridFrame, sx: Side, sy: Side, cx: number, cy: number) {
+function footprint(
+  wasm: ManifoldToplevel,
+  own: Own,
+  frame: GridFrame,
+  lattice: Lattice,
+  sx: Side,
+  sy: Side,
+  cx: number,
+  cy: number,
+) {
   const { width, depth, outerRadius, segmentsPerQuarter } = frame;
-  const area = own(new wasm.CrossSection([rect(...brickArea(frame, sx, sy))]));
+  const area = own(new wasm.CrossSection([rect(...brickArea(frame, lattice, sx, sy))]));
   if (sx === 0 || sy === 0) return area;
   const outline = own(new wasm.CrossSection([roundedRect(width, depth, outerRadius, segmentsPerQuarter)]));
   return own(area.intersect(own(outline.translate([-cx, -cy]))));
 }
 
-/** Rectangle of a brick around its cell centre: the cell, and the margins on its sides on the outline. */
-function brickArea(frame: GridFrame, sx: Side, sy: Side): [x0: number, y0: number, x1: number, y1: number] {
+/** Rectangle of a brick around its cell centre: the cell, and the rest of the margin on its sides on the outline. */
+function brickArea(frame: GridFrame, lattice: Lattice, sx: Side, sy: Side): [x0: number, y0: number, x1: number, y1: number] {
   const half = frame.cellSize / 2;
-  const [mx, my] = [marginX(frame, sx), marginY(frame, sy)];
+  const [mx, my] = [restX(lattice, sx), restY(lattice, sy)];
   return [-half - (sx === -1 ? mx : 0), -half - (sy === -1 ? my : 0), half + (sx === 1 ? mx : 0), half + (sy === 1 ? my : 0)];
 }
 
-/** Margin on the side of the outline a cell touches along X (left or right), 0 inside. */
-function marginX({ margins }: GridFrame, sx: Side): number {
-  return sx === 1 ? margins.right : sx === -1 ? margins.left : 0;
+/** Rest of the margin on the side of the outline a cell touches along X (left or right), 0 inside. */
+function restX({ rests }: Lattice, sx: Side): number {
+  return sx === 1 ? rests.right : sx === -1 ? rests.left : 0;
 }
 
-/** Margin on the side of the outline a cell touches along Y (front or back), 0 inside. */
-function marginY({ margins }: GridFrame, sy: Side): number {
-  return sy === 1 ? margins.back : sy === -1 ? margins.front : 0;
+/** Rest of the margin on the side of the outline a cell touches along Y (front or back), 0 inside. */
+function restY({ rests }: Lattice, sy: Side): number {
+  return sy === 1 ? rests.back : sy === -1 ? rests.front : 0;
 }
 
 function brickOf(mesh: TriangleMesh, half: number): Brick {
@@ -208,13 +267,13 @@ function brickOf(mesh: TriangleMesh, half: number): Brick {
 }
 
 /** Copies the bricks across the grid, drops the faces between neighbours and welds the seams. */
-function joinBricks(bricks: Map<string, Brick>, frame: GridFrame): TriangleMesh {
-  const { columns, rows } = frame;
-  const brickAt = (i: number, j: number) => bricks.get(brickKey(i, j, frame)) as Brick;
+function joinBricks(bricks: Map<string, Brick>, frame: GridFrame, lattice: Lattice): TriangleMesh {
+  const [[i0, i1], [j0, j1]] = [lattice.columns, lattice.rows];
+  const brickAt = (i: number, j: number) => bricks.get(brickKey(i, j, frame, lattice)) as Brick;
   let vertexCount = 0;
   let indexCount = 0;
-  for (let i = 0; i < columns; i++)
-    for (let j = 0; j < rows; j++) {
+  for (let i = i0; i < i1; i++)
+    for (let j = j0; j < j1; j++) {
       const brick = brickAt(i, j);
       vertexCount += brick.vertexFaces.length;
       indexCount += brick.indices.length;
@@ -225,8 +284,8 @@ function joinBricks(bricks: Map<string, Brick>, frame: GridFrame): TriangleMesh 
   let vertices = 0;
   let written = 0;
 
-  for (let i = 0; i < columns; i++)
-    for (let j = 0; j < rows; j++) {
+  for (let i = i0; i < i1; i++)
+    for (let j = j0; j < j1; j++) {
       const brick = brickAt(i, j);
       const [cx, cy] = cellCentre(i, j, frame);
       const remap = new Uint32Array(brick.vertexFaces.length);
@@ -249,8 +308,7 @@ function joinBricks(bricks: Map<string, Brick>, frame: GridFrame): TriangleMesh 
         remap[v] = vertices++;
       }
       // Faces shared with a neighbour are inside the baseplate: drop them.
-      const inside =
-        (i < columns - 1 ? PLUS_X : 0) | (i > 0 ? MINUS_X : 0) | (j < rows - 1 ? PLUS_Y : 0) | (j > 0 ? MINUS_Y : 0);
+      const inside = (i < i1 - 1 ? PLUS_X : 0) | (i > i0 ? MINUS_X : 0) | (j < j1 - 1 ? PLUS_Y : 0) | (j > j0 ? MINUS_Y : 0);
       for (let t = 0; t < brick.triangleFaces.length; t++) {
         if ((brick.triangleFaces[t] as number) & inside) continue;
         indices[written++] = remap[brick.indices[3 * t] as number] as number;

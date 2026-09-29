@@ -43,15 +43,19 @@ Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le ba
 _Avoid_: appui, contact
 
 **Marge**:
-La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme est une variante interchangeable du moteur ; la variante provisoire (#3) est un cadre : un mur extérieur relié à la grille par des traverses.
+La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme est une variante interchangeable du moteur. Depuis #19, c'est la grille prolongée : des cellules tronquées, fermées par un mur extérieur, à la hauteur de la grille (ADR 0008). Le cadre à traverses de #3 reste dans le code, mais n'est plus exposé.
 _Avoid_: padding, bordure, remplissage
 
+**Cellule tronquée**:
+Une cellule de la grille prolongée dans la marge et coupée par le mur extérieur : une poche vide, au même profil et sans fond. Une cellule tronquée trop étroite pour laisser un trou d'au moins un mur de large reçoit un fond plat, sur un nombre entier de couches, ou est remplie (ADR 0008). Une cellule de la marge que le mur extérieur ne coupe pas est entière : c'est une poche comme celles de la grille, sans vis.
+_Avoid_: demi-cellule, cellule partielle, fausse poche
+
 **Mur extérieur**:
-Le mur de la marge qui suit le contour de la baseplate et s'appuie sur les parois du tiroir.
+Le mur de la marge qui suit tout le contour de la baseplate et s'appuie sur les parois du tiroir (1,2 mm, arrondi au nombre de lignes, deux au moins).
 _Avoid_: paroi, bordure, ceinture
 
 **Traverse**:
-Une barre de la marge qui prolonge une ligne de la grille, dans l'alignement d'un muret, du bord de la grille jusqu'au mur extérieur ; elle transmet à la grille la poussée des parois du tiroir.
+Une barre du cadre à traverses (#3), qui n'est plus exposé, qui prolonge une ligne de la grille, dans l'alignement d'un muret, du bord de la grille jusqu'au mur extérieur.
 _Avoid_: nervure (réservé au rejet de « muret »), rib, entretoise
 
 **Alignement**:

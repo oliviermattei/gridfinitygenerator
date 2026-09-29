@@ -44,6 +44,23 @@ export const FLUSH_PROFILE: PocketProfile = {
   ],
 };
 
+/**
+ * Inset of the pocket wall at height `z`, from the cell edge: linear between the points of
+ * the profile, the first segment carried on below its first point and the top flat above
+ * its last one (as the pocket tool does).
+ */
+export function insetAt({ points }: PocketProfile, z: number): number {
+  for (let k = 1; k < points.length; k++) {
+    const [z0, d0] = points[k - 1] as readonly [number, number];
+    const [z1, d1] = points[k] as readonly [number, number];
+    if (z <= z1 || k === points.length - 1) {
+      if (z >= z1) return d1;
+      return d0 + ((d1 - d0) * (z - z0)) / (z1 - z0);
+    }
+  }
+  throw new Error("A pocket profile needs at least two points");
+}
+
 /** Name of a pocket profile in the settings and in the share link (`pr`). */
 export type PocketProfileName = "hybrid" | "flush";
 

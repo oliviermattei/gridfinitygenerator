@@ -28,7 +28,7 @@ export function roundDownToLayer(height: number, layerHeight: number): number {
 }
 
 /**
- * Rounds a width chosen by the generator (margin walls and crossbars) up to a whole number of
+ * Rounds a width chosen by the generator (the walls of the margin) up to a whole number of
  * lines, and to `minLines` at least, so that the slicer fills it with whole extrusions.
  */
 export function roundUpToLine(width: number, lineWidth: number, minLines = 1): number {

@@ -15,6 +15,19 @@ async function manifoldModule(): Promise<ManifoldToplevel> {
   return wasm;
 }
 
+/**
+ * Heights of reference of the hybrid pocket profile (ADR 0002): at height `z`, the pocket
+ * wall is `inset` mm off the edge of its cell. Whatever the cell size, the opening is a
+ * rounded square of side `cellSize − 2·inset`; only its footprint follows the cell.
+ */
+export const HYBRID_OPENINGS: readonly { z: number; inset: number }[] = [
+  { z: 0.1, inset: 2.85 },
+  { z: 0.7, inset: 2.5 },
+  { z: 1.5, inset: 2.15 },
+  { z: 3.5, inset: 1.5 },
+  { z: 4.5, inset: 0.5 },
+];
+
 export interface MeshCheck {
   /** Manifold status of the mesh: "NoError" for a closed, valid solid. */
   status: string;
@@ -132,6 +145,33 @@ export async function areaOutside(a: [number, number][][], b: [number, number][]
       rest = own(rest.subtract(own(own(manifold.CrossSection.circle(radius, 256)).translate([x, y]))));
     }
     return rest.area();
+  } finally {
+    for (const object of owned) object.delete();
+  }
+}
+
+/**
+ * Radius of the largest disc the holes of a section around `point` can hold, to the
+ * hundredth of a millimetre: 0 when `point` is in the material. A hole is the empty part of
+ * the section inside its outer contour.
+ */
+export async function holeReach(contours: [number, number][][], point: [number, number]): Promise<number> {
+  const manifold = await manifoldModule();
+  const owned: { delete(): void }[] = [];
+  const own = <T extends { delete(): void }>(object: T) => {
+    owned.push(object);
+    return object;
+  };
+  try {
+    const material = own(new manifold.CrossSection(contours, "EvenOdd"));
+    const bounds = material.bounds();
+    const box = own(manifold.CrossSection.square([bounds.max[0] - bounds.min[0], bounds.max[1] - bounds.min[1]]).translate([bounds.min[0], bounds.min[1]]));
+    const holes = own(box.subtract(material));
+    const hole = holes.decompose().map(own).find((piece) => inSection(piece.toPolygons() as [number, number][][], point));
+    if (!hole) return 0;
+    let reach = 0;
+    for (let radius = 0.01; !own(hole.offset(-radius, "Round")).isEmpty(); radius += 0.01) reach = radius;
+    return Math.round(reach * 100) / 100;
   } finally {
     for (const object of owned) object.delete();
   }

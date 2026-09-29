@@ -41,7 +41,8 @@ export interface BaseplateStats {
 /**
  * How the frame is assembled; both give the same solid (volume within 0.1 mm³).
  * - `"bricks"`: cell bricks joined at the mesh level (ADR 0004), fast on any grid size, but
- *   only for grids of at least 2 × 2 cells (a `RangeError` otherwise).
+ *   only when the grid and the whole cells its margin carries on span at least 2 × 2 cells
+ *   (a `RangeError` otherwise).
  * - `"boolean"`: grouped booleans over the whole grid, the slower fallback for any grid.
  */
 export type AssemblyStrategy = "bricks" | "boolean";
@@ -60,9 +61,10 @@ export interface Baseplate {
 /**
  * Generates a baseplate: a grid of open pockets with the profile of the settings (hybrid by
  * default, ADR 0002, or flush) on a pitch of the cell size, sized for a drawer or by its
- * number of cells, its outline rounded and chamfered at the bottom by the settings, and its margin
- * (a frame of crossbars for now, see margin.ts), with a countersunk screw hole on each inner
- * intersection of the grid when the screws are on (screws.ts, ADR 0006). The settings are
+ * number of cells, its outline rounded and chamfered at the bottom by the settings, and its
+ * margin (the grid carried on up to the outline in truncated cells, see margin.ts and ADR
+ * 0008), with a countersunk screw hole on each inner intersection of the grid when the
+ * screws are on (screws.ts, ADR 0006). The settings are
  * first brought into their ranges, and a missing one takes its default (`clampSettings`):
  * without settings, the baseplate of the default drawer. The mesh is always closed; the
  * final mesh, the one that gets exported, is also checked by manifold (`NoError`) before it

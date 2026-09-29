@@ -1,24 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { generateBaseplate, generateTestKit, type BaseplateSettings, type Quality } from "../src/index";
-import { checkMesh, inSection, outerContour, pocketOpening } from "./support/measure";
+import { HYBRID_OPENINGS as POCKET_OPENINGS, checkMesh, inSection, outerContour, pocketOpening } from "./support/measure";
 
 // Advanced settings (#13): cell size, outer corner radius and bottom chamfer, observed
 // through the public interface only.
 
 const TOLERANCE_MM = 0.001;
 const HEIGHT_MM = 4.6;
-
-/**
- * Heights of reference of the hybrid pocket profile (ADR 0002): whatever the cell size, the
- * opening is a rounded square of side `cellSize − 2·inset`; only its footprint follows the cell.
- */
-const POCKET_OPENINGS: readonly { z: number; inset: number }[] = [
-  { z: 0.1, inset: 2.85 },
-  { z: 0.7, inset: 2.5 },
-  { z: 1.5, inset: 2.15 },
-  { z: 3.5, inset: 1.5 },
-  { z: 4.5, inset: 0.5 },
-];
 
 /** A 32-segment quarter circle of radius 10 mm falls short of the true arc by 0.13 mm². */
 const FINAL_AREA_TOLERANCE_MM2 = 0.2;
@@ -97,14 +85,17 @@ describe("cell size", () => {
     expect((await checkMesh(baseplate.mesh)).status).toBe("NoError");
   });
 
-  it("lays the crossbars of the margin on the grid lines of its pitch", async () => {
-    // 3 × 3 cells of 30 mm with 20 mm of margin all around: the grid spans ±45 mm, the outline ±65 mm.
+  it("carries the grid on into the margin at its pitch", async () => {
+    // 3 × 3 cells of 30 mm with 20 mm of margin all around: the grid spans ±45 mm, the outline
+    // ±65 mm, the inside of its 1.2 mm outer wall ±63.8 mm.
     const { mesh } = await generateBaseplate(cells(3, 3, { cellSize: 30, marginWidth: 40, marginDepth: 40 }), "preview");
-    const { sections } = await checkMesh(mesh, [1]);
-    // Left margin, middle row: a hole between the outer wall, the grid and two crossbars 30 mm apart.
-    const hole = pocketOpening(sections.get(1) ?? [], [-55, 0]);
-    expectWithin(hole?.width, 20 - 1.2);
-    expectWithin(hole?.depth, 30 - 1.2);
+    const { sections } = await checkMesh(mesh, POCKET_OPENINGS.map(({ z }) => z));
+    for (const { z, inset } of POCKET_OPENINGS) {
+      // Left margin, middle row: the cell from x = −75 to −45, cut by the outer wall.
+      const hole = pocketOpening(sections.get(z) ?? [], [-55, 0]);
+      expectWithin(hole?.width, 63.8 - 45 - inset);
+      expectWithin(hole?.depth, 30 - 2 * inset);
+    }
   });
 });
 
@@ -188,6 +179,9 @@ describe("advanced settings together", () => {
       ["the default drawer with a small chamfer", { bottomChamfer: 0.4 }],
       ["20 mm cells with round corners and screws, no chamfer", cells(5, 4, { cellSize: 20, outerRadius: 10, screws: true })],
       ["thick lines and layers, 55 mm cells, chamfer", { drawerWidth: 300, drawerDepth: 200, cellSize: 55, bottomChamfer: 2, lineWidth: 1.2, layerHeight: 0.28, alignment: "bl" }],
+      ["20 mm cells carried on by whole cells into wide margins, largest radius, chamfer and screws", cells(3, 2, { cellSize: 20, marginWidth: 90, marginDepth: 50, outerRadius: 10, bottomChamfer: 2, screws: true, alignment: "tl" })],
+      ["narrow margins in the largest radius: truncated corner cells", cells(4, 3, { outerRadius: 10, marginWidth: 9, marginDepth: 7 })],
+      ["flush profile, whole cells in the margin, screws", cells(2, 3, { pocketProfile: "flush", marginWidth: 100, marginDepth: 12, screws: true, alignment: "r" })],
     ])("%s: same volume, bounds and genus as the boolean fallback, NoError", async (_, settings) => {
       const [fast, fallback] = await Promise.all([
         generateBaseplate(settings, quality),

@@ -1,10 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { chooseCells, numberField, openSettings, readout } from "./support";
 
-// Drawer, alignment and margin (#10).
+// Drawer, alignment (#10) and margin (#10, #19).
 
 /** A value of the statistics frame on screen: on the right on desktop, in the sheet on mobile. */
-function stat(page: Page, id: "dimensions" | "cells" | "margin") {
+function stat(page: Page, id: "dimensions" | "cells" | "margin" | "volume") {
   return page.getByTestId(`stat-${id}`).filter({ visible: true });
 }
 
@@ -56,6 +56,29 @@ test("entering a drawer updates the cells, the preview and the statistics", asyn
   await numberField(page, "Jeu au tiroir").fill("0");
   await expect(readout(page, "dimensions")).toHaveText("500 × 300 mm");
   await expect(stat(page, "margin")).toHaveText("gauche 38, droite 0, arrière 6, avant 0 mm");
+});
+
+test("the margin carries the grid on up to the drawer, and the statistics count its truncated cells", async ({ page }, testInfo) => {
+  await page.goto("/fr/baseplate");
+  await openSettings(page, testInfo);
+  const volume = stat(page, "volume");
+
+  // The default drawer: the 9 × 6 grid (77,2 cm³) and its margin of truncated cells, as high
+  // as the grid (24,3 cm³), as measured by the margin prototype (#3, variant 1 flush).
+  await expect(stat(page, "dimensions")).toHaveText("399 × 279 × 4,6 mm");
+  await expect(volume).toHaveText("101,5 cm³");
+  const drawerTriangles = await page.getByTestId("mesh-preview").getAttribute("data-triangles");
+  expect(drawerTriangles).not.toBeNull();
+
+  // 500 × 300 mm: 11 × 7 cells, a margin of 18,5 mm on the left and right, carried on in
+  // truncated cells, and of 2,5 mm at the back and front, too narrow for a hole: full.
+  await numberField(page, "Largeur").fill("500");
+  await numberField(page, "Profondeur").fill("300");
+  await expect(stat(page, "cells")).toHaveText("11 × 7");
+  await expect(stat(page, "margin")).toHaveText("gauche 18,5, droite 18,5, arrière 2,5, avant 2,5 mm");
+  await expect(stat(page, "dimensions")).toHaveText("499 × 299 × 4,6 mm");
+  await expect(volume).toHaveText("133,8 cm³");
+  await expect(page.getByTestId("mesh-preview")).not.toHaveAttribute("data-triangles", drawerTriangles ?? "");
 });
 
 test("a margin narrower than two line widths shows a warning", async ({ page }, testInfo) => {

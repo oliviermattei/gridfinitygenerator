@@ -1,7 +1,7 @@
 # Prototype jetable : forme de la marge (ticket #3)
 
 > Question posée : **quelle forme donner à la marge pour qu'elle retienne la baseplate dans le tiroir sans coûter plus de matière que la grille ?**
-> Code jetable, gardé comme référence : il ne sera pas repris tel quel dans `packages/geometry`. Le moteur de la marge (#10) part de la variante provisoire ci-dessous ; le verdict définitif viendra de la recette d'impression (#16).
+> Code jetable, gardé comme référence : il ne sera pas repris tel quel dans `packages/geometry`. Le moteur de la marge (#10) est parti de la variante provisoire de #3, le cadre à nervures. **Depuis #19, le moteur construit la variante 1, les cellules tronquées, à ras de la grille** (ADR 0008) : c'est elle qu'on imprime en priorité. Le verdict définitif viendra de la recette d'impression (#16).
 
 ## Relancer
 
@@ -85,7 +85,19 @@ Grille seule (9 × 6) : 77,21 cm³. Le ticket citait environ 77 cm³ pour la mar
 | 3. Cadre à nervures | 4,60 mm | 9,50 | 86,71 | 12,9 % | 271 / 271 / 391 / 391 | +77,31 |
 | 3. Cadre à nervures | 2,00 mm | 4,13 | 81,34 | 12,9 % | 271 / 271 / 391 / 391 | +33,62 |
 
-## Variante provisoire : 3. Cadre à nervures, hauteur 2,00 mm
+## Variante retenue depuis #19 : 1. Cellules tronquées, à ras
+
+Le mainteneur a jugé le cadre à nervures peu esthétique. Il veut que la marge ressemble à un bout de la grille : les murets se prolongent dans la marge avec leur profil et leur hauteur complète, comme si la grille continuait jusqu'au bord du tiroir et y était coupée. C'est la variante 1 à 4,60 mm, `banc-1-cellules-tronquees-h4.6.3mf`. Le moteur retrouve ses volumes à 0,5 mm³ près : 10 344,9 mm³ pour le banc, 101,53 cm³ pour le tiroir par défaut.
+
+Ce choix renverse l'ordre des critères ci-dessous sur le rendu, en connaissance de cause :
+
+- **Maintien** : inchangé, les variantes 1 et 3 s'appuient toutes deux sur toute la longueur de chaque paroi.
+- **Matière** : sur le tiroir par défaut, la marge passe de 4,13 cm³ (cadre à 2,00 mm) à 24,32 cm³, soit +20,19 cm³ sur la pièce (81,34 → 101,53 cm³, +25 %). Elle reste à 33 % de la marge pleine à ras (73,84 cm³).
+- **Temps d'impression** : +69,2 m de contours au lieu de +33,6 m.
+
+Le moteur ajoute au prototype la règle des cellules trop étroites (ADR 0008) : un trou de la marge n'est jamais plus étroit qu'un mur, à aucune hauteur. Une cellule tronquée étroite reçoit un fond plat, sur un nombre entier de couches ; plus étroite encore, elle est remplie.
+
+## Variante provisoire de #3 (remplacée depuis #19) : 3. Cadre à nervures, hauteur 2,00 mm
 
 On applique les critères du ticket dans l'ordre.
 
@@ -112,11 +124,12 @@ Tous sont dans `files/`, en 3MF (un objet, mm), fermés (`NoError`). Ils font ch
 
 | Priorité | Fichier | Pourquoi | Volume total |
 |---|---|---|---|
-| 1 | `banc-3-cadre-nervures-h2.0.3mf` | variante provisoire | 6,56 cm³ |
-| 1 | `banc-3-cadre-nervures-h4.6.3mf` | même cadre à ras : la hauteur de 2,00 mm est-elle assez raide ? rendu contre la version basse | 7,66 cm³ |
-| 2 | `banc-2-equerres-h2.0.3mf` | challenger le plus économe : les équerres suffisent-elles à retenir la baseplate ? | 6,13 cm³ |
-| 3 | `banc-1-cellules-tronquees-h4.6.3mf` | rendu de la grille prolongée, la plus lourde | 10,34 cm³ |
-| optionnel | `banc-1-cellules-tronquees-h2.0.3mf`, `banc-2-equerres-h4.6.3mf` | complètent la matrice variante × hauteur | 8,06 / 6,69 cm³ |
+| 1 | `banc-1-cellules-tronquees-h4.6.3mf` | la marge du moteur depuis #19 : maintien, rendu de la grille prolongée | 10,34 cm³ |
+| 2 | `banc-3-cadre-nervures-h2.0.3mf` | l'ancienne variante provisoire, 3,8 cm³ de moins : le rendu justifie-t-il la matière ? | 6,56 cm³ |
+| 3 | `banc-2-equerres-h2.0.3mf` | challenger le plus économe : les équerres suffisent-elles à retenir la baseplate ? | 6,13 cm³ |
+| optionnel | `banc-3-cadre-nervures-h4.6.3mf`, `banc-1-cellules-tronquees-h2.0.3mf`, `banc-2-equerres-h4.6.3mf` | complètent la matrice variante × hauteur | 7,66 / 8,06 / 6,69 cm³ |
+
+Le générateur produit la variante 1 à l'identique : mode « nombre de cellules », 2 × 2, 25 mm de marge en largeur et en profondeur, alignement avant gauche (la marge va à droite et à l'arrière).
 
 Pour le test de maintien, le banc n'a de marge qu'à droite et à l'arrière. Il faut donc le caler dans un coin de tiroir (côtés sans marge contre deux parois) ou dans un gabarit de 110 × 110 mm, puis poser et retirer un bac 1 × 1 dans chaque cellule, en regardant si le banc bouge et si les murs ou les jambes fléchissent.
 
