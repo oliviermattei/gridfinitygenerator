@@ -35,8 +35,24 @@ Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le ba
 _Avoid_: appui, contact
 
 **Marge**:
-La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir.
+La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme est une variante interchangeable du moteur ; la variante provisoire (#3) est un cadre : un mur extérieur relié à la grille par des traverses.
 _Avoid_: padding, bordure, remplissage
+
+**Mur extérieur**:
+Le mur de la marge qui suit le contour de la baseplate et s'appuie sur les parois du tiroir.
+_Avoid_: paroi, bordure, ceinture
+
+**Traverse**:
+Une barre de la marge qui prolonge une ligne de la grille, dans l'alignement d'un muret, du bord de la grille jusqu'au mur extérieur ; elle transmet à la grille la poussée des parois du tiroir.
+_Avoid_: nervure (réservé au rejet de « muret »), rib, entretoise
+
+**Alignement**:
+La position de la grille dans la baseplate, parmi 9 (arrière gauche … avant droite), quand il reste une marge ; la marge prend le reste. L'arrière est le fond du tiroir.
+_Avoid_: position, ancrage
+
+**Jeu au tiroir**:
+Le jeu retiré à la largeur et à la profondeur du tiroir pour que la baseplate y entre sans forcer (1 mm par défaut).
+_Avoid_: tolérance, clearance
 
 **Bac**:
 Le contenant Gridfinity posé sur la baseplate ; hors du périmètre généré, mais il fixe les contraintes de compatibilité.

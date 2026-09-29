@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
 import { expect, test, type Page } from "@playwright/test";
-import { closeSettings, numberField, openSettings, readout } from "./support";
+import { chooseCells, closeSettings, numberField, openSettings, readout } from "./support";
 
 test("the French baseplate page opens in the project colours", async ({ page }) => {
   const response = await page.goto("/fr/baseplate");
@@ -27,11 +27,16 @@ test("cell counts drive the 3D preview and the 3MF and STL downloads", async ({ 
   await openSettings(page, testInfo);
   const preview = page.getByTestId("mesh-preview");
 
-  // Default 4 × 3 baseplate, computed by the engine in its worker (manifold-3d WASM).
-  await expect(readout(page, "cells")).toHaveText("4 × 3 cellules");
-  await expect(readout(page, "dimensions")).toHaveText("168 × 126 mm");
+  // Default drawer of 400 × 280 mm, computed by the engine in its worker (manifold-3d WASM).
+  await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
+  await expect(readout(page, "dimensions")).toHaveText("399 × 279 mm");
   await expect(readout(page, "height")).toHaveText("4,6 mm");
   await expect(preview.locator("canvas")).toBeVisible();
+
+  // A number of cells instead: 4 × 3 by default, without margin.
+  await chooseCells(page);
+  await expect(readout(page, "cells")).toHaveText("4 × 3 cellules");
+  await expect(readout(page, "dimensions")).toHaveText("168 × 126 mm");
   const defaultTriangles = Number(await preview.getAttribute("data-triangles"));
   expect(defaultTriangles).toBeGreaterThan(0);
 
@@ -72,6 +77,7 @@ test("cell counts drive the 3D preview and the 3MF and STL downloads", async ({ 
 test("cell counts are brought back into 1 to 24", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
+  await chooseCells(page);
   const columns = numberField(page, "Colonnes");
 
   await columns.fill("30");
@@ -112,6 +118,7 @@ function renderMeasures(page: Page): Promise<EngineMeasure[]> {
 test("dragging a cell count never piles computations up, and only the last state is rendered", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
+  await chooseCells(page);
   await expect(readout(page, "cells")).toHaveText("4 × 3 cellules");
   await numberField(page, "Rangées").fill("20");
   await expect(readout(page, "cells")).toHaveText("4 × 20 cellules");
@@ -153,6 +160,7 @@ test("dragging a cell count never piles computations up, and only the last state
 test("a setting changed during a large final is shown without waiting for that final", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
+  await chooseCells(page);
   await numberField(page, "Colonnes").fill("24");
   await numberField(page, "Rangées").fill("24");
   await expect(readout(page, "cells")).toHaveText("24 × 24 cellules");

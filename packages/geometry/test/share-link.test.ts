@@ -3,20 +3,38 @@ import { DEFAULT_SETTINGS, decodeSettings, encodeSettings, openingSettings, read
 
 // Settings codec (spec v1, entry point 2): baseplate settings ↔ share link query string.
 
+/** Settings in cells mode, the only mode of the app before the drawer mode (#10). */
+const CELLS: BaseplateSettings = { ...DEFAULT_SETTINGS, sizeMode: "cells" };
+
 describe("share link round trip", () => {
   it("gives back the same settings: settings → link → settings", () => {
-    const settings: BaseplateSettings = { columns: 7, rows: 5, layerHeight: 0.28, lineWidth: 0.6 };
-    expect(decodeSettings(encodeSettings(settings))).toEqual(settings);
+    const drawer: BaseplateSettings = {
+      ...DEFAULT_SETTINGS,
+      drawerWidth: 512.5,
+      drawerDepth: 333,
+      drawerGap: 0.5,
+      alignment: "bl",
+      layerHeight: 0.28,
+      lineWidth: 0.6,
+    };
+    expect(decodeSettings(encodeSettings(drawer))).toEqual(drawer);
+    const cells: BaseplateSettings = { ...CELLS, columns: 7, rows: 5, marginWidth: 12.5, marginDepth: 30, alignment: "r" };
+    expect(decodeSettings(encodeSettings(cells))).toEqual(cells);
     expect(decodeSettings(encodeSettings(DEFAULT_SETTINGS))).toEqual(DEFAULT_SETTINGS);
   });
 });
 
 describe("share link content", () => {
   it("carries v=1 and only the settings that differ from the v1 defaults", () => {
-    // The engine builds from a number of cells until the drawer mode lands (#10): the
-    // link says so, since the v1 default mode is `drawer`.
-    expect(encodeSettings(DEFAULT_SETTINGS)).toBe("v=1&mode=cells");
-    expect(encodeSettings({ ...DEFAULT_SETTINGS, columns: 6, layerHeight: 0.28 })).toBe("v=1&mode=cells&cx=6&lh=0.28");
+    // The default drawer of v1: nothing but the version.
+    expect(encodeSettings(DEFAULT_SETTINGS)).toBe("v=1");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, drawerWidth: 512.5, drawerGap: 2, alignment: "t" })).toBe("v=1&w=512.5&al=t&gap=2");
+    expect(encodeSettings({ ...CELLS, columns: 6, layerHeight: 0.28 })).toBe("v=1&mode=cells&cx=6&lh=0.28");
+    expect(encodeSettings({ ...CELLS, marginWidth: 10, marginDepth: 4.5 })).toBe("v=1&mode=cells&mx=10&my=4.5");
+  });
+
+  it("writes the settings brought into their ranges", () => {
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, drawerWidth: 2000, drawerGap: -1 })).toBe("v=1&w=1000&gap=0");
   });
 });
 
@@ -69,19 +87,51 @@ describe("frozen v1 links", () => {
       lh: 0.28,
       lw: 0.6,
     });
-    expect(decodeSettings(link)).toEqual({ columns: 7, rows: 5, layerHeight: 0.28, lineWidth: 0.6 });
+    const settings: BaseplateSettings = {
+      sizeMode: "cells",
+      drawerWidth: 512.5,
+      drawerDepth: 300,
+      drawerGap: 2,
+      columns: 7,
+      rows: 5,
+      marginWidth: 12.5,
+      marginDepth: 30,
+      alignment: "tr",
+      layerHeight: 0.28,
+      lineWidth: 0.6,
+    };
+    expect(decodeSettings(link)).toEqual(settings);
     // The leading "?" of a page address is accepted.
-    expect(decodeSettings(`?${link}`)).toEqual({ columns: 7, rows: 5, layerHeight: 0.28, lineWidth: 0.6 });
+    expect(decodeSettings(`?${link}`)).toEqual(settings);
+  });
+
+  it("a bare v1 link is the default drawer, 400 × 280 mm", () => {
+    expect(decodeSettings("v=1")).toEqual(DEFAULT_SETTINGS);
+    expect(decodeSettings("v=1")?.sizeMode).toBe("drawer");
+  });
+
+  it("links written before the drawer mode keep their meaning: a number of cells, without margin", () => {
+    // Until #10, every link said `mode=cells` (#8).
+    expect(decodeSettings("v=1&mode=cells&cx=3&cy=2")).toEqual({ ...CELLS, columns: 3, rows: 2 });
+    expect(decodeSettings("v=1&mode=cells")).toEqual(CELLS);
   });
 });
 
 describe("reading any link", () => {
   it("ignores unknown keys", () => {
-    expect(decodeSettings("v=1&mode=cells&cx=6&magnets=1&utm_source=forum")).toEqual({ ...DEFAULT_SETTINGS, columns: 6 });
+    expect(decodeSettings("v=1&mode=cells&cx=6&magnets=1&utm_source=forum")).toEqual({ ...CELLS, columns: 6 });
   });
 
   it("brings values out of range back into their range", () => {
-    expect(decodeSettings("v=1&cx=0&cy=99&lh=0.05&lw=3")).toEqual({ columns: 1, rows: 24, layerHeight: 0.12, lineWidth: 1.2 });
+    expect(decodeSettings("v=1&cx=0&cy=99&lh=0.05&lw=3")).toEqual({ ...DEFAULT_SETTINGS, columns: 1, rows: 24, layerHeight: 0.12, lineWidth: 1.2 });
+    expect(decodeSettings("v=1&w=5000&d=10&gap=9&mx=-3&my=900")).toEqual({
+      ...DEFAULT_SETTINGS,
+      drawerWidth: 1000,
+      drawerDepth: 42,
+      drawerGap: 5,
+      marginWidth: 0,
+      marginDepth: 500,
+    });
     // Whole numbers of cells: a value in between is rounded.
     expect(decodeSettings("v=1&cx=6.6")?.columns).toBe(7);
     const link = readShareLink("v=1&w=5000&d=10&mx=-3&gap=9&tol=2");
@@ -108,21 +158,21 @@ describe("reading any link", () => {
   });
 
   it("reads a link of a version newer than it knows with the latest one", () => {
-    expect(decodeSettings("v=7&mode=cells&cx=6")).toEqual({ ...DEFAULT_SETTINGS, columns: 6 });
+    expect(decodeSettings("v=7&mode=cells&cx=6")).toEqual({ ...CELLS, columns: 6 });
   });
 });
 
 describe("settings on opening", () => {
   // The last settings are stored as a link too, in this browser.
-  const stored = encodeSettings({ ...DEFAULT_SETTINGS, columns: 9, rows: 2 });
+  const stored = encodeSettings({ ...CELLS, columns: 9, rows: 2 });
 
   it("a shared link wins over the stored settings", () => {
-    expect(openingSettings("?v=1&mode=cells&cx=5&cy=5", stored)).toEqual({ ...DEFAULT_SETTINGS, columns: 5, rows: 5 });
+    expect(openingSettings("?v=1&mode=cells&cx=5&cy=5", stored)).toEqual({ ...CELLS, columns: 5, rows: 5 });
   });
 
   it("without a shared link, the stored settings come back", () => {
-    expect(openingSettings("", stored)).toEqual({ ...DEFAULT_SETTINGS, columns: 9, rows: 2 });
-    expect(openingSettings("?utm_source=forum", stored)).toEqual({ ...DEFAULT_SETTINGS, columns: 9, rows: 2 });
+    expect(openingSettings("", stored)).toEqual({ ...CELLS, columns: 9, rows: 2 });
+    expect(openingSettings("?utm_source=forum", stored)).toEqual({ ...CELLS, columns: 9, rows: 2 });
   });
 
   it("with neither, or unreadable stored settings, the defaults", () => {

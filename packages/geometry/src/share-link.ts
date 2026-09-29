@@ -80,18 +80,18 @@ const VERSIONS: Record<number, LinkTable> = { 1: V1 };
 
 /** Link key of each baseplate setting the engine implements. */
 const LINK_KEYS = {
+  sizeMode: "mode",
+  drawerWidth: "w",
+  drawerDepth: "d",
+  drawerGap: "gap",
   columns: "cx",
   rows: "cy",
+  marginWidth: "mx",
+  marginDepth: "my",
+  alignment: "al",
   layerHeight: "lh",
   lineWidth: "lw",
 } as const satisfies Record<keyof BaseplateSettings, LinkKey>;
-
-/**
- * Settings of the link that the engine does not expose yet, at the value it builds the
- * baseplate with when it differs from the v1 default. Each one moves into
- * `BaseplateSettings` (and `LINK_KEYS`) with its ticket: the size mode with #10.
- */
-const BUILT_AS: Partial<ShareLinkSettings> = { mode: "cells" };
 
 function defaultsOf(table: LinkTable): ShareLinkSettings {
   const entries = Object.entries(table).map(([key, setting]) => [key, setting.default]);
@@ -102,7 +102,7 @@ function defaultsOf(table: LinkTable): ShareLinkSettings {
 export function encodeSettings(settings: BaseplateSettings): string {
   const table = VERSIONS[SHARE_LINK_VERSION] as LinkTable;
   const defaults = defaultsOf(table);
-  const content: ShareLinkSettings = { ...defaults, ...BUILT_AS };
+  const content: ShareLinkSettings = { ...defaults };
   const clamped = clampSettings(settings);
   for (const field of Object.keys(LINK_KEYS) as (keyof BaseplateSettings)[]) {
     (content as Record<LinkKey, unknown>)[LINK_KEYS[field]] = clamped[field];
@@ -165,11 +165,11 @@ function readValue(setting: LinkSetting, raw: string): number | string | boolean
 export function decodeSettings(query: string): BaseplateSettings | null {
   const content = readShareLink(query);
   if (!content) return null;
-  const settings: Partial<BaseplateSettings> = {};
+  const settings: Record<string, unknown> = {};
   for (const field of Object.keys(LINK_KEYS) as (keyof BaseplateSettings)[]) {
     settings[field] = content[LINK_KEYS[field]];
   }
-  return clampSettings({ ...DEFAULT_SETTINGS, ...settings });
+  return clampSettings({ ...DEFAULT_SETTINGS, ...(settings as Partial<BaseplateSettings>) });
 }
 
 /**

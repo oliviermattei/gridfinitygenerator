@@ -1,6 +1,6 @@
 "use client";
 
-import { fitsOnBuildPlate, type BuildPlate } from "@repo/geometry";
+import { fitsOnBuildPlate, narrowMargin, type BuildPlate, type Margins } from "@repo/geometry";
 import { TriangleAlert } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
@@ -19,6 +19,8 @@ export interface StatsCardProps {
   summary: BaseplateSummary | null;
   /** Layer height the summary was computed with, in millimetres. */
   layerHeight: number;
+  /** Line width the summary was computed with, in millimetres. */
+  lineWidth: number;
   /** Whether the summary comes from the final mesh of the current settings (its volume is then shown). */
   final: boolean;
   buildPlate: BuildPlate;
@@ -32,8 +34,9 @@ export interface StatsCardProps {
  * exactly, never estimated. The volume of material is measured on the final mesh, "…"
  * until it answers for the current settings.
  */
-export function StatsCard({ summary, layerHeight, final, buildPlate, fits, className = "" }: StatsCardProps) {
+export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, className = "" }: StatsCardProps) {
   const stats = summary?.stats;
+  const narrowest = summary ? narrowMargin(summary.layout.margins, lineWidth) : null;
   const volume = final ? stats?.volume : null;
   const titleId = useId();
   return (
@@ -76,14 +79,20 @@ export function StatsCard({ summary, layerHeight, final, buildPlate, fits, class
           {t.plateTooSmall(footprint(buildPlate))}
         </p>
       )}
+      {narrowest !== null && (
+        <p role="alert" className="mx-3 mb-3 flex gap-2 rounded-ctl bg-accent-tint px-3 py-2.5 text-[12.5px] leading-snug text-ink-soft">
+          <TriangleAlert className="mt-px size-4 shrink-0 text-accent-strong" aria-hidden />
+          {t.narrowMargin(fine.format(narrowest), fine.format(2 * lineWidth))}
+        </p>
+      )}
     </section>
   );
 }
 
-function marginText(margins: BaseplateSummary["layout"]["margins"]): string {
+function marginText(margins: Margins): string {
   const { left, right, back, front } = margins;
   if (left === 0 && right === 0 && back === 0 && front === 0) return t.none;
-  return t.margins(lengths.format(left), lengths.format(right), lengths.format(back), lengths.format(front));
+  return t.margins(fine.format(left), fine.format(right), fine.format(back), fine.format(front));
 }
 
 /** One statistic; "…" while its value is being computed. */

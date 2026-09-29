@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings, readout } from "./support";
+import { chooseCells, closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings, readout } from "./support";
 
 /** A value of the statistics frame on screen: on the right on desktop, in the sheet on mobile. */
 function stat(page: Page, id: "dimensions" | "cells" | "margin" | "layers" | "volume" | "screws" | "pieces" | "fit") {
@@ -15,17 +15,24 @@ test("the statistics frame shows the real numbers of the baseplate, and … whil
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
 
-  await expect(stat(page, "dimensions")).toHaveText("168 × 126 × 4,6 mm");
-  await expect(stat(page, "cells")).toHaveText("4 × 3");
-  await expect(stat(page, "margin")).toHaveText("aucune");
+  // The default drawer, 400 × 280 mm less its 1 mm gap: the grid centred in its margin.
+  await expect(stat(page, "dimensions")).toHaveText("399 × 279 × 4,6 mm");
+  await expect(stat(page, "cells")).toHaveText("9 × 6");
+  await expect(stat(page, "margin")).toHaveText("gauche 10,5, droite 10,5, arrière 13,5, avant 13,5 mm");
   await expect(stat(page, "layers")).toHaveText("23 couches de 0,2 mm");
   await expect(stat(page, "screws")).toHaveText("aucune");
   await expect(stat(page, "pieces")).toHaveText("1");
-  await expect(stat(page, "fit")).toHaveText("tient");
-  // Measured on the final mesh, in cm³: no grams, no estimate.
+  await expect(stat(page, "fit")).toHaveText("ne tient pas");
+  // Measured on the final mesh, in cm³: no grams, no estimate. The grid and its ribbed
+  // frame, as measured by the margin prototype (#3).
   const volume = stat(page, "volume");
-  await expect(volume).toHaveText(/^\d+,\d cm³$/);
+  await expect(volume).toHaveText("81,3 cm³");
   await expect(volume).not.toHaveAttribute("aria-busy");
+
+  await chooseCells(page);
+  await expect(stat(page, "cells")).toHaveText("4 × 3");
+  await expect(stat(page, "margin")).toHaveText("aucune");
+  await expect(volume).toHaveText(/^\d+,\d cm³$/);
   const small = parseFloat((await volume.innerText()).replace(",", "."));
 
   // A 20 × 20 final takes about a second: the volume shows "…" until it answers.
@@ -63,7 +70,7 @@ test("the print settings live in the gear menu, and the layer height gives the h
   await openSettings(page, testInfo);
   // The pocket profile is not rounded to the layer: 4.60 mm, 16.4 layers of 0.28 mm printed as 17.
   await expect(stat(page, "layers")).toHaveText("17 couches de 0,28 mm");
-  await expect(stat(page, "dimensions")).toHaveText("168 × 126 × 4,6 mm");
+  await expect(stat(page, "dimensions")).toHaveText("399 × 279 × 4,6 mm");
 });
 
 test("a baseplate larger than the build plate shows the warning and « ne tient pas »", async ({ page }, testInfo) => {
@@ -78,6 +85,7 @@ test("a baseplate larger than the build plate shows the warning and « ne tient 
   await closeMenu(page);
 
   await openSettings(page, testInfo);
+  await chooseCells(page);
   await expect(stat(page, "fit")).toHaveText("tient");
   await numberField(page, "Colonnes").fill("5");
   await numberField(page, "Rangées").fill("5");

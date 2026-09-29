@@ -5,14 +5,38 @@
  * link keeps its meaning when a default changes here.
  * Local preferences (nozzle, build plate, preview colour…) are not baseplate settings.
  */
+
+/** How the size of the baseplate is given: by the drawer it fills, or by a number of cells. */
+export type SizeMode = "drawer" | "cells";
+
+/**
+ * Where the grid sits in the baseplate when a margin is left, seen from above: back (`t`)
+ * to front (`b`), left (`l`) to right (`r`). The back is the far end of the drawer (+Y).
+ */
+export type Alignment = "tl" | "t" | "tr" | "l" | "c" | "r" | "bl" | "b" | "br";
+
 export interface BaseplateSettings {
-  /** Number of cells along X (left to right). */
+  /** Size mode: the drawer by default, or a number of cells (shelf, worktop…). */
+  sizeMode: SizeMode;
+  /** Inner width of the drawer, in millimetres, along X (mode `drawer`). */
+  drawerWidth: number;
+  /** Inner depth of the drawer, in millimetres, along Y (mode `drawer`). */
+  drawerDepth: number;
+  /** Gap taken off the drawer width and depth so the baseplate goes in without forcing, in millimetres. */
+  drawerGap: number;
+  /** Number of cells along X, left to right (mode `cells`). */
   columns: number;
-  /** Number of cells along Y (front to back). */
+  /** Number of cells along Y, front to back (mode `cells`). */
   rows: number;
+  /** Margin added to the width of the grid, in millimetres (mode `cells`). */
+  marginWidth: number;
+  /** Margin added to the depth of the grid, in millimetres (mode `cells`). */
+  marginDepth: number;
+  /** Where the grid sits when there is a margin; the margin takes the rest. */
+  alignment: Alignment;
   /** Layer height of the print, in millimetres: thicknesses the generator chooses are multiples of it. */
   layerHeight: number;
-  /** Line width of the print, in millimetres. */
+  /** Line width of the print, in millimetres: widths the generator chooses are multiples of it. */
   lineWidth: number;
 }
 
@@ -24,34 +48,59 @@ export interface NumericSetting {
   integer: boolean;
 }
 
+export interface ChoiceSetting<T extends string = string> {
+  options: readonly T[];
+  default: T;
+}
+
+/** The 9 alignments, row by row from the back left to the front right (the order of a keypad). */
+export const ALIGNMENTS: readonly Alignment[] = ["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"];
+
 /** Range and default of every baseplate setting (spec v1, table of settings). */
 export const BASEPLATE_SETTINGS = {
+  sizeMode: { options: ["drawer", "cells"], default: "drawer" } as ChoiceSetting<SizeMode>,
+  drawerWidth: { min: 42, max: 1000, default: 400, integer: false },
+  drawerDepth: { min: 42, max: 1000, default: 280, integer: false },
+  drawerGap: { min: 0, max: 5, default: 1, integer: false },
   columns: { min: 1, max: 24, default: 4, integer: true },
   rows: { min: 1, max: 24, default: 3, integer: true },
+  marginWidth: { min: 0, max: 500, default: 0, integer: false },
+  marginDepth: { min: 0, max: 500, default: 0, integer: false },
+  alignment: { options: ALIGNMENTS, default: "c" } as ChoiceSetting<Alignment>,
   layerHeight: { min: 0.12, max: 0.28, default: 0.2, integer: false },
   lineWidth: { min: 0.1, max: 1.2, default: 0.4, integer: false },
-} as const satisfies Record<keyof BaseplateSettings, NumericSetting>;
+} as const satisfies { [K in keyof BaseplateSettings]: BaseplateSettings[K] extends string ? ChoiceSetting : NumericSetting };
 
-/** The default baseplate: the cheapest one to print for a newcomer. */
+/** The default baseplate: the one for the default drawer, the cheapest to print for a newcomer. */
 export const DEFAULT_SETTINGS: BaseplateSettings = {
+  sizeMode: BASEPLATE_SETTINGS.sizeMode.default,
+  drawerWidth: BASEPLATE_SETTINGS.drawerWidth.default,
+  drawerDepth: BASEPLATE_SETTINGS.drawerDepth.default,
+  drawerGap: BASEPLATE_SETTINGS.drawerGap.default,
   columns: BASEPLATE_SETTINGS.columns.default,
   rows: BASEPLATE_SETTINGS.rows.default,
+  marginWidth: BASEPLATE_SETTINGS.marginWidth.default,
+  marginDepth: BASEPLATE_SETTINGS.marginDepth.default,
+  alignment: BASEPLATE_SETTINGS.alignment.default,
   layerHeight: BASEPLATE_SETTINGS.layerHeight.default,
   lineWidth: BASEPLATE_SETTINGS.lineWidth.default,
 };
 
 /**
  * Brings every setting into its range, rounding the whole ones; a missing setting, or one
- * that is not a number, takes its default.
+ * that is not a number or not one of its choices, takes its default.
  */
 export function clampSettings(settings: Partial<BaseplateSettings>): BaseplateSettings {
-  const clamped = { ...DEFAULT_SETTINGS };
-  for (const key of Object.keys(BASEPLATE_SETTINGS) as (keyof BaseplateSettings)[]) {
+  const clamped: Record<string, unknown> = { ...DEFAULT_SETTINGS };
+  for (const [key, setting] of Object.entries(BASEPLATE_SETTINGS) as [keyof BaseplateSettings, NumericSetting | ChoiceSetting][]) {
     const value = settings[key];
-    if (typeof value !== "number" || Number.isNaN(value)) continue;
-    clamped[key] = clampSetting(BASEPLATE_SETTINGS[key], value);
+    if ("options" in setting) {
+      if (typeof value === "string" && setting.options.includes(value)) clamped[key] = value;
+    } else if (typeof value === "number" && !Number.isNaN(value)) {
+      clamped[key] = clampSetting(setting, value);
+    }
   }
-  return clamped;
+  return clamped as unknown as BaseplateSettings;
 }
 
 function clampSetting({ min, max, integer }: NumericSetting, value: number): number {

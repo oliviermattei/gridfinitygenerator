@@ -36,6 +36,16 @@ export async function closeMenu(page: Page) {
   await expect(page.getByRole("dialog", { name: /^(Paramètres|Menu)$/ })).toBeHidden();
 }
 
+/**
+ * Switches the size to a number of cells (the size family must be on screen). The
+ * default size mode is the drawer.
+ */
+export async function chooseCells(page: Page) {
+  const cells = page.getByRole("radio", { name: "Nombre de cellules" });
+  await cells.click();
+  await expect(cells).toBeChecked();
+}
+
 /** A number field of the settings, by its label. */
 export function numberField(page: Page, label: string) {
   return page.getByRole("textbox", { name: label, exact: true });

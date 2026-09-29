@@ -1,5 +1,6 @@
 import { assembleWithBooleans } from "./boolean-assembly";
 import { assembleWithBricks, canAssembleWithBricks } from "./brick-assembly";
+import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold } from "./manifold";
 import { HYBRID_PROFILE } from "./pocket-profile";
 import { layerCount } from "./print";
@@ -7,7 +8,7 @@ import { clampSettings, type BaseplateSettings } from "./settings";
 import type { TriangleMesh } from "./mesh";
 import type { GridFrame } from "./shapes";
 
-export type { TriangleMesh };
+export type { BaseplateLayout, Margins, TriangleMesh };
 
 /** Side of a Gridfinity cell in the standard, in millimetres (default cell size). */
 export const STANDARD_CELL_SIZE_MM = 42;
@@ -19,14 +20,6 @@ export type Quality = "preview" | "final";
 
 /** Segments per quarter circle for rounded corners (spec v1: 8 in preview, 32 in final). */
 const SEGMENTS_PER_QUARTER: Record<Quality, number> = { preview: 8, final: 32 };
-
-export interface BaseplateLayout {
-  columns: number;
-  rows: number;
-  cellSize: number;
-  /** Width of the margin on each side of the grid, in millimetres. */
-  margins: { left: number; right: number; back: number; front: number };
-}
 
 export interface BaseplateStats {
   /** Bounding box of the mesh, in millimetres (width along X, depth along Y). */
@@ -68,10 +61,12 @@ export interface Baseplate {
 }
 
 /**
- * Generates a baseplate: a frame of open pockets with the hybrid profile (ADR 0002),
- * without margin. The settings are first brought into their ranges, and a missing one
- * takes its default (`clampSettings`). The mesh is always closed; the final mesh, the one
- * that gets exported, is also checked by manifold (`NoError`) before it is returned.
+ * Generates a baseplate: a grid of open pockets with the hybrid profile (ADR 0002), sized
+ * for a drawer or by its number of cells, and its margin (a frame of crossbars for now, see
+ * margin.ts). The settings are first brought into their ranges, and a missing one takes its
+ * default (`clampSettings`): without settings, the baseplate of the default drawer. The mesh
+ * is always closed; the final mesh, the one that gets exported, is also checked by manifold
+ * (`NoError`) before it is returned.
  */
 export async function generateBaseplate(
   input: Partial<BaseplateSettings>,
@@ -80,16 +75,22 @@ export async function generateBaseplate(
 ): Promise<Baseplate> {
   const wasm = await loadManifold();
   const settings = clampSettings(input);
-  const layout = layoutOf(settings);
-  const width = layout.columns * layout.cellSize;
-  const depth = layout.rows * layout.cellSize;
+  const layout = layoutOf(settings, STANDARD_CELL_SIZE_MM);
+  const { margins } = layout;
+  const width = layout.columns * layout.cellSize + margins.left + margins.right;
+  const depth = layout.rows * layout.cellSize + margins.back + margins.front;
   const frame: GridFrame = {
     columns: layout.columns,
     rows: layout.rows,
     cellSize: layout.cellSize,
     profile: HYBRID_PROFILE,
+    margins,
+    width,
+    depth,
     outerRadius: Math.min(OUTER_RADIUS_MM, width / 2, depth / 2),
     segmentsPerQuarter: SEGMENTS_PER_QUARTER[quality],
+    layerHeight: settings.layerHeight,
+    lineWidth: settings.lineWidth,
   };
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
   const mesh =
@@ -113,15 +114,6 @@ export async function generateBaseplate(
  */
 export async function loadEngine(): Promise<void> {
   await loadManifold();
-}
-
-function layoutOf(settings: BaseplateSettings): BaseplateLayout {
-  return {
-    columns: settings.columns,
-    rows: settings.rows,
-    cellSize: STANDARD_CELL_SIZE_MM,
-    margins: { left: 0, right: 0, back: 0, front: 0 },
-  };
 }
 
 function dimensionsOf({ positions }: TriangleMesh): BaseplateStats["dimensions"] {

@@ -1,26 +1,54 @@
 // Shapes shared by the assembly strategies: outlines, the pocket tool and mesh helpers.
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
+import type { Margins } from "./layout";
 import type { Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
 
-/** What an assembly strategy needs to build the frame of a grid. */
+/**
+ * What an assembly strategy needs to build a baseplate: its grid, its margins and its
+ * outline. The outline is centred on the origin; the grid sits in it, shifted by the margins.
+ */
 export interface GridFrame {
   columns: number;
   rows: number;
   cellSize: number;
   profile: PocketProfile;
+  margins: Margins;
+  /** Size of the outline, grid and margins included. */
+  width: number;
+  depth: number;
   /** Radius of the rounded outer corners, already limited to the outline. */
   outerRadius: number;
   segmentsPerQuarter: number;
+  /** Print settings the thicknesses and widths chosen by the generator follow. */
+  layerHeight: number;
+  lineWidth: number;
 }
 
 /** Overshoot of cutting tools below and above the frame, to avoid coplanar faces. */
 export const TOOL_OVERSHOOT_MM = 1;
 
-/** Centre of cell (i, j) of the grid, which is centred on the origin (i along X, j along Y). */
-export function cellCentre(i: number, j: number, { columns, rows, cellSize }: GridFrame): [x: number, y: number] {
-  return [(i - (columns - 1) / 2) * cellSize, (j - (rows - 1) / 2) * cellSize];
+/** Grid rectangle in the outline: [x0, y0, x1, y1]. */
+export function gridRect({ width, depth, margins }: GridFrame): [x0: number, y0: number, x1: number, y1: number] {
+  return [-width / 2 + margins.left, -depth / 2 + margins.front, width / 2 - margins.right, depth / 2 - margins.back];
+}
+
+/** Centre of cell (i, j) of the grid (i along X, j along Y). */
+export function cellCentre(i: number, j: number, frame: GridFrame): [x: number, y: number] {
+  const { cellSize } = frame;
+  const [x0, y0] = gridRect(frame);
+  return [x0 + (i + 0.5) * cellSize, y0 + (j + 0.5) * cellSize];
+}
+
+/** Counter-clockwise rectangle from its corners. */
+export function rect(x0: number, y0: number, x1: number, y1: number): [number, number][] {
+  return [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+  ];
 }
 
 /** Throws unless manifold reports the solid as closed and valid. */
@@ -28,8 +56,12 @@ export function assertNoError(status: string): void {
   if (status !== "NoError") throw new Error(`Baseplate mesh is not manifold: ${status}`);
 }
 
-/** Counter-clockwise rounded rectangle centred on the origin, `segmentsPerQuarter` segments per corner. */
+/**
+ * Counter-clockwise rounded rectangle centred on the origin, `segmentsPerQuarter` segments
+ * per corner; a plain rectangle without radius.
+ */
 export function roundedRect(width: number, depth: number, radius: number, segmentsPerQuarter: number): [number, number][] {
+  if (radius <= 0) return rect(-width / 2, -depth / 2, width / 2, depth / 2);
   const hx = width / 2 - radius;
   const hy = depth / 2 - radius;
   const centres: [number, number][] = [

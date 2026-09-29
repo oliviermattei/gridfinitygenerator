@@ -118,6 +118,7 @@ export function BaseplateGenerator() {
     <StatsCard
       summary={baseplate}
       layerHeight={shown?.settings.layerHeight ?? settings.layerHeight}
+      lineWidth={shown?.settings.lineWidth ?? settings.lineWidth}
       final={final}
       buildPlate={preferences.buildPlate}
       fits={fits}

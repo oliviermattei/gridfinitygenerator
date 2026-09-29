@@ -1,5 +1,5 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
-import { closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings, readout } from "./support";
+import { chooseCells, closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings, readout } from "./support";
 
 // Share, memory of the last settings and reset (#8).
 
@@ -18,6 +18,7 @@ async function runAction(page: Page, testInfo: TestInfo, name: "Partager" | "Ré
 
 async function setCells(page: Page, testInfo: TestInfo, columns: number, rows: number) {
   await openSettings(page, testInfo);
+  await chooseCells(page);
   await numberField(page, "Colonnes").fill(String(columns));
   await numberField(page, "Rangées").fill(String(rows));
   await expect(readout(page, "cells")).toHaveText(`${columns} × ${rows} cellules`);
@@ -35,7 +36,7 @@ test("a shared link opened in a new context gives back the same baseplate", asyn
   await runAction(page, testInfo, "Partager");
   await expect(page.getByText("Lien copié")).toBeVisible();
   const link = await page.evaluate(() => navigator.clipboard.readText());
-  // Only what differs from the v1 defaults: the engine builds from a number of cells.
+  // Only what differs from the v1 defaults, whose size mode is the drawer.
   expect(new URL(link).pathname).toBe("/fr/baseplate");
   expect(new URL(link).search).toBe("?v=1&mode=cells&cx=7&cy=5&lh=0.28");
 
@@ -103,12 +104,12 @@ test("reset asks for a confirmation, then brings back the defaults and keeps the
   await expect(confirm).toBeHidden();
   await expect(readout(page, "cells")).toHaveText("8 × 2 cellules");
 
-  // Confirm: the baseplate settings come back to their defaults.
+  // Confirm: the baseplate settings come back to their defaults, the 400 × 280 mm drawer.
   await runAction(page, testInfo, "Réinitialiser");
   await confirm.getByRole("button", { name: "Réinitialiser" }).click();
   await expect(confirm).toBeHidden();
-  await expect(readout(page, "cells")).toHaveText("4 × 3 cellules");
-  await expect(readout(page, "dimensions")).toHaveText("168 × 126 mm");
+  await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
+  await expect(readout(page, "dimensions")).toHaveText("399 × 279 mm");
 
   // The preferences are kept, and the layer height too: it describes the printer.
   await expect(page.getByTestId("mesh-preview")).toHaveAttribute("data-color", "#2E3137");
@@ -119,5 +120,37 @@ test("reset asks for a confirmation, then brings back the defaults and keeps the
 
   // The reset is remembered like any other change.
   await page.reload();
-  await expect(readout(page, "cells")).toHaveText("4 × 3 cellules");
+  await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
+});
+
+test("a drawer is shared by its dimensions, and links made before the drawer mode keep their cells", async ({ page, browser }, testInfo) => {
+  await page.goto("/fr/baseplate");
+  await openSettings(page, testInfo);
+  await numberField(page, "Largeur").fill("500");
+  await numberField(page, "Profondeur").fill("300");
+  await expect(readout(page, "cells")).toHaveText("11 × 7 cellules");
+  await closeSettings(page, testInfo);
+  await runAction(page, testInfo, "Partager");
+  await expect(page.getByText("Lien copié")).toBeVisible();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  // The drawer is the default size mode of v1: the link carries its dimensions only.
+  expect(new URL(link).search).toBe("?v=1&w=500&d=300");
+
+  const other = await browser.newContext({
+    viewport: page.viewportSize(),
+    isMobile: isMobile(testInfo),
+    hasTouch: isMobile(testInfo),
+  });
+  try {
+    const recipient = await other.newPage();
+    await recipient.goto(link);
+    await expect(readout(recipient, "dimensions")).toHaveText("499 × 299 mm");
+    await expect(readout(recipient, "cells")).toHaveText("11 × 7 cellules");
+    // Every link written before #10 said mode=cells: it still opens as that number of cells.
+    await recipient.goto("/fr/baseplate?v=1&mode=cells&cx=3&cy=2");
+    await expect(readout(recipient, "dimensions")).toHaveText("126 × 84 mm");
+    await expect(readout(recipient, "cells")).toHaveText("3 × 2 cellules");
+  } finally {
+    await other.close();
+  }
 });

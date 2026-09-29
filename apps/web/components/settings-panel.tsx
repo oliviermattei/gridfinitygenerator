@@ -1,20 +1,25 @@
 "use client";
 
 import { Collapsible } from "@base-ui/react/collapsible";
-import { BASEPLATE_SETTINGS, type BaseplateSettings } from "@repo/geometry";
-import { ChoiceGroup, NumberStepper, focusRing } from "@repo/ui";
+import { BASEPLATE_SETTINGS, type BaseplateSettings, type SizeMode } from "@repo/geometry";
+import { ChoiceGroup, NumberStepper, Segmented, focusRing } from "@repo/ui";
 import { ChevronDown, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
-import { fine, footprint as footprintOf } from "@/lib/format";
+import { fine, footprint as footprintOf, lengths } from "@/lib/format";
 import { strings as t } from "@/lib/strings";
-import { ProfileArt, ProfileIcon, SizeIcon } from "./illustrations";
+import { AlignmentPad } from "./alignment-pad";
+import { AdvancedIcon, AlignIcon, ProfileArt, ProfileIcon, SizeIcon } from "./illustrations";
 
 /**
- * Families of settings in the panel. Screws and advanced settings join with their tickets;
- * the print settings (layer height, line width) live in the gear menu.
+ * Families of settings in the panel. Screws join with their ticket, and the advanced family
+ * gets its other settings with #13; the print settings (layer height, line width) live in
+ * the gear menu.
  */
-export type Family = "size" | "profile";
+export type Family = "size" | "alignment" | "profile" | "advanced";
+
+/** Drops the floating-point noise of a stepped length (0.5 + 0.1 = 0.6000000000000001). */
+const toHundredths = (value: number) => Math.round(value * 100) / 100;
 
 /** "168 × 126 mm", measured on the mesh. */
 function footprint(summary: BaseplateSummary): string {
@@ -23,6 +28,15 @@ function footprint(summary: BaseplateSummary): string {
 
 function cellCount(summary: BaseplateSummary): string {
   return t.cells(summary.layout.columns, summary.layout.rows);
+}
+
+/** "9 × 6 cellules, marge 21 × 27 mm": what the size settings give, as laid out by the engine. */
+function sizeResult(summary: BaseplateSummary): string {
+  const { left, right, back, front } = summary.layout.margins;
+  const width = left + right;
+  const depth = back + front;
+  const margin = width === 0 && depth === 0 ? t.withoutMargin : t.withMargin(lengths.format(width), lengths.format(depth));
+  return `${cellCount(summary)}, ${margin}`;
 }
 
 /**
@@ -91,32 +105,18 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
         title={t.size}
         summary={summary ? `${footprint(summary)}, ${cellCount(summary)}` : "…"}
       >
-        <div className="grid grid-cols-2 gap-2.5">
-          <NumberStepper
-            label={t.columns}
-            decrementLabel={t.fewerColumns}
-            incrementLabel={t.moreColumns}
-            value={settings.columns}
-            min={BASEPLATE_SETTINGS.columns.min}
-            max={BASEPLATE_SETTINGS.columns.max}
-            step={1}
-            unit="×"
-            locale={t.locale}
-            onChange={(columns) => onSettingsChange({ columns: Math.round(columns) })}
-          />
-          <NumberStepper
-            label={t.rows}
-            decrementLabel={t.fewerRows}
-            incrementLabel={t.moreRows}
-            value={settings.rows}
-            min={BASEPLATE_SETTINGS.rows.min}
-            max={BASEPLATE_SETTINGS.rows.max}
-            step={1}
-            unit="×"
-            locale={t.locale}
-            onChange={(rows) => onSettingsChange({ rows: Math.round(rows) })}
-          />
-        </div>
+        <SizeFields settings={settings} onSettingsChange={onSettingsChange} />
+        <p className="mt-3 text-[12.5px] text-muted tabular-nums" data-testid="size-result">
+          {summary ? sizeResult(summary) : "…"}
+        </p>
+      </FamilyItem>
+      <FamilyItem
+        {...bind("alignment")}
+        icon={<AlignIcon className="size-[18px]" />}
+        title={t.alignment}
+        summary={t.alignments[settings.alignment]}
+      >
+        <AlignmentPad value={settings.alignment} onChange={(alignment) => onSettingsChange({ alignment })} />
       </FamilyItem>
       <FamilyItem
         {...bind("profile")}
@@ -148,6 +148,100 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
           ]}
         />
       </FamilyItem>
+      <FamilyItem
+        {...bind("advanced")}
+        icon={<AdvancedIcon className="size-[18px]" />}
+        title={t.advanced}
+        summary={t.gapSummary(fine.format(settings.drawerGap))}
+      >
+        {/* Skeleton: the other advanced settings, and their warning, arrive with #13. */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <NumberStepper
+            label={t.drawerGap}
+            decrementLabel={t.lessGap}
+            incrementLabel={t.moreGap}
+            value={settings.drawerGap}
+            min={BASEPLATE_SETTINGS.drawerGap.min}
+            max={BASEPLATE_SETTINGS.drawerGap.max}
+            step={0.5}
+            unit="mm"
+            locale={t.locale}
+            onChange={(drawerGap) => onSettingsChange({ drawerGap: toHundredths(drawerGap) })}
+          />
+        </div>
+        <p className="mt-2 text-[12px] leading-snug text-muted">{t.drawerGapHint}</p>
+      </FamilyItem>
+    </div>
+  );
+}
+
+interface SizeFieldsProps {
+  settings: BaseplateSettings;
+  onSettingsChange: (patch: Partial<BaseplateSettings>) => void;
+}
+
+type LengthSetting = "drawerWidth" | "drawerDepth" | "marginWidth" | "marginDepth";
+
+/** The size mode, then the drawer, or the cells and their margins. */
+function SizeFields({ settings, onSettingsChange }: SizeFieldsProps) {
+  const length = (key: LengthSetting) => ({
+    value: settings[key],
+    min: BASEPLATE_SETTINGS[key].min,
+    max: BASEPLATE_SETTINGS[key].max,
+    step: 1,
+    unit: "mm",
+    locale: t.locale,
+    onChange: (value: number) => onSettingsChange({ [key]: toHundredths(value) }),
+  });
+  return (
+    <div className="flex flex-col gap-3.5">
+      <Segmented<SizeMode>
+        label={t.sizeMode}
+        value={settings.sizeMode}
+        onChange={(sizeMode) => onSettingsChange({ sizeMode })}
+        options={[
+          { value: "drawer", label: t.sizeDrawer },
+          { value: "cells", label: t.sizeCells },
+        ]}
+      />
+      {settings.sizeMode === "drawer" ? (
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
+            <NumberStepper label={t.drawerWidth} decrementLabel={t.narrowerDrawer} incrementLabel={t.widerDrawer} {...length("drawerWidth")} />
+            <NumberStepper label={t.drawerDepth} decrementLabel={t.shallowerDrawer} incrementLabel={t.deeperDrawer} {...length("drawerDepth")} />
+          </div>
+          <p className="text-[12px] leading-snug text-muted">{t.drawerHint}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2.5">
+          <NumberStepper
+            label={t.columns}
+            decrementLabel={t.fewerColumns}
+            incrementLabel={t.moreColumns}
+            value={settings.columns}
+            min={BASEPLATE_SETTINGS.columns.min}
+            max={BASEPLATE_SETTINGS.columns.max}
+            step={1}
+            unit="×"
+            locale={t.locale}
+            onChange={(columns) => onSettingsChange({ columns: Math.round(columns) })}
+          />
+          <NumberStepper
+            label={t.rows}
+            decrementLabel={t.fewerRows}
+            incrementLabel={t.moreRows}
+            value={settings.rows}
+            min={BASEPLATE_SETTINGS.rows.min}
+            max={BASEPLATE_SETTINGS.rows.max}
+            step={1}
+            unit="×"
+            locale={t.locale}
+            onChange={(rows) => onSettingsChange({ rows: Math.round(rows) })}
+          />
+          <NumberStepper label={t.marginWidth} decrementLabel={t.lessMarginWidth} incrementLabel={t.moreMarginWidth} {...length("marginWidth")} />
+          <NumberStepper label={t.marginDepth} decrementLabel={t.lessMarginDepth} incrementLabel={t.moreMarginDepth} {...length("marginDepth")} />
+        </div>
+      )}
     </div>
   );
 }

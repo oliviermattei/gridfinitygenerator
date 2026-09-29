@@ -42,7 +42,7 @@ test.describe("desktop", () => {
     const profile = page.getByRole("button", { name: /^Profil de poche/ });
 
     // Each family is summarised on one line, open or closed.
-    await expect(size).toHaveAccessibleName("Taille 168 × 126 mm, 4 × 3 cellules");
+    await expect(size).toHaveAccessibleName("Taille 399 × 279 mm, 9 × 6 cellules");
     await expect(profile).toHaveAccessibleName("Profil de poche Hybride");
     await expect(size).toHaveAttribute("aria-expanded", "true");
     await expect(profile).toHaveAttribute("aria-expanded", "false");
@@ -51,12 +51,12 @@ test.describe("desktop", () => {
     await expect(profile).toHaveAttribute("aria-expanded", "true");
     await expect(size).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByRole("radio", { name: /Hybride/ })).toBeChecked();
-    await expect(numberField(page, "Colonnes")).toHaveCount(0);
+    await expect(numberField(page, "Largeur")).toHaveCount(0);
 
     await size.click();
     await expect(size).toHaveAttribute("aria-expanded", "true");
     await expect(profile).toHaveAttribute("aria-expanded", "false");
-    await expect(numberField(page, "Colonnes")).toBeVisible();
+    await expect(numberField(page, "Largeur")).toBeVisible();
 
     // Closing the open family leaves them all closed.
     await size.click();
@@ -98,14 +98,14 @@ test.describe("desktop", () => {
     const first = await expectFramedIn(page, visible);
 
     // A larger baseplate is reframed in the same area.
-    await numberField(page, "Colonnes").fill("12");
-    await expect(readout(page, "cells")).toHaveText("12 × 3 cellules");
+    await numberField(page, "Largeur").fill("600");
+    await expect(readout(page, "cells")).toHaveText("14 × 6 cellules");
     await expectFramedIn(page, visible, first);
   });
 
   test("every control is reachable and operable with the keyboard, with a visible focus", async ({ page }) => {
     await page.goto("/fr/baseplate");
-    await expect(readout(page, "cells")).toHaveText("4 × 3 cellules");
+    await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
 
     const reached: string[] = [];
     for (let step = 0; step < 20; step++) {
@@ -118,11 +118,13 @@ test.describe("desktop", () => {
       });
       reached.push(name);
     }
-    for (const name of ["Paramètres", "Colonnes", "Rangées", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
+    for (const name of ["Paramètres", "Tiroir", "Largeur", "Profondeur", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
       expect(reached, `${name} is reached with Tab`).toContain(name);
     }
     expect(reached.some((name) => name.startsWith("Taille"))).toBe(true);
-    expect(reached.some((name) => name.startsWith("Profil de poche"))).toBe(true);
+    for (const family of ["Alignement", "Profil de poche", "Avancé"]) {
+      expect(reached.some((name) => name.startsWith(family)), `${family} is reached with Tab`).toBe(true);
+    }
 
     // Focus is visible: the accent ring around the focused control.
     const download = page.getByRole("button", { name: "Télécharger le 3MF" });
@@ -132,10 +134,10 @@ test.describe("desktop", () => {
     await expect(download).toBeFocused();
     await expect(download).not.toHaveCSS("box-shadow", "none");
 
-    // Operable: the arrow keys step a cell count, Enter opens a family.
-    await numberField(page, "Colonnes").focus();
+    // Operable: the arrow keys step a drawer dimension, Enter opens a family.
+    await numberField(page, "Largeur").focus();
     await page.keyboard.press("ArrowUp");
-    await expect(readout(page, "cells")).toHaveText("5 × 3 cellules");
+    await expect(readout(page, "dimensions")).toHaveText("400 × 279 mm");
     await page.getByRole("button", { name: /^Profil de poche/ }).focus();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("button", { name: /^Profil de poche/ })).toHaveAttribute("aria-expanded", "true");
@@ -170,7 +172,7 @@ test.describe("mobile", () => {
     const settings = page.getByRole("button", { name: "Réglages" });
     await expect(settings).toBeVisible();
     await expect(page.getByRole("button", { name: "Télécharger le 3MF" })).toBeVisible();
-    await expect(readout(page, "dimensions")).toHaveText("168 × 126 mm");
+    await expect(readout(page, "dimensions")).toHaveText("399 × 279 mm");
     // No desktop panel nor top bar actions at this width.
     await expect(page.getByRole("complementary", { name: "Réglages" })).toBeHidden();
     await expect(page.getByRole("button", { name: "Partager" })).toBeHidden();
@@ -178,7 +180,7 @@ test.describe("mobile", () => {
     await settings.click();
     const sheet = page.getByRole("dialog", { name: "Réglages" });
     await expect(sheet).toBeVisible();
-    await expect(numberField(page, "Colonnes")).toBeVisible();
+    await expect(numberField(page, "Largeur")).toBeVisible();
 
     const viewport = page.viewportSize();
     if (!viewport) throw new Error("No viewport");
@@ -192,8 +194,8 @@ test.describe("mobile", () => {
     const first = await expectFramedIn(page, visible);
 
     // The settings apply while the sheet is open, and the model is reframed above it.
-    await numberField(page, "Colonnes").fill("6");
-    await expect(readout(page, "cells")).toHaveText("6 × 3 cellules");
+    await numberField(page, "Largeur").fill("300");
+    await expect(readout(page, "cells")).toHaveText("7 × 6 cellules");
     await expectFramedIn(page, visible, first);
 
     await sheet.getByRole("button", { name: "Fermer" }).click();

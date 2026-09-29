@@ -1,17 +1,22 @@
-import { generateBaseplate, type GenerateOptions, type Quality } from "../../src/index";
+import { generateBaseplate, type BaseplateSettings, type GenerateOptions, type Quality } from "../../src/index";
+
+/** Settings of a grid of `columns` × `rows` cells without margin. */
+export function cells(columns: number, rows: number): Partial<BaseplateSettings> {
+  return { sizeMode: "cells", columns, rows };
+}
 
 /** Median wall-clock time of `generateBaseplate`, in milliseconds, after one warm-up run. */
 export async function medianGenerationMs(
-  [columns, rows]: readonly [number, number],
+  settings: Partial<BaseplateSettings>,
   quality: Quality,
   runs: number,
   options?: GenerateOptions,
 ): Promise<number> {
-  await generateBaseplate({ columns, rows }, quality, options);
+  await generateBaseplate(settings, quality, options);
   const times: number[] = [];
   for (let run = 0; run < runs; run++) {
     const start = performance.now();
-    await generateBaseplate({ columns, rows }, quality, options);
+    await generateBaseplate(settings, quality, options);
     times.push(performance.now() - start);
   }
   times.sort((a, b) => a - b);
