@@ -1,5 +1,5 @@
 import type { Baseplate, BaseplateSettings, Quality } from "@repo/geometry";
-import type { BaseplateSummary, EngineRequest, EngineResponse, EngineWarmUp } from "./protocol";
+import type { BaseplateSummary, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat } from "./protocol";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
@@ -18,7 +18,15 @@ export interface EngineClient {
    * latest settings are rendered.
    */
   show(settings: BaseplateSettings): void;
-  exportStl(settings: BaseplateSettings): Promise<{ bytes: Uint8Array; baseplate: BaseplateSummary }>;
+  /**
+   * The file of `settings` in `format`, computed in final quality. A 3MF carries
+   * `shareLink`, the absolute share link of the settings.
+   */
+  exportFile(
+    settings: BaseplateSettings,
+    format: ExportFormat,
+    shareLink: string,
+  ): Promise<{ bytes: Uint8Array; baseplate: BaseplateSummary }>;
   dispose(): void;
 }
 
@@ -42,7 +50,7 @@ const FINAL_AFTER_STILL_MS = 200;
 export const ENGINE_TIMING_PREFIX = "engine:";
 
 /** What a request computes, as named in its User Timing measure. */
-type RequestLabel = Quality | "export-stl";
+type RequestLabel = Quality | `export-${ExportFormat}`;
 
 interface Pending {
   resolve: (response: EngineResponse) => void;
@@ -67,7 +75,8 @@ interface Shown {
  * large mesh is replaced by a fresh one once idle, to give its WASM heap back.
  *
  * Each request is recorded as a User Timing measure named `engine:<request>`, whose
- * detail holds the settings (and `cancelled: true` for a cancelled final).
+ * detail holds the settings (and `cancelled: true` for a cancelled final, `serializeMs`
+ * for an export).
  */
 export function createEngineClient(events: EngineClientEvents): EngineClient {
   const pending = new Map<number, Pending>();
@@ -96,7 +105,7 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
     performance.mark(`${ENGINE_TIMING_PREFIX}worker-start`);
     const started = new Worker(new URL("./baseplate.worker.ts", import.meta.url), { type: "module" });
     started.onmessage = ({ data: response }: MessageEvent<EngineResponse>) => {
-      const request = settle(response.id, false);
+      const request = settle(response.id, false, response.type === "export" ? response.serializeMs : undefined);
       if (!request) return;
       if (triangleCount(response) >= LARGE_MESH_TRIANGLES) recycleWhenIdle = true;
       if (response.type === "error") request.reject(new Error(response.message));
@@ -113,8 +122,11 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
     return started;
   }
 
-  /** Removes a request from the pending ones and records its User Timing measure. */
-  function settle(id: number, cancelled: boolean): Pending | undefined {
+  /**
+   * Removes a request from the pending ones and records its User Timing measure; its
+   * detail holds the settings, plus the serialisation time of an export.
+   */
+  function settle(id: number, cancelled: boolean, serializeMs?: number): Pending | undefined {
     const request = pending.get(id);
     if (!request) return undefined;
     pending.delete(id);
@@ -122,7 +134,11 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
     performance.measure(`${ENGINE_TIMING_PREFIX}${request.label}`, {
       start: request.startedAt,
       end: performance.now(),
-      detail: cancelled ? { ...request.settings, cancelled } : { ...request.settings },
+      detail: cancelled
+        ? { ...request.settings, cancelled }
+        : serializeMs === undefined
+          ? { ...request.settings }
+          : { ...request.settings, serializeMs },
     });
     return request;
   }
@@ -204,9 +220,9 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
       cancelStaleFinal();
       void render();
     },
-    async exportStl(settings) {
-      const response = await send({ type: "export-stl", settings }, "export-stl").response;
-      if (response.type !== "stl") throw new Error(`Unexpected engine response: ${response.type}`);
+    async exportFile(settings, format, shareLink) {
+      const response = await send({ type: "export", settings, format, shareLink }, `export-${format}`).response;
+      if (response.type !== "export") throw new Error(`Unexpected engine response: ${response.type}`);
       return { bytes: response.bytes, baseplate: response.baseplate };
     },
     dispose() {
@@ -219,6 +235,6 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
 
 function triangleCount(response: EngineResponse): number {
   if (response.type === "baseplate") return response.baseplate.mesh.indices.length / 3;
-  if (response.type === "stl") return (response.bytes.byteLength - 84) / 50; // binary STL layout
+  if (response.type === "export") return response.triangles;
   return 0;
 }

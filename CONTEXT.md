@@ -70,6 +70,10 @@ _Avoid_: part, fragment, tuile
 Le plateau d'impression de l'imprimante, uniquement.
 _Avoid_: build plate, lit, bed (et jamais pour désigner la baseplate)
 
+**Trancheur**:
+Le logiciel qui découpe le fichier 3MF ou STL en couches pour l'imprimante (PrusaSlicer, Bambu Studio, OrcaSlicer, Cura).
+_Avoid_: slicer, slicer 3D
+
 ### Contexte d'usage
 
 **Tiroir**:

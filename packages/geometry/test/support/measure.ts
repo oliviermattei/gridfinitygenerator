@@ -1,6 +1,7 @@
 // Measuring instruments for the engine tests. manifold-3d is used here as an independent
 // checker of the meshes returned by the public interface (validity, volume, sections),
 // the TypeScript counterpart of the trimesh script prototypes/geometry-perf/validate.py.
+import { crc32, inflateRawSync } from "node:zlib";
 import Module, { type Manifold, type ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "../../src/index";
 
@@ -117,4 +118,120 @@ export function readBinaryStl(bytes: Uint8Array): TriangleMesh {
     }
   }
   return { positions: new Float32Array(positions), indices };
+}
+
+/**
+ * Entries of a zip archive, read through its central directory and inflated by zlib (the
+ * library most slicers read 3MF with); the CRC-32 and size of every entry are checked.
+ */
+export function readZip(bytes: Uint8Array): Record<string, Uint8Array> {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const end = bytes.byteLength - 22;
+  if (view.getUint32(end, true) !== 0x06054b50) throw new Error("zip: no end of central directory");
+  const count = view.getUint16(end + 10, true);
+  let at = view.getUint32(end + 16, true);
+  const files: Record<string, Uint8Array> = {};
+  for (let entry = 0; entry < count; entry++) {
+    if (view.getUint32(at, true) !== 0x02014b50) throw new Error("zip: bad central directory header");
+    const method = view.getUint16(at + 10, true);
+    const crc = view.getUint32(at + 16, true);
+    const compressedSize = view.getUint32(at + 20, true);
+    const size = view.getUint32(at + 24, true);
+    const nameLength = view.getUint16(at + 28, true);
+    const extraLength = view.getUint16(at + 30, true);
+    const commentLength = view.getUint16(at + 32, true);
+    const offset = view.getUint32(at + 42, true);
+    const name = new TextDecoder().decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    at += 46 + nameLength + extraLength + commentLength;
+
+    if (view.getUint32(offset, true) !== 0x04034b50) throw new Error(`zip: bad local header for ${name}`);
+    const dataAt = offset + 30 + view.getUint16(offset + 26, true) + view.getUint16(offset + 28, true);
+    const stored = bytes.subarray(dataAt, dataAt + compressedSize);
+    const data = method === 8 ? new Uint8Array(inflateRawSync(stored)) : stored;
+    if (data.byteLength !== size) throw new Error(`zip: ${name} is ${data.byteLength} bytes, not ${size}`);
+    if (crc32(data) !== crc) throw new Error(`zip: CRC-32 mismatch for ${name}`);
+    files[name] = data;
+  }
+  return files;
+}
+
+/** What a 3MF package holds, as read back by `readThreeMf`. */
+export interface ThreeMfContent {
+  /** Paths of the parts of the package (zip entries). */
+  parts: string[];
+  /** Target of the package relationship to the 3D model. */
+  modelTarget: string | undefined;
+  /** Content type declared for the `.model` extension. */
+  modelContentType: string | undefined;
+  unit: string | undefined;
+  /** `name` of each object of the model. */
+  objectNames: string[];
+  /** Object ids referenced by the build items. */
+  buildItems: string[];
+  /** Translation of the first build item (its `transform`), zero without one. */
+  placement: [number, number, number];
+  /** Model metadata, by name, with XML entities decoded. */
+  metadata: Map<string, string>;
+  /** The mesh of the object, as stored (without the build item transform). */
+  mesh: TriangleMesh;
+}
+
+/** Translation of a 3MF transform (`m00 m01 m02 … m30 m31 m32`), which must not rotate nor scale. */
+function placementOf(transform: string | undefined): [number, number, number] {
+  if (transform === undefined) return [0, 0, 0];
+  const matrix = transform.trim().split(/\s+/).map(Number);
+  if (matrix.slice(0, 9).join(" ") !== "1 0 0 0 1 0 0 0 1") throw new Error(`Unexpected transform: ${transform}`);
+  return matrix.slice(9, 12) as [number, number, number];
+}
+
+const decodeXml = (text: string) =>
+  text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+
+/**
+ * Unzips a 3MF package and reads its model back: an independent reader for the tests,
+ * which follows the package relationships (3MF core specification) rather than assuming
+ * where the model lives.
+ */
+export function readThreeMf(bytes: Uint8Array): ThreeMfContent {
+  const files = readZip(bytes);
+  const text = (path: string) => {
+    const file = files[path];
+    if (!file) throw new Error(`3MF part missing: ${path}`);
+    return new TextDecoder().decode(file);
+  };
+  const contentTypes = text("[Content_Types].xml");
+  const rels = text("_rels/.rels");
+  const modelTarget = /<Relationship\b[^>]*\bTarget="([^"]+)"[^>]*\bType="http:\/\/schemas\.microsoft\.com\/3dmanufacturing\/2013\/01\/3dmodel"/.exec(rels)?.[1]
+    ?? /<Relationship\b[^>]*\bType="http:\/\/schemas\.microsoft\.com\/3dmanufacturing\/2013\/01\/3dmodel"[^>]*\bTarget="([^"]+)"/.exec(rels)?.[1];
+  const modelContentType = /<Default\b[^>]*\bExtension="model"[^>]*\bContentType="([^"]+)"/.exec(contentTypes)?.[1];
+  const xml = text((modelTarget ?? "").replace(/^\//, ""));
+
+  const metadata = new Map<string, string>();
+  for (const [, name, value] of xml.matchAll(/<metadata\b[^>]*\bname="([^"]+)"[^>]*>([^<]*)<\/metadata>/g)) {
+    metadata.set(decodeXml(name as string), decodeXml(value as string));
+  }
+  const positions: number[] = [];
+  for (const [, x, y, z] of xml.matchAll(/<vertex x="([^"]+)" y="([^"]+)" z="([^"]+)"\s*\/>/g)) {
+    positions.push(Number(x), Number(y), Number(z));
+  }
+  const indices: number[] = [];
+  for (const [, a, b, c] of xml.matchAll(/<triangle v1="(\d+)" v2="(\d+)" v3="(\d+)"\s*\/>/g)) {
+    indices.push(Number(a), Number(b), Number(c));
+  }
+  return {
+    parts: Object.keys(files),
+    modelTarget,
+    modelContentType,
+    unit: /<model\b[^>]*\bunit="([^"]+)"/.exec(xml)?.[1],
+    objectNames: [...xml.matchAll(/<object\b[^>]*\bname="([^"]*)"/g)].map(([, name]) => decodeXml(name as string)),
+    buildItems: [...xml.matchAll(/<item\b[^>]*\bobjectid="([^"]+)"/g)].map(([, id]) => id as string),
+    placement: placementOf(/<item\b[^>]*\btransform="([^"]+)"/.exec(xml)?.[1]),
+    metadata,
+    mesh: { positions: new Float32Array(positions), indices: new Uint32Array(indices) },
+  };
 }

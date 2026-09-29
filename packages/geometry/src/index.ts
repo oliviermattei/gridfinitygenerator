@@ -28,3 +28,4 @@ export {
 } from "./share-link";
 export { fitsOnBuildPlate, roundUpToLayer, type BuildPlate } from "./print";
 export { serializeStl } from "./stl";
+export { serialize3mf, type ThreeMfOptions } from "./three-mf";

@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { strFromU8, unzipSync } from "fflate";
 import { expect, test, type Page } from "@playwright/test";
 import { closeSettings, numberField, openSettings, readout } from "./support";
 
@@ -13,7 +14,7 @@ test("the French baseplate page opens in the project colours", async ({ page }) 
   await expect(heading).toHaveCSS("font-family", /Outfit/);
 
   // The brand accent (terracotta #C4502F) reaches the page from its single source.
-  await expect(page.getByRole("button", { name: "Télécharger le STL" })).toHaveCSS("background-color", "rgb(196, 80, 47)");
+  await expect(page.getByRole("button", { name: "Télécharger le 3MF" })).toHaveCSS("background-color", "rgb(196, 80, 47)");
 });
 
 test("the site root leads to the baseplate generator", async ({ page }) => {
@@ -21,7 +22,7 @@ test("the site root leads to the baseplate generator", async ({ page }) => {
   await expect(page).toHaveURL(/\/fr\/baseplate$/);
 });
 
-test("cell counts drive the 3D preview and the STL download", async ({ page }, testInfo) => {
+test("cell counts drive the 3D preview and the 3MF and STL downloads", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
   const preview = page.getByTestId("mesh-preview");
@@ -43,12 +44,25 @@ test("cell counts drive the 3D preview and the STL download", async ({ page }, t
   await expect(preview).not.toHaveAttribute("data-triangles", "0");
 
   await closeSettings(page, testInfo); // mobile: the download sits in the dock, under the sheet
-  const [download] = await Promise.all([
+
+  // The main button downloads a 3MF: one model, with the share link of the settings.
+  const [threeMf] = await Promise.all([
     page.waitForEvent("download"),
-    page.getByRole("button", { name: "Télécharger le STL" }).click(),
+    page.getByRole("button", { name: "Télécharger le 3MF" }).click(),
   ]);
-  expect(download.suggestedFilename()).toBe("baseplate-3x2-126x84mm.stl");
-  const bytes = await readFile(await download.path());
+  expect(threeMf.suggestedFilename()).toBe("baseplate-3x2-126x84mm.3mf");
+  const parts = unzipSync(await readFile(await threeMf.path()));
+  const model = strFromU8(parts["3D/3dmodel.model"] ?? new Uint8Array());
+  expect(model).toContain('unit="millimeter"');
+  expect(model).toContain('name="baseplate-3x2-126x84mm"');
+  expect(model).toMatch(/<metadata name="Description">https?:\/\/[^<]+\/fr\/baseplate\?v=1&amp;mode=cells&amp;cx=3&amp;cy=2</);
+  expect(model.match(/<triangle /g)?.length).toBeGreaterThan(0);
+
+  // Its menu offers the STL.
+  await page.getByRole("button", { name: "Autres formats" }).click();
+  const [stl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: /STL/ }).click()]);
+  expect(stl.suggestedFilename()).toBe("baseplate-3x2-126x84mm.stl");
+  const bytes = await readFile(await stl.path());
   // Binary STL: 80-byte header, triangle count, then 50 bytes per triangle.
   const triangles = bytes.readUInt32LE(80);
   expect(triangles).toBeGreaterThan(0);

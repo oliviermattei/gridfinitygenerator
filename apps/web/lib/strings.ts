@@ -89,9 +89,12 @@ export const strings = {
   recommended: "Recommandé",
   soon: "Bientôt",
   // Download
-  downloadStl: "Télécharger le STL",
-  preparingStl: "Préparation du STL…",
+  download: { "3mf": "Télécharger le 3MF", stl: "Télécharger le STL" },
+  preparing: { "3mf": "Préparation du 3MF…", stl: "Préparation du STL…" },
+  otherFormats: "Autres formats",
+  threeMfDescription: "Recommandé : s'ouvre dans le trancheur, avec le lien de ses réglages.",
+  stlDescription: "Pour les trancheurs qui ne lisent pas le 3MF.",
   // Errors
   computeFailed: "Le calcul de la baseplate a échoué. Modifiez un réglage pour réessayer.",
-  exportFailed: "L'export STL a échoué. Réessayez.",
+  exportFailed: "Le téléchargement a échoué. Réessayez.",
 };

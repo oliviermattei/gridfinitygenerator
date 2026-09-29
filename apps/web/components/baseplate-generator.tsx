@@ -6,7 +6,8 @@ import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
-import type { BaseplateSummary } from "@/lib/engine/protocol";
+import type { ExportFormat } from "@/lib/engine/protocol";
+import { MEDIA_TYPES, exportFileName } from "@/lib/export-file";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
 import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
 import { strings as t } from "@/lib/strings";
@@ -36,15 +37,9 @@ interface OnScreen {
   settings: BaseplateSettings;
 }
 
-/** `baseplate-{nx}x{ny}-{W}x{D}mm.stl`, the naming of the spec (#9). */
-function stlFileName({ layout, stats }: BaseplateSummary): string {
-  const mm = (value: number) => String(Number(value.toFixed(1)));
-  const { width, depth } = stats.dimensions;
-  return `baseplate-${layout.columns}x${layout.rows}-${mm(width)}x${mm(depth)}mm.stl`;
-}
 
-function download(bytes: Uint8Array<ArrayBuffer>, fileName: string) {
-  const url = URL.createObjectURL(new Blob([bytes], { type: "model/stl" }));
+function download(bytes: Uint8Array<ArrayBuffer>, fileName: string, type: string) {
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
@@ -75,7 +70,7 @@ export function BaseplateGenerator() {
   const [resetOpen, setResetOpen] = useState(false);
   const [shown, setShown] = useState<OnScreen | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [openFamily, setOpenFamily] = useState<Family | null>("size");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [recenter, setRecenter] = useState(0);
@@ -144,19 +139,19 @@ export function BaseplateGenerator() {
 
   const actions: TopBarActions = { onShare: share, onReset: () => setResetOpen(true) };
 
-  async function exportStl() {
+  async function exportBaseplate(format: ExportFormat) {
     const client = engine.current;
     if (!client) return;
-    setExporting(true);
+    setExporting(format);
     setError(null);
     try {
-      const { bytes, baseplate: exported } = await client.exportStl(settings);
-      download(bytes as Uint8Array<ArrayBuffer>, stlFileName(exported));
+      const { bytes, baseplate: exported } = await client.exportFile(settings, format, shareLinkOf(settings));
+      download(bytes as Uint8Array<ArrayBuffer>, exportFileName(exported, format), MEDIA_TYPES[format]);
     } catch (reason) {
       console.error(reason);
       setError(t.exportFailed);
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   }
 
@@ -227,7 +222,7 @@ export function BaseplateGenerator() {
         <Readout summary={baseplate} live />
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-2.5 pb-3">{families}</div>
         <div className="border-t border-line p-3.5">
-          <DownloadButton onDownload={exportStl} exporting={exporting} />
+          <DownloadButton onDownload={exportBaseplate} exporting={exporting} />
         </div>
       </aside>
 
@@ -248,7 +243,7 @@ export function BaseplateGenerator() {
         stats={renderStats("mb-2 rounded-2xl bg-sunken")}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        download={<DownloadButton onDownload={exportStl} exporting={exporting} compact />}
+        download={<DownloadButton onDownload={exportBaseplate} exporting={exporting} compact />}
         dockRef={setDock}
         sheetRef={setSheet}
       >

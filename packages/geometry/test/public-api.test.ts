@@ -8,10 +8,11 @@ import {
   generateBaseplate,
   loadEngine,
   roundUpToLayer,
+  serialize3mf,
   serializeStl,
   type Quality,
 } from "../src/index";
-import { checkMesh, pocketOpening, readBinaryStl } from "./support/measure";
+import { checkMesh, pocketOpening, readBinaryStl, readThreeMf } from "./support/measure";
 
 // Behaviour of the geometry engine, observed only through its public interface.
 // Reference values: docs/research/gridfinity-baseplate.md (sections B and C),
@@ -245,6 +246,50 @@ describe("serializeStl", () => {
     for (const axis of [0, 1, 2] as const) {
       expectWithin(reread.bounds.min[axis], original.bounds.min[axis]);
       expectWithin(reread.bounds.max[axis], original.bounds.max[axis]);
+    }
+  });
+});
+
+describe("serialize3mf", () => {
+  // An absolute share link, as the app passes it: its "&" must survive the XML.
+  const shareLink = "https://example.org/fr/baseplate?v=1&mode=cells&cx=3&cy=2";
+
+  it("writes a 3MF package that slicers open: one named object, in millimetres", async () => {
+    const baseplate = await generateBaseplate({ columns: 3, rows: 2 }, "preview");
+    const content = readThreeMf(serialize3mf(baseplate.mesh, { name: "baseplate 3x2", shareLink }));
+    expect(content.parts).toEqual(expect.arrayContaining(["[Content_Types].xml", "_rels/.rels", "3D/3dmodel.model"]));
+    expect(content.modelTarget).toBe("/3D/3dmodel.model");
+    expect(content.modelContentType).toBe("application/vnd.ms-package.3dmanufacturing-3dmodel+xml");
+    expect(content.unit).toBe("millimeter");
+    expect(content.objectNames).toEqual(["baseplate 3x2"]);
+    expect(content.buildItems).toHaveLength(1);
+    expect(content.metadata.get("Title")).toBe("baseplate 3x2");
+  });
+
+  it("keeps the share link of the settings in its metadata", async () => {
+    const baseplate = await generateBaseplate({ columns: 3, rows: 2 }, "preview");
+    const content = readThreeMf(serialize3mf(baseplate.mesh, { name: "baseplate", shareLink }));
+    expect([...content.metadata.values()]).toContain(shareLink);
+  });
+
+  it.each<[number, number]>([
+    [1, 1],
+    [3, 2],
+    [20, 20],
+  ])("reads back %i × %i with the same volume and dimensions as the mesh, on the build plate", async (columns, rows) => {
+    const baseplate = await generateBaseplate({ columns, rows }, "final");
+    const content = readThreeMf(serialize3mf(baseplate.mesh, { name: "baseplate", shareLink }));
+    expect(content.mesh.indices.length).toBe(baseplate.mesh.indices.length);
+
+    const original = await checkMesh(baseplate.mesh);
+    const reread = await checkMesh(content.mesh);
+    expect(reread.status).toBe("NoError");
+    expectWithin(reread.volume, original.volume);
+    for (const axis of [0, 1, 2] as const) {
+      expectWithin(reread.bounds.min[axis], original.bounds.min[axis]);
+      expectWithin(reread.bounds.max[axis], original.bounds.max[axis]);
+      // The build item places it in the positive octant, where the build plate of a 3MF starts.
+      expectWithin(reread.bounds.min[axis] + content.placement[axis], 0);
     }
   });
 });

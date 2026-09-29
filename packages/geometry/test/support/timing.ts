@@ -17,3 +17,16 @@ export async function medianGenerationMs(
   times.sort((a, b) => a - b);
   return times[Math.floor(times.length / 2)] as number;
 }
+
+/** Median wall-clock time of `run`, in milliseconds, after one warm-up run. */
+export async function medianMs(run: () => unknown, runs: number): Promise<number> {
+  await run();
+  const times: number[] = [];
+  for (let i = 0; i < runs; i++) {
+    const start = performance.now();
+    await run();
+    times.push(performance.now() - start);
+  }
+  times.sort((a, b) => a - b);
+  return times[Math.floor(times.length / 2)] as number;
+}

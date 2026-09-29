@@ -118,14 +118,14 @@ test.describe("desktop", () => {
       });
       reached.push(name);
     }
-    for (const name of ["Paramètres", "Colonnes", "Rangées", "Télécharger le STL", "Recentrer la vue"]) {
+    for (const name of ["Paramètres", "Colonnes", "Rangées", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
       expect(reached, `${name} is reached with Tab`).toContain(name);
     }
     expect(reached.some((name) => name.startsWith("Taille"))).toBe(true);
     expect(reached.some((name) => name.startsWith("Profil de poche"))).toBe(true);
 
     // Focus is visible: the accent ring around the focused control.
-    const download = page.getByRole("button", { name: "Télécharger le STL" });
+    const download = page.getByRole("button", { name: "Télécharger le 3MF" });
     await download.focus();
     await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Tab");
@@ -169,7 +169,7 @@ test.describe("mobile", () => {
     await page.goto("/fr/baseplate");
     const settings = page.getByRole("button", { name: "Réglages" });
     await expect(settings).toBeVisible();
-    await expect(page.getByRole("button", { name: "Télécharger le STL" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Télécharger le 3MF" })).toBeVisible();
     await expect(readout(page, "dimensions")).toHaveText("168 × 126 mm");
     // No desktop panel nor top bar actions at this width.
     await expect(page.getByRole("complementary", { name: "Réglages" })).toBeHidden();
