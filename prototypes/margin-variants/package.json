@@ -1,0 +1,16 @@
+{
+  "name": "prototype-margin-variants",
+  "private": true,
+  "type": "module",
+  "description": "PROTOTYPE JETABLE : trois variantes de marge de baseplate (ticket #3), générées avec manifold-3d",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "generate": "node src/generate.mjs"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "manifold-3d": "3.5.4"
+  }
+}

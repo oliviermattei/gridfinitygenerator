@@ -1,0 +1,446 @@
+{
+ "bench": {
+  "grid": {
+   "variant": null,
+   "status": "NoError",
+   "genus": 4,
+   "volume": 5703.317304057567,
+   "gridVolume": 5703.317304057567,
+   "layers": {
+    "perimeter": 21400.4666316894,
+    "loops": 115
+   },
+   "contact": {
+    "left": 80,
+    "right": 0,
+    "front": 80.004268039181,
+    "back": 0
+   },
+   "marginVolume": 0,
+   "triangles": 5436
+  },
+  "rows": [
+   {
+    "variant": "solid",
+    "h": 4.6,
+    "status": "NoError",
+    "genus": 4,
+    "volume": 27850.86354956598,
+    "gridVolume": 5703.317304057567,
+    "layers": {
+     "perimeter": 23581.962892319152,
+     "loops": 115
+    },
+    "contact": {
+     "left": 101.004268039181,
+     "right": 101.004268039181,
+     "front": 101.004268039181,
+     "back": 101.004268039181
+    },
+    "marginVolume": 22147.546245508413,
+    "triangles": 5864
+   },
+   {
+    "variant": "solid",
+    "h": 2,
+    "status": "NoError",
+    "genus": 4,
+    "volume": 15332.68525182464,
+    "gridVolume": 5703.317304057567,
+    "layers": {
+     "perimeter": 22348.943266745704,
+     "loops": 115
+    },
+    "contact": {
+     "left": 101.00981648873633,
+     "right": 101.00981648873633,
+     "front": 101.004268039181,
+     "back": 101.00981648873633
+    },
+    "marginVolume": 9629.367947767074,
+    "triangles": 5856
+   },
+   {
+    "variant": "truncated",
+    "h": 4.6,
+    "status": "NoError",
+    "genus": 9,
+    "volume": 10344.85628470331,
+    "gridVolume": 5703.317304057567,
+    "layers": {
+     "perimeter": 36393.496126631886,
+     "loops": 230
+    },
+    "contact": {
+     "left": 101.004268039181,
+     "right": 101.004268039181,
+     "front": 101.004268039181,
+     "back": 101.004268039181
+    },
+    "marginVolume": 4641.538980645743,
+    "triangles": 9672,
+    "file": "files/banc-1-cellules-tronquees-h4.6.3mf",
+    "bytes": 95004,
+    "reread": {
+     "status": "NoError",
+     "volume": 10344.858072768742,
+     "genus": 9,
+     "bbox": [
+      109,
+      109,
+      4.599999904632568
+     ],
+     "name": "Banc de marge - 1. Cellules tronquées vides - hauteur 4,60 mm"
+    }
+   },
+   {
+    "variant": "truncated",
+    "h": 2,
+    "status": "NoError",
+    "genus": 9,
+    "volume": 8057.814987163791,
+    "gridVolume": 5703.317304057567,
+    "layers": {
+     "perimeter": 27812.030218112017,
+     "loops": 165
+    },
+    "contact": {
+     "left": 101.00981648873633,
+     "right": 101.00981648873633,
+     "front": 101.004268039181,
+     "back": 101.00981648873633
+    },
+    "marginVolume": 2354.497683106224,
+    "triangles": 8586,
+    "file": "files/banc-1-cellules-tronquees-h2.0.3mf",
+    "bytes": 83450,
+    "reread": {
+     "status": "NoError",
+     "volume": 8057.816827273991,
+     "genus": 9,
+     "bbox": [
+      109,
+      109,
+      4.599999904632568
+     ],
+     "name": "Banc de marge - 1. Cellules tronquées vides - hauteur 2,00 mm"
+    }
+   },
+   {
+    "variant": "brackets",
+    "h": 4.6,
+    "status": "NoError",
+    "genus": 5,
+    "volume": 6694.7959097179455,
+    "gridVolume": 5703.317304057567,
+    "layers": {
+     "perimeter": 29607.810274302134,
+     "loops": 138
+    },
+    "contact": {
+     "left": 101.004268039181,
+     "right": 37.004268039181,
+     "front": 101.004268039181,
+     "back": 37.004268039181
+    },
+    "marginVolume": 991.4786056603789,
+    "triangles": 6330,
+    "file": "files/banc-2-equerres-h4.6.3mf",
+    "bytes": 61880,
+    "reread": {
+     "status": "NoError",
+     "volume": 6694.796892209633,
+     "genus": 5,
+     "bbox": [
+      109,
+      109,
+      4.599999904632568
+     ],
+     "name": "Banc de marge - 2. Équerres de coin seules - hauteur 4,60 mm"
+    }
+   },
+   {
+    "variant": "brackets",
+    "h": 2,
+    "status": "NoError",
+    "genus": 5,
+    "volume": 6134.3949583902695,
+    "gridVolume": 5703.317304057567,
+    "layers": {
+     "perimeter": 24968.876911086343,
+     "loops": 125
+    },
+    "contact": {
+     "left": 101.00981648873633,
+     "right": 37.009816488736334,
+     "front": 101.004268039181,
+     "back": 37.009816488736334
+    },
+    "marginVolume": 431.0776543327029,
+    "triangles": 6320,
+    "file": "files/banc-2-equerres-h2.0.3mf",
+    "bytes": 61765,
+    "reread": {
+     "status": "NoError",
+     "volume": 6134.396880117648,
+     "genus": 5,
+     "bbox": [
+      109,
+      109,
+      4.599999904632568
+     ],
+     "name": "Banc de marge - 2. Équerres de coin seules - hauteur 2,00 mm"
+    }
+   },
+   {
+    "variant": "ribbed",
+    "h": 4.6,
+    "status": "NoError",
+    "genus": 9,
+    "volume": 7664.1079120919185,
+    "gridVolume": 5703.317304057567,
+    "layers": {
+     "perimeter": 37464.61027347962,
+     "loops": 230
+    },
+    "contact": {
+     "left": 101.004268039181,
+     "right": 101.004268039181,
+     "front": 101.004268039181,
+     "back": 101.004268039181
+    },
+    "marginVolume": 1960.7906080343519,
+    "triangles": 6336,
+    "file": "files/banc-3-cadre-nervures-h4.6.3mf",
+    "bytes": 61844,
+    "reread": {
+     "status": "NoError",
+     "volume": 7664.106443242731,
+     "genus": 9,
+     "bbox": [
+      109,
+      109,
+      4.599999904632568
+     ],
+     "name": "Banc de marge - 3. Cadre à nervures - hauteur 4,60 mm"
+    }
+   },
+   {
+    "variant": "ribbed",
+    "h": 2,
+    "status": "NoError",
+    "genus": 9,
+    "volume": 6555.834959422434,
+    "gridVolume": 5703.317304057567,
+    "layers": {
+     "perimeter": 28384.87691072964,
+     "loops": 165
+    },
+    "contact": {
+     "left": 101.00981648873633,
+     "right": 101.00981648873633,
+     "front": 101.004268039181,
+     "back": 101.00981648873633
+    },
+    "marginVolume": 852.5176553648671,
+    "triangles": 6326,
+    "file": "files/banc-3-cadre-nervures-h2.0.3mf",
+    "bytes": 61698,
+    "reread": {
+     "status": "NoError",
+     "volume": 6555.835824086725,
+     "genus": 9,
+     "bbox": [
+      109,
+      109,
+      4.599999904632568
+     ],
+     "name": "Banc de marge - 3. Cadre à nervures - hauteur 2,00 mm"
+    }
+   }
+  ]
+ },
+ "drawer": {
+  "grid": {
+   "variant": null,
+   "status": "NoError",
+   "genus": 54,
+   "volume": 77208.32527499163,
+   "gridVolume": 77208.32527499163,
+   "layers": {
+    "perimeter": 214091.56635498005,
+    "loops": 1265
+   },
+   "contact": {
+    "left": 0,
+    "right": 0,
+    "front": 0,
+    "back": 0
+   },
+   "marginVolume": 0,
+   "triangles": 71508
+  },
+  "rows": [
+   {
+    "variant": "solid",
+    "h": 4.6,
+    "status": "NoError",
+    "genus": 54,
+    "volume": 151044.0535116336,
+    "gridVolume": 77208.32527499163,
+    "layers": {
+     "perimeter": 216141.56136915312,
+     "loops": 1265
+    },
+    "contact": {
+     "left": 271.004268039181,
+     "right": 271.004268039181,
+     "front": 391.004268039181,
+     "back": 391.004268039181
+    },
+    "marginVolume": 73835.72823664197,
+    "triangles": 72074
+   },
+   {
+    "variant": "solid",
+    "h": 2,
+    "status": "NoError",
+    "genus": 54,
+    "volume": 109310.8158720144,
+    "gridVolume": 77208.32527499163,
+    "layers": {
+     "perimeter": 214982.86853505418,
+     "loops": 1265
+    },
+    "contact": {
+     "left": 271.00981648873636,
+     "right": 271.00981648873636,
+     "front": 391.00981648873636,
+     "back": 391.00981648873636
+    },
+    "marginVolume": 32102.49059702277,
+    "triangles": 72068
+   },
+   {
+    "variant": "truncated",
+    "h": 4.6,
+    "status": "NoError",
+    "genus": 88,
+    "volume": 101533.00703158528,
+    "gridVolume": 77208.32527499163,
+    "layers": {
+     "perimeter": 283298.2298657947,
+     "loops": 2047
+    },
+    "contact": {
+     "left": 271.004268039181,
+     "right": 271.004268039181,
+     "front": 391.004268039181,
+     "back": 391.004268039181
+    },
+    "marginVolume": 24324.68175659365,
+    "triangles": 95588
+   },
+   {
+    "variant": "truncated",
+    "h": 2,
+    "status": "NoError",
+    "genus": 88,
+    "volume": 89404.89500913727,
+    "gridVolume": 77208.32527499163,
+    "layers": {
+     "perimeter": 243387.5400917948,
+     "loops": 1605
+    },
+    "contact": {
+     "left": 271.00981648873636,
+     "right": 271.00981648873636,
+     "front": 391.00981648873636,
+     "back": 391.00981648873636
+    },
+    "marginVolume": 12196.56973414564,
+    "triangles": 90190
+   },
+   {
+    "variant": "brackets",
+    "h": 4.6,
+    "status": "NoError",
+    "genus": 58,
+    "volume": 79634.66475661729,
+    "gridVolume": 77208.32527499163,
+    "layers": {
+     "perimeter": 234090.55787654684,
+     "loops": 1357
+    },
+    "contact": {
+     "left": 59.004268039181,
+     "right": 59.004268039181,
+     "front": 73.004268039181,
+     "back": 73.004268039181
+    },
+    "marginVolume": 2426.3394816256623,
+    "triangles": 72994
+   },
+   {
+    "variant": "brackets",
+    "h": 2,
+    "status": "NoError",
+    "genus": 58,
+    "volume": 78263.2554818809,
+    "gridVolume": 77208.32527499163,
+    "layers": {
+     "perimeter": 222786.78006000802,
+     "loops": 1305
+    },
+    "contact": {
+     "left": 59.009816488736334,
+     "right": 59.009816488736334,
+     "front": 73.00981648873633,
+     "back": 73.00981648873633
+    },
+    "marginVolume": 1054.930206889272,
+    "triangles": 72980
+   },
+   {
+    "variant": "ribbed",
+    "h": 4.6,
+    "status": "NoError",
+    "genus": 88,
+    "volume": 86711.30477386333,
+    "gridVolume": 77208.32527499163,
+    "layers": {
+     "perimeter": 291406.55786978774,
+     "loops": 2047
+    },
+    "contact": {
+     "left": 271.004268039181,
+     "right": 271.004268039181,
+     "front": 391.004268039181,
+     "back": 391.004268039181
+    },
+    "marginVolume": 9502.979498871704,
+    "triangles": 73248
+   },
+   {
+    "variant": "ribbed",
+    "h": 2,
+    "status": "NoError",
+    "genus": 88,
+    "volume": 81340.05548937919,
+    "gridVolume": 77208.32527499163,
+    "layers": {
+     "perimeter": 247706.78005703585,
+     "loops": 1605
+    },
+    "contact": {
+     "left": 271.00981648873636,
+     "right": 271.00981648873636,
+     "front": 391.00981648873636,
+     "back": 391.00981648873636
+    },
+    "marginVolume": 4131.730214387557,
+    "triangles": 73234
+   }
+  ]
+ }
+}
