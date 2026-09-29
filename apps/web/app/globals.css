@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "@repo/ui/tokens.css";
+
+/* Tailwind only scans this app by default: also scan the design system sources. */
+@source "../../../packages/ui/src";
+
+html,
+body {
+  min-height: 100%;
+}

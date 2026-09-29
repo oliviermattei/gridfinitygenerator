@@ -1,8 +1,28 @@
+# Dependencies
 node_modules/
+
+# Build outputs and caches
 .next/
 dist/
 .turbo/
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+
+# Test outputs
+coverage/
+playwright-report/
+blob-report/
+test-results/
+playwright/.cache/
+
+# Environment (only the example is versioned)
+.env*
+!.env.example
+
+# OS and logs
 .DS_Store
 *.log
-.env*
+
+# Local agent settings
 .claude/

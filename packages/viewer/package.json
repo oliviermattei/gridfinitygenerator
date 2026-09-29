@@ -1,0 +1,17 @@
+{
+  "name": "@repo/viewer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "3D preview (react-three-fiber), independent of any generator.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

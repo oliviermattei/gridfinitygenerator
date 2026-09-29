@@ -1,0 +1,27 @@
+import { defineConfig, devices } from "@playwright/test";
+
+const PORT = 3217;
+const baseURL = `http://localhost:${PORT}`;
+
+// End-to-end tests run against the production build (`next start`), like Vercel serves it.
+export default defineConfig({
+  testDir: "./e2e",
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: 0,
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  use: {
+    baseURL,
+    trace: "retain-on-failure",
+  },
+  projects: [
+    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile", use: { ...devices["Pixel 7"] } },
+  ],
+  webServer: {
+    command: `pnpm exec next start -p ${PORT}`,
+    url: `${baseURL}/fr/baseplate`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 60_000,
+  },
+});

@@ -1,0 +1,31 @@
+/* Design tokens for Tailwind v4 (imported by each app's global stylesheet).
+   Neutrals are defined here. The accent is NOT: its only source is src/accent.ts,
+   which the app sets on <html> as --accent* custom properties. */
+@import "@fontsource-variable/outfit";
+
+@theme {
+  --font-sans: "Outfit Variable", system-ui, sans-serif;
+
+  --color-bg: #f1f1f3;
+  --color-surface: #ffffff;
+  --color-sunken: #f3f3f6;
+  --color-track: #e6e6ec;
+  --color-line: #e8e8ed;
+  --color-line-strong: #cfd0d8;
+  --color-ink: #121319;
+  --color-ink-soft: #3b3d47;
+  --color-muted: #6b6d78;
+  --color-faint: #a0a2ad;
+
+  --radius-ctl: 10px;
+  --radius-card: 14px;
+  --shadow-pop: 0 1px 1px rgb(18 19 25 / 0.04), 0 18px 48px -16px rgb(18 19 25 / 0.28);
+}
+
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-ring: var(--accent-ring);
+}

@@ -1,0 +1,25 @@
+{
+  "name": "gridfinitygenerator",
+  "private": true,
+  "description": "Free, open-source Gridfinity tools computed in the browser.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "test": "turbo run test test:e2e",
+    "test:unit": "turbo run test",
+    "test:e2e": "turbo run test:e2e"
+  },
+  "devDependencies": {
+    "eslint": "10.11.0",
+    "eslint-config-next": "16.3.7",
+    "turbo": "2.11.5",
+    "typescript": "6.0.3"
+  }
+}
