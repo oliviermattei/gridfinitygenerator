@@ -35,7 +35,7 @@ Note : les captures sont faites en Chromium headless (rendu WebGL logiciel). Ce 
 
 ---
 
-# Historique : v2 (2 directions visuelles, sur la branche `prototype/ui-directions-v2`)
+# Historique : v2 (2 directions visuelles, commit `de1a3ee`)
 
 Stack : Next.js 16, Tailwind v4, Base UI (`@base-ui/react` 1.8 : Tabs, Switch, Slider, NumberField, ToggleGroup, Collapsible, Menu, Popover, Drawer), react-three-fiber 9 + drei 10 + `@react-three/postprocessing` (N8AO, SMAA, ToneMapping), lucide pour les petites icônes utilitaires.
 

@@ -26,12 +26,12 @@ Ce fichier permet de reprendre le travail sur une autre machine : la mémoire de
 - **Tests** : moteur écrit en TDD (dimensions, maillage manifold, position des trous) + tests de bout en bout Playwright.
 - **Plus tard** : découpe pour le plateau d'impression, presets de tiroirs, types Tray / Skeleton, marges Half Grid / Overtile.
 
-## Prototypes (branches poussées, non fusionnées)
+## Prototypes (dans `prototypes/` sur `main`)
 
-- `prototype/geometry-perf` : bench manifold contre JSCAD ; verdict dans `prototypes/geometry-perf/RESULTS.md`.
-- `prototype/ui-directions` : maquettes v1, rejetées (aperçu 3D terne, contrôles, trop de couleurs).
-- `prototype/ui-directions-v2` : maquettes v2, A « Calibre » (accent orange, Instrument Sans) et B « Studio » (accent outremer, Outfit).
-- Depuis le 29/09, les prototypes sont fusionnés dans `main` et on les fait évoluer directement dans `prototypes/` sur `main`. Lancer le prototype d'interface : `cd prototypes/ui-directions && pnpm install && pnpm dev`, puis http://localhost:3100/ (décisions et captures dans son README).
+- `prototypes/geometry-perf/` : bench manifold contre JSCAD ; verdict dans `RESULTS.md`.
+- `prototypes/ui-directions/` : maquettes d'interface. v1 (commit `78d3695`) rejetée (aperçu 3D terne, contrôles, trop de couleurs).
+- v2 (commit `de1a3ee`) : A « Calibre » (accent orange, Instrument Sans) et B « Studio » (accent outremer, Outfit).
+- v3 : Studio retravaillée, en cours. Les branches `prototype/*` ont été fusionnées puis supprimées le 29/09 ; les prototypes évoluent directement sur `main`. Lancer le prototype d'interface : `cd prototypes/ui-directions && pnpm install && pnpm dev`, puis http://localhost:3100/ (décisions et captures dans son README).
 
 Retour de l'utilisateur sur le design : palette sobre avec un seul accent. extrabold sert de référence de qualité, mais l'identité doit être la nôtre.
 

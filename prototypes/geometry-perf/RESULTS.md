@@ -1,6 +1,6 @@
 # PROTOTYPE JETABLE — perf géométrie : manifold-3d vs @jscad/modeling
 
-> Branche `prototype/geometry-perf`, à ne pas merger. Question : quel moteur de géométrie pour le navigateur ?
+> Prototype jetable (commit `5cddc95`), fusionné dans `main` pour référence. Question : quel moteur de géométrie pour le navigateur ?
 > Objectifs : aperçu < 100 ms pendant le réglage ; calcul complet < 1 s (10×10) et < 3 s (20×20), avec aimants.
 
 ## Verdict
