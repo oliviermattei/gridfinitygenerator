@@ -57,6 +57,16 @@ describe("spec v1 performance targets (local)", () => {
   it.each(DRAWERS)("computes the final %s in under 3 s", (name, settings) => measureSettings(name, settings, "final", 3_000));
 });
 
+describe("cell bricks against the boolean fallback (local)", () => {
+  it("builds a final 10 × 10 grid several times faster than the boolean fallback", async () => {
+    // A ratio of two measures: meaningful on an idle machine only. The prototype measured about 14×.
+    const fast = await medianGenerationMs(cells(10, 10), "final", RUNS);
+    const fallback = await medianGenerationMs(cells(10, 10), "final", RUNS, { strategy: "boolean" });
+    report.push(`| 10 × 10 final, boolean fallback / bricks | ×${(fallback / fast).toFixed(1)} | ×3 |`);
+    expect(fast * 3).toBeLessThan(fallback);
+  });
+});
+
 describe("spec v1 export targets (local)", () => {
   it("writes the 3MF of a final 20 × 20 in under 1 s", async () => {
     const { mesh } = await generateBaseplate(cells(20, 20), "final");

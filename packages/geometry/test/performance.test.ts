@@ -4,7 +4,9 @@ import { cells, medianGenerationMs, medianMs } from "./support/timing";
 
 // Guard against gross performance regressions on any machine, CI included. The thresholds
 // are wide on purpose (several times the spec targets) so the test never flakes; the
-// precise spec targets are checked by `pnpm --filter @repo/geometry test:perf` (local).
+// precise spec targets, and the speed of the cell bricks against the boolean fallback (a
+// ratio of two measures, which a shared runner can skew), are checked by
+// `pnpm --filter @repo/geometry test:perf` (local).
 
 /** The largest drawer: 23 × 23 cells and a margin on every side. */
 const LARGEST_DRAWER = { drawerWidth: 1000, drawerDepth: 1000 };
@@ -23,14 +25,6 @@ describe("generation time (wide CI thresholds)", { timeout: 60_000 }, () => {
     expect(await medianGenerationMs(cells(20, 20), "final", 1)).toBeLessThan(9_000);
   });
 
-  it("is several times faster than the boolean fallback on a 10 × 10 grid", async () => {
-    // A ratio holds on slow and fast machines alike; the prototype measured about 14×.
-    const fast = await medianGenerationMs(cells(10, 10), "final", 3);
-    const fallback = await medianGenerationMs(cells(10, 10), "final", 3, { strategy: "boolean" });
-    expect(fast * 3).toBeLessThan(fallback);
-  });
-
-  // After the ratio above: a large final grows the WASM heap, which slows what follows.
   it("computes the final default drawer and largest drawer, margin included, within a few seconds", async () => {
     expect(await medianGenerationMs({}, "final", 3)).toBeLessThan(3_000);
     expect(await medianGenerationMs(LARGEST_DRAWER, "final", 1)).toBeLessThan(9_000);
