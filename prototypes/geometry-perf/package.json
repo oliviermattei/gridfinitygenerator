@@ -1,0 +1,24 @@
+{
+  "name": "prototype-geometry-perf",
+  "private": true,
+  "type": "module",
+  "description": "PROTOTYPE JETABLE : bench manifold-3d vs @jscad/modeling pour la baseplate Gridfinity",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "bench": "node --expose-gc --max-old-space-size=8192 src/bench.mjs",
+    "export": "node src/export-samples.mjs",
+    "validate": ".venv/bin/python validate.py out",
+    "browser": "vite browser --config browser/vite.config.js",
+    "size": "ENGINE=manifold vite build -c browser/size.config.js && ENGINE=jscad vite build -c browser/size.config.js"
+  },
+  "dependencies": {
+    "@jscad/3mf-serializer": "2.1.17",
+    "@jscad/modeling": "2.13.0",
+    "@jscad/stl-serializer": "2.1.23",
+    "fflate": "0.8.3",
+    "manifold-3d": "3.5.4",
+    "vite": "^8.3.1"
+  }
+}

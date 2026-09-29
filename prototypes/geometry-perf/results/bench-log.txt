@@ -1,0 +1,186 @@
+manifold final naive nomag 2x2: gen 54.4 ms (x7) tri 1596 stl 1 ms/78 KB 3mf 4.7 ms/14 KB rss 73 MB manifold true
+manifold final naive nomag 5x5: gen 416.7 ms (x7) tri 9240 stl 0.8 ms/451 KB 3mf 28.9 ms/82 KB rss 93 MB manifold true
+manifold final naive nomag 10x10: gen 2538.7 ms (x3) tri 36540 stl 3.1 ms/1784 KB 3mf 117.4 ms/323 KB rss 167 MB manifold true
+manifold final naive nomag 20x20: gen 33439.1 ms (x1) tri 145740 stl 55.1 ms/7116 KB 3mf 1275.9 ms/1288 KB rss 265 MB
+manifold final naive mag 2x2: gen 117.8 ms (x7) tri 5884 stl 3.7 ms/287 KB 3mf 21 ms/51 KB rss 84 MB manifold true
+manifold final naive mag 5x5: gen 1237.4 ms (x3) tri 36040 stl 3.8 ms/1760 KB 3mf 293.7 ms/319 KB rss 163 MB manifold true
+manifold final naive mag 10x10: gen 7406.4 ms (x1) tri 143740 stl 15.8 ms/7019 KB 3mf 537.4 ms/1289 KB rss 268 MB manifold true
+manifold final naive mag 20x20: gen 76929.4 ms (x1) tri 574540 stl 47.8 ms/28054 KB 3mf 2058.9 ms/5200 KB rss 822 MB
+manifold final seq nomag 2x2: gen 23.5 ms (x7) tri 1596 stl 0.9 ms/78 KB 3mf 5.2 ms/14 KB rss 73 MB manifold true
+manifold final seq nomag 5x5: gen 167.8 ms (x7) tri 9240 stl 0.6 ms/451 KB 3mf 28.6 ms/83 KB rss 95 MB manifold true
+manifold final seq nomag 10x10: gen 1518.1 ms (x3) tri 36540 stl 2.9 ms/1784 KB 3mf 111 ms/328 KB rss 159 MB manifold true
+manifold final seq nomag 20x20: gen 18873.9 ms (x1) tri 145740 stl 16.2 ms/7116 KB 3mf 553.4 ms/1302 KB rss 269 MB
+manifold final seq mag 2x2: gen 39.2 ms (x7) tri 5884 stl 1.4 ms/287 KB 3mf 16.6 ms/52 KB rss 84 MB manifold true
+manifold final seq mag 5x5: gen 384 ms (x7) tri 36040 stl 2.9 ms/1760 KB 3mf 108.8 ms/322 KB rss 156 MB manifold true
+manifold final seq mag 10x10: gen 4477.9 ms (x3) tri 143740 stl 16 ms/7019 KB 3mf 538.5 ms/1301 KB rss 285 MB manifold true
+manifold final seq mag 20x20: gen 65037.6 ms (x1) tri 574540 stl 50.8 ms/28054 KB 3mf 2099.5 ms/5229 KB rss 796 MB
+manifold final seqLazy nomag 2x2: gen 19.9 ms (x7) tri 1596 stl 0.9 ms/78 KB 3mf 5.1 ms/14 KB rss 72 MB manifold true
+manifold final seqLazy nomag 5x5: gen 56.1 ms (x7) tri 9240 stl 0.6 ms/451 KB 3mf 28.5 ms/83 KB rss 94 MB manifold true
+manifold final seqLazy nomag 10x10: gen 187.8 ms (x7) tri 36542 stl 2.8 ms/1784 KB 3mf 111.2 ms/332 KB rss 162 MB manifold true
+manifold final seqLazy nomag 20x20: gen 842.4 ms (x7) tri 145742 stl 17.1 ms/7116 KB 3mf 552.2 ms/1321 KB rss 456 MB
+manifold final seqLazy mag 2x2: gen 35.2 ms (x7) tri 5884 stl 1.7 ms/287 KB 3mf 23.3 ms/52 KB rss 85 MB manifold true
+manifold final seqLazy mag 5x5: gen 121.2 ms (x7) tri 36040 stl 3.2 ms/1760 KB 3mf 130.8 ms/322 KB rss 160 MB manifold true
+manifold final seqLazy mag 10x10: gen 469.7 ms (x7) tri 143740 stl 14.2 ms/7019 KB 3mf 644.3 ms/1301 KB rss 386 MB manifold true
+manifold final seqLazy mag 20x20: gen 1954.1 ms (x3) tri 574540 stl 72.2 ms/28054 KB 3mf 2736.4 ms/5233 KB rss 1205 MB
+manifold final batchUnion nomag 2x2: gen 24.6 ms (x7) tri 1596 stl 1.7 ms/78 KB 3mf 13.8 ms/14 KB rss 74 MB manifold true
+manifold final batchUnion nomag 5x5: gen 71.7 ms (x7) tri 9240 stl 1.8 ms/451 KB 3mf 34.8 ms/83 KB rss 92 MB manifold true
+manifold final batchUnion nomag 10x10: gen 259.9 ms (x7) tri 36542 stl 5.7 ms/1784 KB 3mf 170.9 ms/332 KB rss 170 MB manifold true
+manifold final batchUnion nomag 20x20: gen 825.8 ms (x3) tri 145742 stl 11.9 ms/7116 KB 3mf 494.6 ms/1321 KB rss 457 MB
+manifold final batchUnion mag 2x2: gen 32.9 ms (x7) tri 5884 stl 1.5 ms/287 KB 3mf 17.8 ms/52 KB rss 86 MB manifold true
+manifold final batchUnion mag 5x5: gen 105.9 ms (x7) tri 36040 stl 3 ms/1760 KB 3mf 111.2 ms/322 KB rss 160 MB manifold true
+manifold final batchUnion mag 10x10: gen 367.2 ms (x7) tri 143740 stl 11.2 ms/7019 KB 3mf 452 ms/1301 KB rss 440 MB manifold true
+manifold final batchUnion mag 20x20: gen 1432.3 ms (x3) tri 574540 stl 45.3 ms/28054 KB 3mf 2195 ms/5233 KB rss 1205 MB
+manifold final batch nomag 2x2: gen 20.1 ms (x7) tri 1596 stl 1 ms/78 KB 3mf 5.8 ms/14 KB rss 74 MB manifold true
+manifold final batch nomag 5x5: gen 56.4 ms (x7) tri 9240 stl 0.7 ms/451 KB 3mf 27.1 ms/83 KB rss 89 MB manifold true
+manifold final batch nomag 10x10: gen 186.7 ms (x7) tri 36542 stl 3 ms/1784 KB 3mf 111.7 ms/332 KB rss 158 MB manifold true
+manifold final batch nomag 20x20: gen 747.6 ms (x7) tri 145742 stl 18.2 ms/7116 KB 3mf 513.2 ms/1321 KB rss 455 MB
+manifold final batch mag 2x2: gen 34.2 ms (x7) tri 5884 stl 2.2 ms/287 KB 3mf 18.4 ms/52 KB rss 83 MB manifold true
+manifold final batch mag 5x5: gen 115.6 ms (x7) tri 36040 stl 2.6 ms/1760 KB 3mf 113.3 ms/322 KB rss 160 MB manifold true
+manifold final batch mag 10x10: gen 370.6 ms (x7) tri 143740 stl 11.7 ms/7019 KB 3mf 455.4 ms/1301 KB rss 440 MB manifold true
+manifold final batch mag 20x20: gen 1454.1 ms (x3) tri 574540 stl 45.9 ms/28054 KB 3mf 2139.6 ms/5233 KB rss 1205 MB
+manifold final batchLoft nomag 2x2: gen 9.6 ms (x7) tri 1600 stl 1.6 ms/78 KB 3mf 9.2 ms/14 KB rss 72 MB manifold true
+manifold final batchLoft nomag 5x5: gen 46.3 ms (x7) tri 9244 stl 1.2 ms/451 KB 3mf 32.5 ms/83 KB rss 87 MB manifold true
+manifold final batchLoft nomag 10x10: gen 176.1 ms (x7) tri 36554 stl 4.8 ms/1785 KB 3mf 126.5 ms/331 KB rss 162 MB manifold true
+manifold final batchLoft nomag 20x20: gen 850.2 ms (x7) tri 145762 stl 38.8 ms/7117 KB 3mf 771.1 ms/1323 KB rss 446 MB
+manifold final batchLoft mag 2x2: gen 25.5 ms (x7) tri 5884 stl 1.4 ms/287 KB 3mf 23.7 ms/52 KB rss 82 MB manifold true
+manifold final batchLoft mag 5x5: gen 122.6 ms (x7) tri 36040 stl 6.3 ms/1760 KB 3mf 141.1 ms/321 KB rss 167 MB manifold true
+manifold final batchLoft mag 10x10: gen 502.5 ms (x7) tri 143740 stl 16.7 ms/7019 KB 3mf 622 ms/1299 KB rss 439 MB manifold true
+manifold final batchLoft mag 20x20: gen 1935.7 ms (x3) tri 574540 stl 156.3 ms/28054 KB 3mf 2965.3 ms/5237 KB rss 1202 MB
+manifold final bricks nomag 2x2: gen 16 ms (x7) tri 1606 stl 1.1 ms/79 KB 3mf 4.9 ms/14 KB rss 71 MB manifold true
+manifold final bricks nomag 5x5: gen 92.4 ms (x7) tri 9304 stl 1.2 ms/454 KB 3mf 32.5 ms/83 KB rss 93 MB manifold true
+manifold final bricks nomag 10x10: gen 391.2 ms (x7) tri 36774 stl 3.1 ms/1796 KB 3mf 113.2 ms/330 KB rss 161 MB manifold true
+manifold final bricks nomag 20x20: gen 1694.9 ms (x3) tri 146616 stl 15.7 ms/7159 KB 3mf 510.6 ms/1322 KB rss 437 MB
+manifold final bricks mag 2x2: gen 33.4 ms (x7) tri 5884 stl 2.2 ms/287 KB 3mf 20.3 ms/52 KB rss 86 MB manifold true
+manifold final bricks mag 5x5: gen 171.1 ms (x7) tri 36040 stl 3.1 ms/1760 KB 3mf 118.7 ms/321 KB rss 163 MB manifold true
+manifold final bricks mag 10x10: gen 837.7 ms (x7) tri 143740 stl 38.7 ms/7019 KB 3mf 528.9 ms/1300 KB rss 434 MB manifold true
+manifold final bricks mag 20x20: gen 3910.9 ms (x3) tri 574540 stl 68 ms/28054 KB 3mf 2376.8 ms/5237 KB rss 811 MB
+manifold final direct nomag 2x2: gen 3.9 ms (x7) tri 1596 stl 1.1 ms/78 KB 3mf 6.4 ms/14 KB rss 65 MB manifold true
+manifold final direct nomag 5x5: gen 19.6 ms (x7) tri 9240 stl 1.3 ms/451 KB 3mf 35.6 ms/82 KB rss 82 MB manifold true
+manifold final direct nomag 10x10: gen 64.5 ms (x7) tri 36540 stl 2.2 ms/1784 KB 3mf 110.9 ms/328 KB rss 140 MB manifold true
+manifold final direct nomag 20x20: gen 263 ms (x7) tri 145740 stl 11 ms/7116 KB 3mf 491.4 ms/1328 KB rss 390 MB
+manifold final direct mag 2x2: gen 37.2 ms (x7) tri 6024 stl 1.2 ms/294 KB 3mf 18.6 ms/52 KB rss 88 MB manifold true
+manifold final direct mag 5x5: gen 239.1 ms (x7) tri 36612 stl 3.2 ms/1788 KB 3mf 123.1 ms/325 KB rss 181 MB manifold true
+manifold final direct mag 10x10: gen 1089.3 ms (x3) tri 145772 stl 15.6 ms/7118 KB 3mf 461.6 ms/1313 KB rss 467 MB manifold true
+manifold final direct mag 20x20: gen 4890.9 ms (x3) tri 584816 stl 48.1 ms/28556 KB 3mf 2162.6 ms/5317 KB rss 908 MB
+manifold final brickMesh nomag 2x2: gen 12.5 ms (x7) tri 1616 stl 1 ms/79 KB 3mf 5.3 ms/14 KB rss 71 MB manifold true
+manifold final brickMesh nomag 5x5: gen 12.8 ms (x7) tri 9368 stl 0.7 ms/458 KB 3mf 27.2 ms/77 KB rss 86 MB manifold true
+manifold final brickMesh nomag 10x10: gen 13.6 ms (x7) tri 37008 stl 2.7 ms/1807 KB 3mf 103.8 ms/302 KB rss 135 MB manifold true
+manifold final brickMesh nomag 20x20: gen 26.2 ms (x7) tri 147488 stl 9.8 ms/7202 KB 3mf 409.6 ms/1204 KB rss 338 MB
+manifold final brickMesh mag 2x2: gen 25.6 ms (x7) tri 5904 stl 1.5 ms/288 KB 3mf 17.3 ms/51 KB rss 83 MB manifold true
+manifold final brickMesh mag 5x5: gen 27.4 ms (x7) tri 36168 stl 2.4 ms/1766 KB 3mf 97.2 ms/308 KB rss 138 MB manifold true
+manifold final brickMesh mag 10x10: gen 35.3 ms (x7) tri 144208 stl 9.5 ms/7041 KB 3mf 397.6 ms/1236 KB rss 336 MB manifold true
+manifold final brickMesh mag 20x20: gen 40.1 ms (x7) tri 576288 stl 38.8 ms/28139 KB 3mf 1757.2 ms/4957 KB rss 797 MB
+manifold preview batch nomag 2x2: gen 6.7 ms (x9) tri 540 rss 69 MB manifold true
+manifold preview batch nomag 5x5: gen 19.6 ms (x9) tri 3144 rss 71 MB manifold true
+manifold preview batch nomag 10x10: gen 63.4 ms (x9) tri 12444 rss 79 MB manifold true
+manifold preview batch nomag 20x20: gen 246.6 ms (x9) tri 49644 rss 109 MB
+manifold preview batch mag 2x2: gen 10.7 ms (x9) tri 1756 rss 73 MB manifold true
+manifold preview batch mag 5x5: gen 35 ms (x9) tri 10744 rss 79 MB manifold true
+manifold preview batch mag 10x10: gen 123.6 ms (x9) tri 42844 rss 102 MB manifold true
+manifold preview batch mag 20x20: gen 480.4 ms (x9) tri 171244 rss 208 MB
+manifold preview batchLoft nomag 2x2: gen 3.8 ms (x9) tri 544 rss 67 MB manifold true
+manifold preview batchLoft nomag 5x5: gen 14.8 ms (x9) tri 3160 rss 70 MB manifold true
+manifold preview batchLoft nomag 10x10: gen 54.6 ms (x9) tri 12484 rss 76 MB manifold true
+manifold preview batchLoft nomag 20x20: gen 219.4 ms (x9) tri 49724 rss 106 MB
+manifold preview batchLoft mag 2x2: gen 7.5 ms (x9) tri 1756 rss 68 MB manifold true
+manifold preview batchLoft mag 5x5: gen 30.2 ms (x9) tri 10744 rss 75 MB manifold true
+manifold preview batchLoft mag 10x10: gen 111.3 ms (x9) tri 42844 rss 101 MB manifold true
+manifold preview batchLoft mag 20x20: gen 449.1 ms (x9) tri 171244 rss 201 MB
+manifold preview brickMesh nomag 2x2: gen 5.1 ms (x9) tri 560 rss 67 MB manifold true
+manifold preview brickMesh nomag 5x5: gen 5.6 ms (x9) tri 3272 rss 67 MB manifold true
+manifold preview brickMesh nomag 10x10: gen 6.6 ms (x9) tri 12912 rss 68 MB manifold true
+manifold preview brickMesh nomag 20x20: gen 9.6 ms (x9) tri 51392 rss 72 MB
+manifold preview brickMesh mag 2x2: gen 13.6 ms (x9) tri 1776 rss 68 MB manifold true
+manifold preview brickMesh mag 5x5: gen 11.5 ms (x9) tri 10872 rss 69 MB manifold true
+manifold preview brickMesh mag 10x10: gen 16.6 ms (x9) tri 43312 rss 74 MB manifold true
+manifold preview brickMesh mag 20x20: gen 12.9 ms (x9) tri 172992 rss 80 MB
+manifold preview instanced nomag 2x2: gen 4.9 ms (x9) tri 576 rss 67 MB
+manifold preview instanced nomag 5x5: gen 4.9 ms (x9) tri 3432 rss 67 MB
+manifold preview instanced nomag 10x10: gen 6.1 ms (x9) tri 13632 rss 67 MB
+manifold preview instanced nomag 20x20: gen 5.1 ms (x9) tri 54432 rss 66 MB
+manifold preview instanced mag 2x2: gen 10.6 ms (x9) tri 1792 rss 68 MB
+manifold preview instanced mag 5x5: gen 9.7 ms (x9) tri 11032 rss 68 MB
+manifold preview instanced mag 10x10: gen 11.8 ms (x9) tri 44032 rss 68 MB
+manifold preview instanced mag 20x20: gen 14.8 ms (x9) tri 176032 rss 68 MB
+jscad final naive nomag 2x2: gen 262.9 ms (x7) tri 1700 stl 31.7 ms/91 KB 3mf 217.2 ms/33 KB rss 126 MB manifold false
+jscad final naive nomag 5x5: gen 1466.2 ms (x3) tri 9392 stl 40.9 ms/486 KB 3mf 185.4 ms/173 KB rss 392 MB manifold false
+jscad final naive nomag 10x10: gen 22701 ms (x1) tri 36452 stl 204.3 ms/1855 KB 3mf 2279 ms/665 KB rss 1058 MB manifold false
+jscad final naive nomag 20x20: SKIP (> 10 s à 10x10)
+jscad final naive mag 2x2: gen 298.5 ms (x7) tri 6912 stl 52 ms/409 KB 3mf 219.2 ms/144 KB rss 205 MB manifold false
+jscad final naive mag 5x5: gen 6877 ms (x1) tri 42156 stl 848.2 ms/2481 KB 3mf 5088.6 ms/889 KB rss 563 MB manifold false
+jscad final naive mag 10x10: gen 94382 ms (x1) tri 167776 stl 19432.1 ms/9858 KB 3mf 86430.1 ms/3607 KB rss 1490 MB manifold false
+jscad final naive mag 20x20: SKIP (> 10 s à 10x10)
+jscad final seq nomag 2x2: gen 96.4 ms (x7) tri 1700 stl 11.3 ms/91 KB 3mf 71.9 ms/33 KB rss 124 MB manifold false
+jscad final seq nomag 5x5: gen 2553.1 ms (x3) tri 9392 stl 39 ms/486 KB 3mf 219.6 ms/173 KB rss 317 MB manifold false
+jscad final seq nomag 10x10: gen 22212.3 ms (x1) tri 36452 stl 147.6 ms/1855 KB 3mf 1739.7 ms/665 KB rss 1036 MB manifold false
+jscad final seq nomag 20x20: SKIP (> 10 s à 10x10)
+jscad final seq mag 2x2: gen 118.6 ms (x7) tri 6912 stl 40.9 ms/409 KB 3mf 153.7 ms/144 KB rss 221 MB manifold false
+jscad final seq mag 5x5: gen 3157.5 ms (x3) tri 42156 stl 507.6 ms/2481 KB 3mf 3106.1 ms/889 KB rss 604 MB manifold false
+jscad final seq mag 10x10: gen 65965.2 ms (x1) tri 167776 stl 7739 ms/9858 KB 3mf 43331.1 ms/3607 KB rss 2075 MB manifold false
+jscad final seq mag 20x20: SKIP (> 10 s à 10x10)
+jscad final batchUnion nomag 2x2: gen 37.1 ms (x7) tri 1700 stl 7.1 ms/91 KB 3mf 31.8 ms/34 KB rss 133 MB manifold false
+jscad final batchUnion nomag 5x5: gen 281.1 ms (x7) tri 9392 stl 36.3 ms/486 KB 3mf 174.6 ms/175 KB rss 258 MB manifold false
+jscad final batchUnion nomag 10x10: gen 1563.5 ms (x3) tri 36452 stl 149.9 ms/1855 KB 3mf 1656.2 ms/680 KB rss 703 MB manifold false
+jscad final batchUnion nomag 20x20: gen 9520.2 ms (x1) tri 143976 stl 735.5 ms/7259 KB 3mf 20562.3 ms/2760 KB rss 2092 MB
+jscad final batchUnion mag 2x2: gen 88.3 ms (x7) tri 6912 stl 40.7 ms/409 KB 3mf 152 ms/144 KB rss 219 MB manifold false
+jscad final batchUnion mag 5x5: gen 800 ms (x7) tri 42161 stl 510.7 ms/2481 KB 3mf 3564.7 ms/888 KB rss 575 MB manifold false
+jscad final batchUnion mag 10x10: gen 5476.8 ms (x1) tri 167782 stl 17401.2 ms/9859 KB 3mf 84529 ms/3605 KB rss 1412 MB manifold false
+jscad final batchUnion mag 20x20: ERREUR ETIMEDOUT
+jscad final batch nomag 2x2: gen 33.3 ms (x7) tri 1700 stl 7.8 ms/91 KB 3mf 31.4 ms/34 KB rss 129 MB manifold false
+jscad final batch nomag 5x5: gen 154.1 ms (x7) tri 9392 stl 37.7 ms/486 KB 3mf 181.7 ms/176 KB rss 233 MB manifold false
+jscad final batch nomag 10x10: gen 491.2 ms (x7) tri 36452 stl 137.2 ms/1855 KB 3mf 1642.7 ms/680 KB rss 628 MB manifold false
+jscad final batch nomag 20x20: gen 2151.4 ms (x3) tri 143974 stl 664.5 ms/7259 KB 3mf 17654.8 ms/2755 KB rss 1573 MB
+jscad final batch mag 2x2: gen 73.7 ms (x7) tri 6912 stl 40.8 ms/409 KB 3mf 154.4 ms/144 KB rss 212 MB manifold false
+jscad final batch mag 5x5: gen 322 ms (x7) tri 42157 stl 488.4 ms/2481 KB 3mf 3109.4 ms/888 KB rss 629 MB manifold false
+jscad final batch mag 10x10: gen 848.4 ms (x7) tri 167776 stl 7076.5 ms/9858 KB 3mf 36177.8 ms/3604 KB rss 1794 MB manifold false
+jscad final batch mag 20x20: ERREUR ETIMEDOUT
+jscad final batchLoft nomag 2x2: gen 61 ms (x7) tri 1700 stl 27.6 ms/91 KB 3mf 79.4 ms/33 KB rss 140 MB manifold false
+jscad final batchLoft nomag 5x5: gen 417.6 ms (x7) tri 9392 stl 73.4 ms/486 KB 3mf 376.5 ms/174 KB rss 254 MB manifold false
+jscad final batchLoft nomag 10x10: gen 681.5 ms (x7) tri 36452 stl 145.3 ms/1855 KB 3mf 1736.5 ms/676 KB rss 637 MB manifold false
+jscad final batchLoft nomag 20x20: gen 7835.3 ms (x1) tri 143976 stl 874.3 ms/7259 KB 3mf 21998.1 ms/2748 KB rss 1604 MB
+jscad final batchLoft mag 2x2: gen 72.5 ms (x7) tri 6912 stl 39.9 ms/409 KB 3mf 155.3 ms/144 KB rss 222 MB manifold false
+jscad final batchLoft mag 5x5: gen 311.8 ms (x7) tri 42156 stl 490.6 ms/2481 KB 3mf 3688.5 ms/892 KB rss 501 MB manifold false
+jscad final batchLoft mag 10x10: gen 1302.1 ms (x3) tri 167776 stl 11577.3 ms/9858 KB 3mf 39725.3 ms/3619 KB rss 1897 MB manifold false
+jscad final batchLoft mag 20x20: ERREUR ETIMEDOUT
+jscad final bricks nomag 2x2: gen 50 ms (x7) tri 1700 stl 7.9 ms/91 KB 3mf 31.2 ms/34 KB rss 132 MB manifold false
+jscad final bricks nomag 5x5: gen 441.6 ms (x7) tri 9392 stl 38.5 ms/486 KB 3mf 184 ms/175 KB rss 266 MB manifold false
+jscad final bricks nomag 10x10: gen 2713.3 ms (x3) tri 36452 stl 151 ms/1855 KB 3mf 1741.9 ms/678 KB rss 753 MB manifold false
+jscad final bricks nomag 20x20: gen 15365.6 ms (x1) tri 143972 stl 708.6 ms/7259 KB 3mf 21609 ms/2741 KB rss 1974 MB
+jscad final bricks mag 2x2: gen 138.2 ms (x7) tri 6912 stl 40.6 ms/409 KB 3mf 155 ms/145 KB rss 201 MB manifold false
+jscad final bricks mag 5x5: gen 1191.3 ms (x3) tri 42156 stl 482.9 ms/2481 KB 3mf 3076.1 ms/894 KB rss 720 MB manifold false
+jscad final bricks mag 10x10: gen 7160.5 ms (x1) tri 167776 stl 8223.8 ms/9858 KB 3mf 44554.6 ms/3623 KB rss 1756 MB manifold false
+jscad final bricks mag 20x20: ERREUR ETIMEDOUT
+jscad final brickMesh nomag 2x2: gen 43.2 ms (x7) tri 1864 stl 1.1 ms/91 KB 3mf 9.2 ms/16 KB rss 109 MB manifold false
+jscad final brickMesh nomag 5x5: gen 48.2 ms (x7) tri 10960 stl 1.1 ms/535 KB 3mf 77.8 ms/91 KB rss 114 MB manifold false
+jscad final brickMesh nomag 10x10: gen 77.8 ms (x7) tri 43400 stl 3.4 ms/2119 KB 3mf 156.5 ms/357 KB rss 157 MB manifold false
+jscad final brickMesh nomag 20x20: gen 61.2 ms (x7) tri 173080 stl 15.6 ms/8451 KB 3mf 763.2 ms/1421 KB rss 376 MB
+jscad final brickMesh mag 2x2: gen 135.5 ms (x7) tri 7020 stl 1.5 ms/343 KB 3mf 23.4 ms/62 KB rss 143 MB manifold false
+jscad final brickMesh mag 5x5: gen 180.1 ms (x7) tri 43164 stl 3.5 ms/2108 KB 3mf 175.7 ms/375 KB rss 169 MB manifold false
+jscad final brickMesh mag 10x10: gen 235.1 ms (x7) tri 172204 stl 12.4 ms/8408 KB 3mf 770.9 ms/1511 KB rss 336 MB manifold false
+jscad final brickMesh mag 20x20: gen 237 ms (x7) tri 688284 stl 99 ms/33608 KB 3mf 3793 ms/6072 KB rss 943 MB
+jscad preview batch nomag 2x2: gen 13.9 ms (x9) tri 548 rss 102 MB manifold false
+jscad preview batch nomag 5x5: gen 70.1 ms (x9) tri 3056 rss 123 MB manifold false
+jscad preview batch nomag 10x10: gen 333.1 ms (x9) tri 11876 rss 168 MB manifold false
+jscad preview batch nomag 20x20: gen 1471.3 ms (x3) tri 46916 rss 294 MB
+jscad preview batch mag 2x2: gen 45.2 ms (x9) tri 1968 rss 110 MB manifold false
+jscad preview batch mag 5x5: gen 139.3 ms (x9) tri 11940 rss 131 MB manifold false
+jscad preview batch mag 10x10: gen 535.1 ms (x9) tri 47440 rss 190 MB manifold false
+jscad preview batch mag 20x20: gen 1170.4 ms (x3) tri 189240 rss 409 MB
+jscad preview batchLoft nomag 2x2: gen 14.7 ms (x9) tri 548 rss 104 MB manifold false
+jscad preview batchLoft nomag 5x5: gen 79.2 ms (x9) tri 3056 rss 121 MB manifold false
+jscad preview batchLoft nomag 10x10: gen 375.2 ms (x9) tri 11876 rss 171 MB manifold false
+jscad preview batchLoft nomag 20x20: gen 1687.2 ms (x3) tri 46916 rss 309 MB
+jscad preview batchLoft mag 2x2: gen 34.4 ms (x9) tri 1968 rss 112 MB manifold false
+jscad preview batchLoft mag 5x5: gen 113.4 ms (x9) tri 11940 rss 130 MB manifold false
+jscad preview batchLoft mag 10x10: gen 404.9 ms (x9) tri 47440 rss 196 MB manifold false
+jscad preview batchLoft mag 20x20: gen 1820.1 ms (x3) tri 189240 rss 411 MB
+jscad preview brickMesh nomag 2x2: gen 13.8 ms (x9) tri 616 rss 89 MB manifold false
+jscad preview brickMesh nomag 5x5: gen 11.6 ms (x9) tri 3664 rss 90 MB manifold false
+jscad preview brickMesh nomag 10x10: gen 21.9 ms (x9) tri 14504 rss 90 MB manifold false
+jscad preview brickMesh nomag 20x20: gen 32.7 ms (x9) tri 57784 rss 91 MB
+jscad preview brickMesh mag 2x2: gen 41.5 ms (x9) tri 2028 rss 105 MB manifold false
+jscad preview brickMesh mag 5x5: gen 27.8 ms (x9) tri 12468 rss 107 MB manifold false
+jscad preview brickMesh mag 10x10: gen 69.7 ms (x9) tri 49708 rss 109 MB manifold false
+jscad preview brickMesh mag 20x20: gen 43.6 ms (x9) tri 198588 rss 113 MB
+
+écrit results/bench.{json,md} en 2707 s
