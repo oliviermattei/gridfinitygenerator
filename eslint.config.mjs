@@ -45,4 +45,21 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // ADR 0003 and spec v1: the preview receives a mesh and knows nothing about the generator.
+    files: ["packages/viewer/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@repo/geometry", "@repo/geometry/*", "manifold-3d", "@repo/web"],
+              message: "The 3D preview must not depend on the geometry engine or the app.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
