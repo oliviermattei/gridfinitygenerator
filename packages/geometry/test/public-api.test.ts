@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   CELLS_PER_AXIS,
   STANDARD_CELL_SIZE_MM,
+  clampCellCount,
   generateBaseplate,
   serializeStl,
   type Quality,
 } from "../src/index";
-import { checkMesh, pocketOpeningWidth, readBinaryStl } from "./support/measure";
+import { checkMesh, pocketOpening, readBinaryStl } from "./support/measure";
 
 // Behaviour of the geometry engine, observed only through its public interface.
 // Reference values: docs/research/gridfinity-baseplate.md (sections B and C),
@@ -15,15 +16,23 @@ import { checkMesh, pocketOpeningWidth, readBinaryStl } from "./support/measure"
 const TOLERANCE_MM = 0.001;
 const HEIGHT_MM = 4.6;
 
-/** Expected pocket opening, measured across a cell through its centre (ADR 0002). */
-const POCKET_OPENINGS: readonly { z: number; width: number }[] = [
-  { z: 0.1, width: 36.3 }, // vertical muret foot, inset 2.85
-  { z: 0.7, width: 37.0 }, // middle of the lower 45° chamfer
-  { z: 1.5, width: 37.7 }, // vertical 1.8 mm, inset 2.15
-  { z: 2.0, width: 37.7 },
-  { z: 3.5, width: 39.0 }, // upper 45° chamfer
-  { z: 4.5, width: 41.0 }, // just under the 0.4 mm flat
+/**
+ * Expected pocket opening at a height (ADR 0002): a rounded square of side 42 − 2·inset
+ * whose corner radius is 4 − inset (1.15 at the bottom, 3.6 at the top flat).
+ */
+const POCKET_OPENINGS: readonly { z: number; inset: number }[] = [
+  { z: 0.1, inset: 2.85 }, // vertical muret foot: 36.3 mm
+  { z: 0.7, inset: 2.5 }, // middle of the lower 45° chamfer: 37.0 mm
+  { z: 1.5, inset: 2.15 }, // vertical 1.8 mm: 37.7 mm
+  { z: 2.0, inset: 2.15 },
+  { z: 3.5, inset: 1.5 }, // upper 45° chamfer: 39.0 mm
+  { z: 4.5, inset: 0.5 }, // just under the 0.4 mm flat: 41.0 mm
 ];
+
+/** Area of a rounded square: side² minus the four corners cut by the radius. */
+const roundedSquareArea = (side: number, radius: number) => side * side - (4 - Math.PI) * radius * radius;
+/** A 32-segment quarter circle falls short of the true arc by less than 0.01 mm² here. */
+const FINAL_AREA_TOLERANCE_MM2 = 0.02;
 
 const SIZES: readonly [number, number][] = [
   [1, 1],
@@ -78,8 +87,14 @@ describe.each<Quality>(["preview", "final"])("generateBaseplate, %s quality", (q
         POCKET_OPENINGS.map(({ z }) => z),
       );
       for (const centre of cellCentres(columns, rows)) {
-        for (const { z, width } of POCKET_OPENINGS) {
-          expectWithin(pocketOpeningWidth(sections.get(z) ?? [], centre), width);
+        for (const { z, inset } of POCKET_OPENINGS) {
+          const opening = pocketOpening(sections.get(z) ?? [], centre);
+          const side = STANDARD_CELL_SIZE_MM - 2 * inset;
+          expectWithin(opening?.width, side);
+          expectWithin(opening?.depth, side);
+          if (quality === "final") {
+            expectWithin(opening?.area, roundedSquareArea(side, 4 - inset), FINAL_AREA_TOLERANCE_MM2);
+          }
         }
       }
     });
@@ -97,8 +112,11 @@ describe.each<Quality>(["preview", "final"])("generateBaseplate, %s quality", (q
 });
 
 describe("generateBaseplate settings", () => {
-  it("accepts 1 to 24 cells per axis", () => {
+  it("accepts 1 to 24 cells per axis, rounding the others into range", () => {
     expect(CELLS_PER_AXIS).toEqual({ min: 1, max: 24 });
+    expect([0, 1, 2.4, 2.6, 24, 25, -3, Number.NaN, Number.POSITIVE_INFINITY].map(clampCellCount)).toEqual([
+      1, 1, 2, 3, 24, 24, 1, 1, 24,
+    ]);
   });
 
   it("brings out-of-range cell counts back into range", async () => {

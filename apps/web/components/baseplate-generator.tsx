@@ -1,24 +1,25 @@
 "use client";
 
-import { CELLS_PER_AXIS, type Baseplate, type BaseplateSettings } from "@repo/geometry";
+import { CELLS_PER_AXIS, clampCellCount, type Baseplate, type BaseplateSettings } from "@repo/geometry";
 import { BRAND_ACCENT } from "@repo/ui";
 import { MeshPreview } from "@repo/viewer";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
+import type { BaseplateSummary } from "@/lib/engine/protocol";
 
 const DEFAULT_SETTINGS: BaseplateSettings = { columns: 4, rows: 3 };
 
 const millimetres = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
 
-/** Brings a typed cell count into the engine's range; `undefined` while it is not a number. */
-function cellCount(text: string): number | undefined {
+/** A typed cell count brought into the engine's range; `undefined` while it is not a number. */
+function parseCellCount(text: string): number | undefined {
   const value = Number(text.trim().replace(",", "."));
   if (text.trim() === "" || !Number.isFinite(value)) return undefined;
-  return Math.min(CELLS_PER_AXIS.max, Math.max(CELLS_PER_AXIS.min, Math.round(value)));
+  return clampCellCount(value);
 }
 
 /** `baseplate-{nx}x{ny}-{W}x{D}mm.stl`, the naming of the spec (#9). */
-function stlFileName({ layout, stats }: Omit<Baseplate, "mesh">): string {
+function stlFileName({ layout, stats }: BaseplateSummary): string {
   const mm = (value: number) => String(Number(value.toFixed(1)));
   const { width, depth } = stats.dimensions;
   return `baseplate-${layout.columns}x${layout.rows}-${mm(width)}x${mm(depth)}mm.stl`;
@@ -61,7 +62,11 @@ export function BaseplateGenerator() {
         setBaseplate(next);
         setError(null);
       },
-      (reason: unknown) => current && setError(String(reason)),
+      (reason: unknown) => {
+        if (!current) return;
+        console.error(reason);
+        setError("Le calcul de la baseplate a échoué. Modifiez un réglage pour réessayer.");
+      },
     );
     return () => {
       current = false;
@@ -70,17 +75,19 @@ export function BaseplateGenerator() {
 
   async function exportStl() {
     setExporting(true);
+    setError(null);
     try {
       const { bytes, baseplate: exported } = await engine().exportStl(settings);
       download(bytes as Uint8Array<ArrayBuffer>, stlFileName(exported));
     } catch (reason) {
-      setError(String(reason));
+      console.error(reason);
+      setError("L'export STL a échoué. Réessayez.");
     } finally {
       setExporting(false);
     }
   }
 
-  const shown = baseplate?.layout;
+  const layout = baseplate?.layout;
   const dimensions = baseplate?.stats.dimensions;
 
   return (
@@ -116,7 +123,7 @@ export function BaseplateGenerator() {
 
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm" aria-live="polite">
           <dt className="text-muted">Cellules</dt>
-          <dd data-testid="cells">{shown ? `${shown.columns} × ${shown.rows}` : "…"}</dd>
+          <dd data-testid="cells">{layout ? `${layout.columns} × ${layout.rows}` : "…"}</dd>
           <dt className="text-muted">Dimensions</dt>
           <dd data-testid="dimensions">
             {dimensions
@@ -163,7 +170,7 @@ function CellCountField({ label, value, onChange }: { label: string; value: numb
         value={text}
         onChange={(event) => {
           setText(event.target.value);
-          const next = cellCount(event.target.value);
+          const next = parseCellCount(event.target.value);
           if (next !== undefined) onChange(next);
         }}
         onBlur={() => setText(String(value))}

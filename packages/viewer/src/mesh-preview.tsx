@@ -16,14 +16,14 @@ export interface PreviewMesh {
 
 export interface MeshPreviewProps {
   mesh: PreviewMesh | null;
-  /** Plastic colour of the part. */
+  /** Plastic colour of the model. */
   color?: string;
   className?: string;
   /** Shown instead of the 3D view when WebGL is unavailable. */
   fallback?: ReactNode;
 }
 
-/** Direction from the part to the camera: in front, slightly to the right, from above. */
+/** Direction from the model to the camera: in front, slightly to the right, from above. */
 const VIEW_DIRECTION = new Vector3(0.5, 1.1, 1).normalize();
 /** The mesh is Z up; three.js is Y up. */
 const Z_UP_TO_Y_UP: [number, number, number] = [-Math.PI / 2, 0, 0];

@@ -29,17 +29,20 @@ export interface MeshCheck {
  * mesh is not manifold, which fails the test with manifold's own reason.
  */
 export async function checkMesh(mesh: TriangleMesh, sectionHeights: readonly number[] = []): Promise<MeshCheck> {
-  const W = await manifoldModule();
-  const solid: Manifold = new W.Manifold(
-    new W.Mesh({ numProp: 3, vertProperties: mesh.positions, triVerts: mesh.indices }),
+  const manifold = await manifoldModule();
+  const solid: Manifold = new manifold.Manifold(
+    new manifold.Mesh({ numProp: 3, vertProperties: mesh.positions, triVerts: mesh.indices }),
   );
   try {
     const box = solid.boundingBox();
     const sections = new Map<number, [number, number][][]>();
     for (const z of sectionHeights) {
       const section = solid.slice(z);
-      sections.set(z, section.toPolygons() as [number, number][][]);
-      section.delete();
+      try {
+        sections.set(z, section.toPolygons() as [number, number][][]);
+      } finally {
+        section.delete();
+      }
     }
     return {
       status: solid.status(),
@@ -53,23 +56,39 @@ export async function checkMesh(mesh: TriangleMesh, sectionHeights: readonly num
   }
 }
 
+export interface PocketOpening {
+  /** Opening along X; exact, since the straight sides do not depend on corner segments. */
+  width: number;
+  /** Opening along Y. */
+  depth: number;
+  /** Area enclosed by the opening contour, which reflects its corner radius. */
+  area: number;
+}
+
 /**
- * Width along X of the pocket opening around a cell centre, in one horizontal section:
- * the narrowest contour whose bounding box contains the centre (the outline is wider).
- * The straight sides of a pocket make this width exact, whatever the corner segments.
+ * Pocket opening around a cell centre, in one horizontal section: the smallest contour
+ * whose bounding box contains the centre (the outline of the baseplate is larger).
  */
-export function pocketOpeningWidth(contours: [number, number][][], [cx, cy]: [number, number]): number | undefined {
-  let best: number | undefined;
+export function pocketOpening(contours: [number, number][][], [cx, cy]: [number, number]): PocketOpening | undefined {
+  let best: PocketOpening | undefined;
   for (const contour of contours) {
     const xs = contour.map(([x]) => x);
     const ys = contour.map(([, y]) => y);
     const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-    if (x0 < cx && cx < x1 && y0 < cy && cy < y1) {
-      const width = x1 - x0;
-      if (best === undefined || width < best) best = width;
+    if (x0 < cx && cx < x1 && y0 < cy && cy < y1 && (best === undefined || x1 - x0 < best.width)) {
+      best = { width: x1 - x0, depth: y1 - y0, area: Math.abs(shoelaceArea(contour)) };
     }
   }
   return best;
+}
+
+function shoelaceArea(contour: [number, number][]): number {
+  let twice = 0;
+  contour.forEach(([x, y], i) => {
+    const [nx, ny] = contour[(i + 1) % contour.length] as [number, number];
+    twice += x * ny - nx * y;
+  });
+  return twice / 2;
 }
 
 /** Parses a binary STL and welds identical vertices back into an indexed mesh. */

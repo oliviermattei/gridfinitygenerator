@@ -3,6 +3,7 @@
 export {
   CELLS_PER_AXIS,
   STANDARD_CELL_SIZE_MM,
+  clampCellCount,
   generateBaseplate,
   type Baseplate,
   type BaseplateLayout,

@@ -1,5 +1,5 @@
 import type { ManifoldToplevel, Manifold } from "manifold-3d";
-import { loadManifold, withArena } from "./manifold";
+import { loadManifold, withArena, type Own } from "./manifold";
 import { HYBRID_PROFILE, type PocketProfile } from "./pocket-profile";
 
 /** Side of a Gridfinity cell in the standard, in millimetres (default cell size). */
@@ -68,15 +68,16 @@ export async function generateBaseplate(settings: BaseplateSettings, quality: Qu
   return { mesh, layout, stats: { dimensions: dimensionsOf(mesh) } };
 }
 
-function cellCount(value: number): number {
+/** Rounds a cell count and brings it into CELLS_PER_AXIS (a non-number gives the minimum). */
+export function clampCellCount(value: number): number {
   if (Number.isNaN(value)) return CELLS_PER_AXIS.min;
   return Math.min(CELLS_PER_AXIS.max, Math.max(CELLS_PER_AXIS.min, Math.round(value)));
 }
 
 function layoutOf(settings: BaseplateSettings): BaseplateLayout {
   return {
-    columns: cellCount(settings.columns),
-    rows: cellCount(settings.rows),
+    columns: clampCellCount(settings.columns),
+    rows: clampCellCount(settings.rows),
     cellSize: STANDARD_CELL_SIZE_MM,
     margins: { left: 0, right: 0, back: 0, front: 0 },
   };
@@ -86,16 +87,16 @@ function layoutOf(settings: BaseplateSettings): BaseplateLayout {
  * Grouped boolean path (ADR 0004 fallback): the outline slab minus every pocket tool at
  * once. The cell-brick path arrives with #5.
  */
-function buildMesh(wasm: ManifoldToplevel, layout: BaseplateLayout, profile: PocketProfile, quarter: number): TriangleMesh {
+function buildMesh(wasm: ManifoldToplevel, layout: BaseplateLayout, profile: PocketProfile, segmentsPerQuarter: number): TriangleMesh {
   const { columns, rows, cellSize } = layout;
   const width = columns * cellSize;
   const depth = rows * cellSize;
   const outerRadius = Math.min(OUTER_RADIUS_MM, width / 2, depth / 2);
 
   return withArena((own) => {
-    const outline = own(new wasm.CrossSection([roundedRect(width, depth, outerRadius, quarter)]));
+    const outline = own(new wasm.CrossSection([roundedRect(width, depth, outerRadius, segmentsPerQuarter)]));
     const slab = own(wasm.Manifold.extrude(outline, profile.height));
-    const tool = pocketTool(wasm, own, profile, cellSize, quarter);
+    const tool = pocketTool(wasm, own, profile, cellSize, segmentsPerQuarter);
     const tools: Manifold[] = [];
     for (let i = 0; i < columns; i++)
       for (let j = 0; j < rows; j++)
@@ -113,10 +114,10 @@ function buildMesh(wasm: ManifoldToplevel, layout: BaseplateLayout, profile: Poc
 /** Solid removed for one cell, centred on the origin: a loft of the profile's layers. */
 function pocketTool(
   wasm: ManifoldToplevel,
-  own: <D extends { delete(): void }>(object: D) => D,
+  own: Own,
   profile: PocketProfile,
   cellSize: number,
-  quarter: number,
+  segmentsPerQuarter: number,
 ): Manifold {
   const first = profile.points[0];
   const last = profile.points[profile.points.length - 1];
@@ -127,14 +128,14 @@ function pocketTool(
     [last[0] + TOOL_OVERSHOOT_MM, last[1]] as const,
   ].map(([z, inset]) => ({
     z,
-    points: roundedRect(cellSize - 2 * inset, cellSize - 2 * inset, profile.topRadius - inset, quarter),
+    points: roundedRect(cellSize - 2 * inset, cellSize - 2 * inset, profile.topRadius - inset, segmentsPerQuarter),
   }));
   const { positions, indices } = loft(layers);
   return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: positions, triVerts: indices })));
 }
 
-/** Counter-clockwise rounded rectangle centred on the origin, `quarter` segments per corner. */
-function roundedRect(width: number, depth: number, radius: number, quarter: number): [number, number][] {
+/** Counter-clockwise rounded rectangle centred on the origin, `segmentsPerQuarter` segments per corner. */
+function roundedRect(width: number, depth: number, radius: number, segmentsPerQuarter: number): [number, number][] {
   const hx = width / 2 - radius;
   const hy = depth / 2 - radius;
   const centres: [number, number][] = [
@@ -145,8 +146,8 @@ function roundedRect(width: number, depth: number, radius: number, quarter: numb
   ];
   const points: [number, number][] = [];
   centres.forEach(([cx, cy], corner) => {
-    for (let s = 0; s <= quarter; s++) {
-      const angle = ((corner + s / quarter) * Math.PI) / 2;
+    for (let s = 0; s <= segmentsPerQuarter; s++) {
+      const angle = ((corner + s / segmentsPerQuarter) * Math.PI) / 2;
       points.push([cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)]);
     }
   });

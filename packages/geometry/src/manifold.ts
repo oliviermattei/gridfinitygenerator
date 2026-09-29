@@ -9,11 +9,16 @@ let loading: Promise<ManifoldToplevel> | undefined;
  * (`new URL(..., import.meta.url)`), which Node, Vitest and the Next.js worker bundle resolve.
  */
 export function loadManifold(): Promise<ManifoldToplevel> {
-  loading ??= import("manifold-3d").then(async ({ default: Module }) => {
-    const wasm = await Module();
-    wasm.setup();
-    return wasm;
-  });
+  loading ??= import("manifold-3d")
+    .then(async ({ default: Module }) => {
+      const wasm = await Module();
+      wasm.setup();
+      return wasm;
+    })
+    .catch((error: unknown) => {
+      loading = undefined; // let the next call retry instead of failing for good
+      throw error;
+    });
   return loading;
 }
 
@@ -21,12 +26,15 @@ interface Deletable {
   delete(): void;
 }
 
+/** Registers a WASM object in the current arena and returns it. */
+export type Own = <D extends Deletable>(object: D) => D;
+
 /**
  * Runs `build` and frees every WASM object registered with `own` when it returns or
  * throws: manifold objects are not garbage-collected (ADR 0004). Register each object
  * exactly once, including intermediate results, and copy what must outlive the call.
  */
-export function withArena<T>(build: (own: <D extends Deletable>(object: D) => D) => T): T {
+export function withArena<T>(build: (own: Own) => T): T {
   const owned: Deletable[] = [];
   try {
     return build((object) => {

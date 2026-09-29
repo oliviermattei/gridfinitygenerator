@@ -4,13 +4,13 @@ const HEADER_BYTES = 80;
 const TRIANGLE_BYTES = 50;
 
 /** Serialises a mesh as binary STL (little-endian, millimetres, facet normals computed). */
-export function serializeStl(mesh: TriangleMesh, name = "baseplate"): Uint8Array {
+export function serializeStl(mesh: TriangleMesh): Uint8Array {
   const { positions, indices } = mesh;
   const count = indices.length / 3;
   const bytes = new Uint8Array(HEADER_BYTES + 4 + count * TRIANGLE_BYTES);
   const view = new DataView(bytes.buffer);
   // ASCII header; it must not start with "solid", which marks an ASCII STL.
-  const header = `binary STL: ${name}`.slice(0, HEADER_BYTES);
+  const header = "binary STL: baseplate";
   for (let i = 0; i < header.length; i++) bytes[i] = header.charCodeAt(i) & 0x7f;
   view.setUint32(HEADER_BYTES, count, true);
 
