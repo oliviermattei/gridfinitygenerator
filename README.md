@@ -28,6 +28,8 @@ pnpm test         # Vitest puis Playwright (sur le build de production)
 
 `pnpm test` télécharge au besoin le navigateur Chromium de Playwright. Sous Linux, ses dépendances système s'installent avec `pnpm --filter @repo/web exec playwright install --with-deps chromium`.
 
+Les objectifs de performance de la spec (aperçu < 100 ms, finale < 1 s en 10 × 10 et < 3 s en 20 × 20) se mesurent en local, sur une machine au repos : `pnpm --filter @repo/geometry test:perf`. La CI ne vérifie que des seuils larges.
+
 ## Déploiement
 
 Vercel et Umami : voir `docs/deploiement.md`.

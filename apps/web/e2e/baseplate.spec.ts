@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test("the French baseplate page opens in the project colours", async ({ page }) => {
   const response = await page.goto("/fr/baseplate");
@@ -64,4 +64,92 @@ test("cell counts are brought back into 1 to 24", async ({ page }) => {
   await columns.blur();
   await expect(columns).toHaveValue("1");
   await expect(page.getByTestId("cells")).toHaveText("1 × 3");
+});
+
+interface EngineMeasure {
+  name: string;
+  start: number;
+  end: number;
+  columns: number;
+  rows: number;
+  cancelled: boolean;
+}
+
+/** User Timing measures recorded by the engine client for the display requests, in order. */
+function renderMeasures(page: Page): Promise<EngineMeasure[]> {
+  return page.evaluate(() =>
+    performance
+      .getEntriesByType("measure")
+      .filter(({ name }) => name === "engine:preview" || name === "engine:final")
+      .map((entry) => {
+        const detail = (entry as PerformanceMeasure).detail as { columns: number; rows: number; cancelled?: boolean };
+        const { columns, rows, cancelled = false } = detail;
+        return { name: entry.name, start: entry.startTime, end: entry.startTime + entry.duration, columns, rows, cancelled };
+      })
+      .sort((a, b) => a.start - b.start),
+  );
+}
+
+test("dragging a cell count never piles computations up, and only the last state is rendered", async ({ page }) => {
+  await page.goto("/fr/baseplate");
+  await expect(page.getByTestId("cells")).toHaveText("4 × 3");
+  await page.getByLabel("Rangées").fill("20");
+  await expect(page.getByTestId("cells")).toHaveText("4 × 20");
+
+  // Hold the arrow key: 16 settings in a row, as fast as the keyboard sends them.
+  const columns = page.getByLabel("Colonnes");
+  await columns.focus();
+  const dragStart = await page.evaluate(() => performance.now());
+  const changes = 16;
+  for (let step = 0; step < changes; step++) await page.keyboard.press("ArrowUp");
+  await expect(columns).toHaveValue("20");
+
+  // The preview, then the final quality, of the last state only end up on screen.
+  await expect
+    .poll(async () => (await renderMeasures(page)).at(-1), { timeout: 20_000 })
+    .toMatchObject({ name: "engine:final", columns: 20, rows: 20 });
+  await expect(page.getByTestId("cells")).toHaveText("20 × 20");
+  await expect(page.getByTestId("dimensions")).toHaveText("840 × 840 × 4,6 mm");
+
+  // One computation at a time: a new one starts only once the previous one has answered,
+  // so nothing ever waits in the worker behind a stale request.
+  const measures = await renderMeasures(page);
+  measures.slice(1).forEach((measure, i) => expect(measure.start).toBeGreaterThanOrEqual((measures[i] as EngineMeasure).end));
+  const drag = measures.filter(({ end }) => end > dragStart);
+  test.info().annotations.push({
+    type: "measure",
+    description: `${changes} changes: computed during the drag, ${drag.filter(({ name }) => name === "engine:preview").length} previews, ${drag.filter(({ name }) => name === "engine:final").length} finals computed`,
+  });
+
+  // A 20 × 20 final is a large computation: the worker is replaced by a fresh one...
+  await expect
+    .poll(() => page.evaluate(() => performance.getEntriesByName("engine:worker-start").length))
+    .toBeGreaterThanOrEqual(2);
+  // ...which keeps computing the next settings.
+  await page.getByLabel("Rangées").fill("2");
+  await expect(page.getByTestId("dimensions")).toHaveText("840 × 84 × 4,6 mm");
+});
+
+test("a setting changed during a large final is shown without waiting for that final", async ({ page }) => {
+  await page.goto("/fr/baseplate");
+  await page.getByLabel("Colonnes").fill("24");
+  await page.getByLabel("Rangées").fill("24");
+  await expect(page.getByTestId("cells")).toHaveText("24 × 24");
+  // The preview is on screen; the final quality (over a second for 24 × 24) starts 200 ms later.
+  await page.waitForTimeout(500);
+
+  await page.getByLabel("Rangées").fill("23");
+  await expect(page.getByTestId("cells")).toHaveText("24 × 23");
+  const measures = await renderMeasures(page);
+  // Earlier finals may have been cancelled too (the 4 × 3 one, on a loaded machine).
+  const cancelled = measures.find(({ cancelled, columns, rows }) => cancelled && columns === 24 && rows === 24);
+  expect(cancelled?.name).toBe("engine:final");
+  // The new preview did not wait for the stale final to finish.
+  const preview = measures.find(({ name, rows }) => name === "engine:preview" && rows === 23);
+  expect(preview?.start).toBeGreaterThanOrEqual(cancelled?.end ?? Number.NaN);
+
+  await expect
+    .poll(async () => (await renderMeasures(page)).at(-1), { timeout: 20_000 })
+    .toMatchObject({ name: "engine:final", columns: 24, rows: 23, cancelled: false });
+  await expect(page.getByTestId("dimensions")).toHaveText(/^1\s008 × 966 × 4,6 mm$/); // French digit grouping
 });

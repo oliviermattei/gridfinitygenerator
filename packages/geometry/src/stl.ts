@@ -1,4 +1,4 @@
-import type { TriangleMesh } from "./baseplate";
+import type { TriangleMesh } from "./mesh";
 
 const HEADER_BYTES = 80;
 const TRIANGLE_BYTES = 50;

@@ -5,10 +5,13 @@ export {
   STANDARD_CELL_SIZE_MM,
   clampCellCount,
   generateBaseplate,
+  loadEngine,
+  type AssemblyStrategy,
   type Baseplate,
   type BaseplateLayout,
   type BaseplateSettings,
   type BaseplateStats,
+  type GenerateOptions,
   type Quality,
   type TriangleMesh,
 } from "./baseplate";

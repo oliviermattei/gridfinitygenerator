@@ -4,6 +4,7 @@ import {
   STANDARD_CELL_SIZE_MM,
   clampCellCount,
   generateBaseplate,
+  loadEngine,
   serializeStl,
   type Quality,
 } from "../src/index";
@@ -108,6 +109,95 @@ describe.each<Quality>(["preview", "final"])("generateBaseplate, %s quality", (q
         margins: { left: 0, right: 0, back: 0, front: 0 },
       });
     });
+  });
+});
+
+describe.each<Quality>(["preview", "final"])("large grids, %s quality", (quality) => {
+  describe.each<[number, number]>([
+    [2, 2],
+    [20, 20],
+  ])("%i × %i cells", (columns, rows) => {
+    it("is a closed, valid mesh of the expected size, with one open pocket per cell", async () => {
+      const baseplate = await generateBaseplate({ columns, rows }, quality);
+      const check = await checkMesh(baseplate.mesh);
+      expect(check.status).toBe("NoError");
+      expect(check.genus).toBe(columns * rows);
+      expectWithin(check.bounds.max[0] - check.bounds.min[0], columns * 42);
+      expectWithin(check.bounds.max[1] - check.bounds.min[1], rows * 42);
+      expectWithin(check.bounds.min[2], 0);
+      expectWithin(check.bounds.max[2], HEIGHT_MM);
+      expectWithin(baseplate.stats.dimensions.width, columns * 42);
+      expectWithin(baseplate.stats.dimensions.depth, rows * 42);
+    });
+
+    it("cuts the corner, edge and inner pockets to the hybrid profile", async () => {
+      const baseplate = await generateBaseplate({ columns, rows }, quality);
+      const { sections } = await checkMesh(
+        baseplate.mesh,
+        POCKET_OPENINGS.map(({ z }) => z),
+      );
+      const centres = cellCentres(columns, rows);
+      // Corners, the middle of the first column and a cell inside the grid.
+      const sampled = [0, rows - 1, rows * (columns - 1), centres.length - 1, Math.floor(rows / 2), Math.floor(centres.length / 2) + 1];
+      for (const index of sampled) {
+        const centre = centres[index] as [number, number];
+        for (const { z, inset } of POCKET_OPENINGS) {
+          const opening = pocketOpening(sections.get(z) ?? [], centre);
+          expectWithin(opening?.width, STANDARD_CELL_SIZE_MM - 2 * inset);
+          expectWithin(opening?.depth, STANDARD_CELL_SIZE_MM - 2 * inset);
+        }
+      }
+    });
+  });
+});
+
+describe("assembly strategies", () => {
+  // The default assembly (cell bricks joined at the mesh level, ADR 0004) must give the
+  // same solid as the grouped boolean fallback.
+  const VOLUME_TOLERANCE_MM3 = 0.1;
+
+  describe.each<Quality>(["preview", "final"])("%s quality", (quality) => {
+    it.each<[number, number]>([
+      [2, 2],
+      [3, 2],
+      [2, 5],
+      [7, 4],
+      [10, 10],
+    ])("%i × %i cells have the same volume and bounds as the boolean fallback", async (columns, rows) => {
+      const [fast, fallback] = await Promise.all([
+        generateBaseplate({ columns, rows }, quality),
+        generateBaseplate({ columns, rows }, quality, { strategy: "boolean" }),
+      ]);
+      const [fastCheck, fallbackCheck] = await Promise.all([checkMesh(fast.mesh), checkMesh(fallback.mesh)]);
+      expect(fastCheck.status).toBe("NoError");
+      expect(fallbackCheck.status).toBe("NoError");
+      expectWithin(fastCheck.volume, fallbackCheck.volume, VOLUME_TOLERANCE_MM3);
+      expect(fastCheck.genus).toBe(fallbackCheck.genus);
+      for (const axis of [0, 1, 2] as const) {
+        expectWithin(fastCheck.bounds.min[axis], fallbackCheck.bounds.min[axis]);
+        expectWithin(fastCheck.bounds.max[axis], fallbackCheck.bounds.max[axis]);
+      }
+      expect(fast.layout).toEqual(fallback.layout);
+    });
+  });
+
+  it("builds single-row and single-column grids with the boolean fallback", async () => {
+    for (const [columns, rows] of [
+      [1, 1],
+      [1, 6],
+      [6, 1],
+    ] as const) {
+      const byDefault = await generateBaseplate({ columns, rows }, "final");
+      const fallback = await generateBaseplate({ columns, rows }, "final", { strategy: "boolean" });
+      expectWithin((await checkMesh(byDefault.mesh)).volume, (await checkMesh(fallback.mesh)).volume, 0);
+      await expect(generateBaseplate({ columns, rows }, "final", { strategy: "bricks" })).rejects.toThrow(RangeError);
+    }
+  });
+});
+
+describe("loadEngine", () => {
+  it("loads the engine ahead of the first generation", async () => {
+    await expect(loadEngine()).resolves.toBeUndefined();
   });
 });
 

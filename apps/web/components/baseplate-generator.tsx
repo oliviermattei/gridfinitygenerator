@@ -3,7 +3,7 @@
 import { CELLS_PER_AXIS, clampCellCount, type Baseplate, type BaseplateSettings } from "@repo/geometry";
 import { BRAND_ACCENT } from "@repo/ui";
 import { MeshPreview } from "@repo/viewer";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 
@@ -34,50 +34,44 @@ function download(bytes: Uint8Array<ArrayBuffer>, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-/** The engine worker, started on first use and terminated when the page unmounts. */
-function useEngine(): () => EngineClient {
-  const client = useRef<EngineClient | null>(null);
-  useEffect(
-    () => () => {
-      client.current?.dispose();
-      client.current = null;
-    },
-    [],
-  );
-  return useCallback(() => (client.current ??= createEngineClient()), []);
-}
-
 export function BaseplateGenerator() {
-  const engine = useEngine();
+  const engine = useRef<EngineClient | null>(null);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [baseplate, setBaseplate] = useState<Baseplate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
+  // The engine worker lives as long as the page: it shows the preview of the latest
+  // settings, then their final quality, and drops whatever a newer setting made stale.
   useEffect(() => {
-    let current = true;
-    engine().generate(settings, "preview").then(
-      (next) => {
-        if (!current) return;
+    const client = createEngineClient({
+      onBaseplate(next) {
         setBaseplate(next);
         setError(null);
       },
-      (reason: unknown) => {
-        if (!current) return;
+      onError(reason) {
         console.error(reason);
         setError("Le calcul de la baseplate a échoué. Modifiez un réglage pour réessayer.");
       },
-    );
+    });
+    engine.current = client;
     return () => {
-      current = false;
+      client.dispose();
+      engine.current = null;
     };
-  }, [engine, settings]);
+  }, []);
+
+  useEffect(() => {
+    engine.current?.show(settings);
+  }, [settings]);
 
   async function exportStl() {
+    const client = engine.current;
+    if (!client) return;
     setExporting(true);
     setError(null);
     try {
-      const { bytes, baseplate: exported } = await engine().exportStl(settings);
+      const { bytes, baseplate: exported } = await client.exportStl(settings);
       download(bytes as Uint8Array<ArrayBuffer>, stlFileName(exported));
     } catch (reason) {
       console.error(reason);

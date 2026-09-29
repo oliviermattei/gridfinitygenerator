@@ -2,8 +2,8 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { Component, useEffect, useMemo, type ReactNode } from "react";
-import { BufferAttribute, BufferGeometry, PerspectiveCamera, Vector3 } from "three";
+import { Component, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { BufferAttribute, BufferGeometry, PerspectiveCamera, Sphere, Vector3 } from "three";
 
 /**
  * Indexed triangle mesh to display, in millimetres, Z up. Structurally the same as the
@@ -25,11 +25,16 @@ export interface MeshPreviewProps {
 
 /** Direction from the model to the camera: in front, slightly to the right, from above. */
 const VIEW_DIRECTION = new Vector3(0.5, 1.1, 1).normalize();
+/**
+ * A new mesh whose bounding sphere moves less than this (in millimetres) keeps the view:
+ * the final quality replacing the preview must not undo the user's orbit.
+ */
+const REFIT_THRESHOLD_MM = 0.5;
 /** The mesh is Z up; three.js is Y up. */
 const Z_UP_TO_Y_UP: [number, number, number] = [-Math.PI / 2, 0, 0];
 
 /**
- * Simple 3D preview of a mesh with orbit and zoom, reframed whenever the mesh changes.
+ * Simple 3D preview of a mesh with orbit and zoom, reframed whenever the mesh changes size.
  * The studio rendering and the framing around the panels arrive with #6.
  */
 export function MeshPreview({ mesh, color = "#8a8580", className, fallback = null }: MeshPreviewProps) {
@@ -87,12 +92,24 @@ function FitCamera({ geometry }: { geometry: BufferGeometry | null }) {
   // OrbitControls registers itself as the default controls (makeDefault) after the first
   // render: subscribing refits once they exist.
   const controls = useThree((state) => state.controls) as unknown as OrbitTarget | null;
+  const fitted = useRef<{ sphere: Sphere; controls: OrbitTarget | null } | null>(null);
 
   useEffect(() => {
     // The camera is mutable three.js state: read it from the store, not from a hook value.
     const { camera, invalidate } = get();
     const sphere = geometry?.boundingSphere;
     if (!sphere || !(camera instanceof PerspectiveCamera)) return;
+    const last = fitted.current;
+    if (
+      last &&
+      last.controls === controls &&
+      last.sphere.center.distanceTo(sphere.center) < REFIT_THRESHOLD_MM &&
+      Math.abs(last.sphere.radius - sphere.radius) < REFIT_THRESHOLD_MM
+    ) {
+      invalidate(); // same size: redraw the new mesh without moving the camera
+      return;
+    }
+    fitted.current = { sphere: sphere.clone(), controls };
     // Centre of the bounding sphere once the mesh is turned Y up: (x, y, z) -> (x, z, -y).
     const centre = new Vector3(sphere.center.x, sphere.center.z, -sphere.center.y);
     const halfFov = (Math.min(camera.fov, camera.fov * camera.aspect) * Math.PI) / 360;

@@ -10,7 +10,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:perf": "vitest run --config vitest.perf.config.ts --silent=false"
   },
   "dependencies": {
     "manifold-3d": "3.5.4"

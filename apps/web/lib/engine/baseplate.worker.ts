@@ -1,11 +1,11 @@
 // Runs the geometry engine (and its manifold-3d WASM) off the main thread.
-import { generateBaseplate, serializeStl } from "@repo/geometry";
-import type { EngineRequest, EngineResponse } from "./protocol";
+import { generateBaseplate, loadEngine, serializeStl } from "@repo/geometry";
+import type { EngineRequest, EngineResponse, EngineWarmUp } from "./protocol";
 
 // The app compiles against the DOM lib: describe the few worker globals used here.
 interface WorkerScope {
   postMessage(message: EngineResponse, transfer: Transferable[]): void;
-  onmessage: ((event: MessageEvent<EngineRequest>) => void) | null;
+  onmessage: ((event: MessageEvent<EngineRequest | EngineWarmUp>) => void) | null;
 }
 
 const scope = self as unknown as WorkerScope;
@@ -14,7 +14,12 @@ function reply(response: EngineResponse, transfer: Transferable[] = []) {
   scope.postMessage(response, transfer);
 }
 
-scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest>) => {
+scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineWarmUp>) => {
+  if (request.type === "warm-up") {
+    // A failure here resurfaces, with its reason, on the first real request.
+    await loadEngine().catch(() => undefined);
+    return;
+  }
   try {
     if (request.type === "generate") {
       const baseplate = await generateBaseplate(request.settings, request.quality);
