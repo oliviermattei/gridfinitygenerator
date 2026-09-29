@@ -3,9 +3,12 @@ import type { CSSProperties } from "react";
 /**
  * Brand accent (terracotta), chosen on 2026-09-29.
  * This is the ONLY place where the accent colour is defined: every accent token of the
- * interface derives from it (and so will the default plastic colour of the 3D preview).
+ * interface derives from it, and so does the default plastic colour of the 3D preview.
  */
 export const BRAND_ACCENT = "#C4502F";
+
+/** Name of the accent colour, shown among the preview colours. */
+export const BRAND_ACCENT_NAME = { fr: "Terre cuite", en: "Terracotta" } as const;
 
 // Candidate text colours laid on the accent. INK_DARK matches --color-ink in tokens.css.
 const INK_LIGHT = "#FFFFFF";

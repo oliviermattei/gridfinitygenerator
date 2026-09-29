@@ -16,7 +16,8 @@ export default defineConfig({
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    // Spec v1 mobile width: 390 px (Pixel 7 touch and scale, narrower viewport).
+    { name: "mobile", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
   ],
   webServer: {
     command: `pnpm exec next start -p ${PORT}`,

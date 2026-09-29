@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Générateur gratuit et open source de baseplates Gridfinity à la mesure de votre tiroir, calculées dans le navigateur.",
 };
 
-// First end-to-end flow (#4): cell counts, 3D preview, STL download. The Studio interface arrives with #6.
+// Studio interface (#6): full-screen 3D preview, floating settings panel, top bar.
 export default function BaseplatePage() {
   return <BaseplateGenerator />;
 }

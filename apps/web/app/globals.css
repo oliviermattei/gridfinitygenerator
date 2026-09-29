@@ -8,3 +8,35 @@ html,
 body {
   min-height: 100%;
 }
+
+/* Popups (menus, lists) rendered in a portal, out of the panels. */
+.popup {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: calc(var(--radius-card) + 2px);
+  box-shadow: var(--shadow-pop);
+  outline: none;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms,
+    transform 120ms;
+}
+.popup[data-starting-style],
+.popup[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

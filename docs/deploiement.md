@@ -1,6 +1,6 @@
 # Déploiement : Vercel et mesure d'audience Umami
 
-Marche à suivre des deux étapes humaines de la v1 : la mise en ligne sur Vercel (#15) et l'activation d'Umami (#17). Le dépôt est déjà prêt : il n'y a rien à modifier dans le code.
+Marche à suivre des étapes humaines de la v1 : la mise en ligne sur Vercel (#15), l'activation d'Umami (#17) et le lien de don. Le dépôt est déjà prêt : il n'y a rien à modifier dans le code.
 
 ## Ce que le dépôt fournit
 
@@ -41,6 +41,14 @@ Umami ne dépose aucun cookie : pas besoin de bandeau de consentement.
    - l'onglet Réseau montre le chargement de `script.js` puis un envoi vers `/api/send` ;
    - l'onglet Application → Cookies est vide pour le domaine ;
    - la visite apparaît dans le tableau de bord Umami (vue temps réel).
+
+## 3. Lien « Offrir un café »
+
+Le bouton « Offrir un café » de la barre du haut (dans le menu sur mobile) ouvre la page de don définie par la variable `NEXT_PUBLIC_DONATION_URL`, lue au moment du build (`apps/web/lib/links.ts`). Sans elle, le bouton reste visible mais inactif.
+
+1. Créer la page de don (par exemple sur Buy Me a Coffee ou Ko-fi) et copier son adresse complète, `https://…`.
+2. Sur Vercel, **Settings → Environment Variables** : `NEXT_PUBLIC_DONATION_URL` = cette adresse, pour **Production** et **Preview**.
+3. **Redéployer**, puis vérifier que le bouton ouvre la page dans un nouvel onglet.
 
 ## Tester Umami en local
 
