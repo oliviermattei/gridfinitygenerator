@@ -24,6 +24,8 @@ describe("share link round trip", () => {
     expect(decodeSettings(encodeSettings(screwed))).toEqual(screwed);
     const flush: BaseplateSettings = { ...DEFAULT_SETTINGS, pocketProfile: "flush" };
     expect(decodeSettings(encodeSettings(flush))).toEqual(flush);
+    const advanced: BaseplateSettings = { ...DEFAULT_SETTINGS, cellSize: 36.5, outerRadius: 0, bottomChamfer: 0.8 };
+    expect(decodeSettings(encodeSettings(advanced))).toEqual(advanced);
     expect(decodeSettings(encodeSettings(DEFAULT_SETTINGS))).toEqual(DEFAULT_SETTINGS);
   });
 });
@@ -39,6 +41,7 @@ describe("share link content", () => {
     // The hybrid pocket profile is the v1 default: only the flush one is written.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, pocketProfile: "flush" })).toBe("v=1&pr=flush");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, pocketProfile: "hybrid" })).toBe("v=1");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, cellSize: 30, outerRadius: 0, bottomChamfer: 1.5 })).toBe("v=1&cs=30&or=0&ch=1.5");
     // The diameters and the hole gap are kept when the screws are off: turning them back on finds them again.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, screwShank: 4 })).toBe("v=1&ss=4");
   });
@@ -113,6 +116,10 @@ describe("frozen v1 links", () => {
       screwShank: 4,
       screwHead: 8,
       holeGap: 0.3,
+      // `cs`, `or` and `ch` were in the v1 table from the start; the engine reads them since the advanced settings (#13).
+      cellSize: 40,
+      outerRadius: 2,
+      bottomChamfer: 0.6,
       layerHeight: 0.28,
       lineWidth: 0.6,
     };
@@ -150,6 +157,7 @@ describe("reading any link", () => {
     });
     // Whole numbers of cells: a value in between is rounded.
     expect(decodeSettings("v=1&cx=6.6")?.columns).toBe(7);
+    expect(decodeSettings("v=1&cs=100&or=-2&ch=4")).toMatchObject({ cellSize: 80, outerRadius: 0, bottomChamfer: 3 });
     const link = readShareLink("v=1&w=5000&d=10&mx=-3&gap=9&tol=2");
     expect(link).toMatchObject({ w: 1000, d: 42, mx: 0, gap: 5, tol: 1 });
   });

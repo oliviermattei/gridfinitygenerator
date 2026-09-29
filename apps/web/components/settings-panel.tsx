@@ -1,7 +1,13 @@
 "use client";
 
 import { Collapsible } from "@base-ui/react/collapsible";
-import { BASEPLATE_SETTINGS, type BaseplateSettings, type PocketProfileName, type SizeMode } from "@repo/geometry";
+import {
+  BASEPLATE_SETTINGS,
+  changedAdvancedSettings,
+  type BaseplateSettings,
+  type PocketProfileName,
+  type SizeMode,
+} from "@repo/geometry";
 import { ChoiceGroup, NumberStepper, Segmented, SliderField, ToggleSwitch, focusRing } from "@repo/ui";
 import { ChevronDown, Download, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
@@ -12,10 +18,18 @@ import { AlignmentPad } from "./alignment-pad";
 import { AdvancedIcon, AlignIcon, ProfileArt, ProfileIcon, ScrewArt, ScrewIcon, SizeIcon, TestKitArt } from "./illustrations";
 
 /**
- * Families of settings in the panel. The advanced family gets its other settings with #13;
- * the print settings (layer height, line width) live in the gear menu.
+ * Families of settings in the panel. The print settings (layer height, line width) live in
+ * the gear menu.
  */
 export type Family = "size" | "alignment" | "profile" | "screws" | "advanced";
+
+/** "Valeurs par défaut", or the advanced settings changed: "Cellule 30 mm, chanfrein 0,6 mm". */
+function advancedSummary(settings: BaseplateSettings): string {
+  const changes = changedAdvancedSettings(settings).map((key) => t.advancedChanges[key](fine.format(settings[key])));
+  if (changes.length === 0) return t.advancedDefaults;
+  const text = changes.join(", ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 
 /** Drops the floating-point noise of a stepped length (0.5 + 0.1 = 0.6000000000000001). */
 const toHundredths = (value: number) => Math.round(value * 100) / 100;
@@ -158,7 +172,12 @@ export function Families({
             },
           ]}
         />
-        <TestKit onDownload={onDownloadTestKit} exporting={exportingTestKit} disabled={downloadBusy} />
+        <TestKit
+          cellSize={settings.cellSize}
+          onDownload={onDownloadTestKit}
+          exporting={exportingTestKit}
+          disabled={downloadBusy}
+        />
       </FamilyItem>
       <FamilyItem
         {...bind("screws")}
@@ -184,10 +203,10 @@ export function Families({
         {...bind("advanced")}
         icon={<AdvancedIcon className="size-[18px]" />}
         title={t.advanced}
-        summary={t.advancedSummary(fine.format(settings.drawerGap), fine.format(settings.holeGap))}
+        summary={advancedSummary(settings)}
       >
-        {/* Skeleton: the other advanced settings, and their warning, arrive with #13. */}
-        <div className="grid grid-cols-2 gap-2.5">
+        <AdvancedFields settings={settings} onSettingsChange={onSettingsChange} />
+        <div className="mt-5 grid grid-cols-2 gap-2.5">
           <NumberStepper
             label={t.drawerGap}
             decrementLabel={t.lessGap}
@@ -221,10 +240,44 @@ export function Families({
 }
 
 /**
- * The test kit, under the two profiles it compares: a 1 × 2 baseplate with one cell of
- * each, to print before a large baseplate. Always a single 3MF.
+ * The cell size, the outer corner radius and the bottom chamfer. Their warning, that bins
+ * may no longer fit, shows with the statistics as long as one of the family is changed.
  */
-function TestKit({ onDownload, exporting, disabled }: { onDownload: () => void; exporting: boolean; disabled: boolean }) {
+function AdvancedFields({ settings, onSettingsChange }: FieldsProps) {
+  const field = (key: "cellSize" | "outerRadius" | "bottomChamfer", step: number) => ({
+    value: settings[key],
+    min: BASEPLATE_SETTINGS[key].min,
+    max: BASEPLATE_SETTINGS[key].max,
+    step,
+    unit: "mm",
+    locale: t.locale,
+    onChange: (value: number) => onSettingsChange({ [key]: toHundredths(value) }),
+  });
+  return (
+    <div className="flex flex-col gap-4">
+      <SliderField label={t.cellSize} hint={t.cellSizeHint} {...field("cellSize", 1)} />
+      <SliderField label={t.outerRadius} hint={t.outerRadiusHint} {...field("outerRadius", 0.5)} />
+      <SliderField label={t.bottomChamfer} hint={t.bottomChamferHint} {...field("bottomChamfer", 0.1)} />
+    </div>
+  );
+}
+
+/**
+ * The test kit, under the two profiles it compares: a 1 × 2 baseplate with one cell of
+ * each, to print before a large baseplate. Always a single 3MF, with the cells of the
+ * cell size.
+ */
+function TestKit({
+  cellSize,
+  onDownload,
+  exporting,
+  disabled,
+}: {
+  cellSize: number;
+  onDownload: () => void;
+  exporting: boolean;
+  disabled: boolean;
+}) {
   return (
     <div className="mt-3 flex items-start gap-3 rounded-card border border-line bg-surface p-3">
       <span className="grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-sunken text-muted [--art:var(--accent)]">
@@ -232,7 +285,9 @@ function TestKit({ onDownload, exporting, disabled }: { onDownload: () => void; 
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[13.5px] font-semibold">{t.testKit}</p>
-        <p className="mt-0.5 text-[12px] leading-snug text-muted">{t.testKitHint}</p>
+        <p className="mt-0.5 text-[12px] leading-snug text-muted">
+          {t.testKitHint(footprintOf({ width: cellSize, depth: 2 * cellSize }))}
+        </p>
         <button
           type="button"
           onClick={onDownload}

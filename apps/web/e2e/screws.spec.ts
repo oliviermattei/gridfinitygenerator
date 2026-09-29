@@ -61,11 +61,11 @@ test("the hole gap is an advanced setting", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
   const advanced = page.getByRole("button", { name: /^Avancé/ });
-  await expect(advanced).toHaveAccessibleName("Avancé Jeu au tiroir 1 mm, jeu des trous 0,5 mm");
+  await expect(advanced).toHaveAccessibleName("Avancé Valeurs par défaut");
   await advanced.click();
   const gap = numberField(page, "Jeu des trous");
   await expect(gap).toHaveValue("0,5");
   await gap.fill("0,3");
   await gap.blur();
-  await expect(advanced).toHaveAccessibleName("Avancé Jeu au tiroir 1 mm, jeu des trous 0,3 mm");
+  await expect(advanced).toHaveAccessibleName("Avancé Jeu des trous 0,3 mm");
 });

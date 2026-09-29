@@ -49,7 +49,8 @@ const SLIT_TOLERANCE_MM = 1e-3;
  * are 1.2 mm wide, rounded up to a whole number of lines, never fewer than two. Crossbars on
  * the first and last grid lines lie within the grid's extent, so that each corner of the
  * margin is a closed box. A hole narrower than a wall is left full: a margin narrower than
- * two walls (the outer wall and a hole) has no hole.
+ * two walls (the outer wall and a hole) has no hole. With a bottom chamfer, the outer wall
+ * is thicker by the chamfer on its inside, so that its foot stays one wall wide.
  */
 export const CROSSBAR_FRAME: MarginVariant = {
   prepare(wasm, own, frame) {
@@ -73,7 +74,10 @@ export const CROSSBAR_FRAME: MarginVariant = {
       const [a, b] = band(y0 + j * cellSize, j, rows, wall);
       solid.push(section(rect(-far, a, far, b)));
     }
-    const inside = section(roundedRect(width - 2 * wall, depth - 2 * wall, outerRadius - wall, segmentsPerQuarter));
+    // The bottom chamfer cuts the outer wall at 45°: its inside moves in by the chamfer, so
+    // that its foot stays one wall wide instead of hanging over a hole.
+    const outerWall = wall + frame.bottomChamfer;
+    const inside = section(roundedRect(width - 2 * outerWall, depth - 2 * outerWall, outerRadius - outerWall, segmentsPerQuarter));
     // A hole narrower than a wall (a margin narrower than two walls) would print as a slit:
     // it is left full. A hole is kept when something is left of it once shrunk by half a wall.
     const pieces = own(inside.subtract(own(wasm.CrossSection.union(solid))))

@@ -26,6 +26,8 @@ export interface StatsCardProps {
   buildPlate: BuildPlate;
   /** Whether the summary fits on the build plate (`fitsOn`); null until it is known. */
   fits: boolean | null;
+  /** Whether an advanced setting differs from its default: standard bins may no longer fit. */
+  advancedChanged: boolean;
   className?: string;
 }
 
@@ -34,7 +36,7 @@ export interface StatsCardProps {
  * exactly, never estimated. The volume of material is measured on the final mesh, "…"
  * until it answers for the current settings.
  */
-export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, className = "" }: StatsCardProps) {
+export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, advancedChanged, className = "" }: StatsCardProps) {
   const stats = summary?.stats;
   const narrowest = summary ? narrowMargin(summary.layout.margins, lineWidth) : null;
   const volume = final ? stats?.volume : null;
@@ -73,19 +75,20 @@ export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, 
           )}
         </Stat>
       </dl>
-      {fits === false && (
-        <p role="alert" className="mx-3 mb-3 flex gap-2 rounded-ctl bg-accent-tint px-3 py-2.5 text-[12.5px] leading-snug text-ink-soft">
-          <TriangleAlert className="mt-px size-4 shrink-0 text-accent-strong" aria-hidden />
-          {t.plateTooSmall(footprint(buildPlate))}
-        </p>
-      )}
-      {narrowest !== null && (
-        <p role="alert" className="mx-3 mb-3 flex gap-2 rounded-ctl bg-accent-tint px-3 py-2.5 text-[12.5px] leading-snug text-ink-soft">
-          <TriangleAlert className="mt-px size-4 shrink-0 text-accent-strong" aria-hidden />
-          {t.narrowMargin(fine.format(narrowest), fine.format(2 * lineWidth))}
-        </p>
-      )}
+      {fits === false && <Warning>{t.plateTooSmall(footprint(buildPlate))}</Warning>}
+      {narrowest !== null && <Warning>{t.narrowMargin(fine.format(narrowest), fine.format(2 * lineWidth))}</Warning>}
+      {advancedChanged && <Warning>{t.advancedWarning}</Warning>}
     </section>
+  );
+}
+
+/** A non-blocking warning under the statistics. */
+function Warning({ children }: { children: ReactNode }) {
+  return (
+    <p role="alert" className="mx-3 mb-3 flex gap-2 rounded-ctl bg-accent-tint px-3 py-2.5 text-[12.5px] leading-snug text-ink-soft">
+      <TriangleAlert className="mt-px size-4 shrink-0 text-accent-strong" aria-hidden />
+      {children}
+    </p>
   );
 }
 

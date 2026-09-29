@@ -1,7 +1,6 @@
 // Public entry point of the geometry engine (ADR 0003): pure TypeScript on top of
 // manifold-3d, with no dependency on React, the DOM or the app.
 export {
-  STANDARD_CELL_SIZE_MM,
   generateBaseplate,
   generateTestKit,
   loadEngine,
@@ -15,10 +14,14 @@ export {
   type TriangleMesh,
 } from "./baseplate";
 export {
+  ADVANCED_SETTINGS,
   ALIGNMENTS,
   BASEPLATE_SETTINGS,
   DEFAULT_SETTINGS,
+  STANDARD_CELL_SIZE_MM,
+  changedAdvancedSettings,
   clampSettings,
+  type AdvancedSetting,
   type Alignment,
   type BaseplateSettings,
   type ChoiceSetting,

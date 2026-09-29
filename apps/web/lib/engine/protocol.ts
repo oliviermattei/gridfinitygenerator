@@ -8,7 +8,8 @@ export type ExportFormat = "3mf" | "stl";
 
 /**
  * What a download holds: the baseplate of the settings, or the test kit (a 1 × 2 baseplate
- * with one cell of each pocket profile, which takes the print settings only).
+ * with one cell of each pocket profile, which takes the cell size, the outline and the
+ * print settings only).
  */
 export type ExportPiece = "baseplate" | "test-kit";
 
@@ -21,10 +22,7 @@ export type EngineRequest =
       piece: ExportPiece;
       settings: BaseplateSettings;
       format: ExportFormat;
-      /**
-       * Absolute link written into the 3MF to generate the piece again: the share link of
-       * the settings for a baseplate, the generator's page for the test kit.
-       */
+      /** Absolute link written into the 3MF to generate the piece again: the share link of the settings. */
       link: string;
     };
 

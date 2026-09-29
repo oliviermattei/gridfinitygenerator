@@ -61,14 +61,14 @@ test("the test kit downloads as a single 3MF, from the pocket profile family", a
   const [file] = await Promise.all([page.waitForEvent("download"), kit.click()]);
   expect(file.suggestedFilename()).toBe("baseplate-test-kit-hybrid-flush-42x84mm.3mf");
 
-  // One 3MF package, one named object in millimetres, closed by the generator's own link.
+  // One 3MF package, one named object in millimetres, with the share link of the settings.
   const parts = unzipSync(await readFile(await file.path()));
   expect(Object.keys(parts)).toContain("3D/3dmodel.model");
   const model = strFromU8(parts["3D/3dmodel.model"] ?? new Uint8Array());
   expect(model).toContain('unit="millimeter"');
   expect(model.match(/<object /g)).toHaveLength(1);
   expect(model).toContain('name="baseplate-test-kit-hybrid-flush-42x84mm"');
-  expect(model).toMatch(/<metadata name="Description">https?:\/\/[^<?]+\/fr\/baseplate</);
+  expect(model).toMatch(/<metadata name="Description">https?:\/\/[^<?]+\/fr\/baseplate\?v=1</);
   expect(model.match(/<triangle /g)?.length).toBeGreaterThan(0);
 
   // The baseplate on screen is left as it was.

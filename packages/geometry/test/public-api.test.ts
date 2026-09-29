@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADVANCED_SETTINGS,
   BASEPLATE_SETTINGS,
+  changedAdvancedSettings,
   DEFAULT_SETTINGS,
   STANDARD_CELL_SIZE_MM,
   clampSettings,
@@ -389,6 +391,9 @@ describe("settings", () => {
       screwShank: 3,
       screwHead: 6,
       holeGap: 0.5,
+      cellSize: 42,
+      outerRadius: 4,
+      bottomChamfer: 0,
       layerHeight: 0.2,
       lineWidth: 0.4,
     });
@@ -408,6 +413,9 @@ describe("settings", () => {
     expect(BASEPLATE_SETTINGS.screwShank).toMatchObject({ min: 2, max: 6, default: 3 });
     expect(BASEPLATE_SETTINGS.screwHead).toMatchObject({ min: 2, max: 8, default: 6 });
     expect(BASEPLATE_SETTINGS.holeGap).toMatchObject({ min: 0, max: 1, default: 0.5 });
+    expect(BASEPLATE_SETTINGS.cellSize).toMatchObject({ min: 20, max: 80, default: STANDARD_CELL_SIZE_MM });
+    expect(BASEPLATE_SETTINGS.outerRadius).toMatchObject({ min: 0, max: 10, default: 4 });
+    expect(BASEPLATE_SETTINGS.bottomChamfer).toMatchObject({ min: 0, max: 3, default: 0 });
   });
 
   it("brings every setting into its range, and fills the missing ones with their default", () => {
@@ -427,6 +435,9 @@ describe("settings", () => {
         screwShank: 7,
         screwHead: 1,
         holeGap: 2,
+        cellSize: 10,
+        outerRadius: 12,
+        bottomChamfer: -1,
         layerHeight: 0.05,
         lineWidth: 3,
       }),
@@ -446,6 +457,9 @@ describe("settings", () => {
       // A screw head narrower than its shank would not hold: raised to the shank.
       screwHead: 6,
       holeGap: 1,
+      cellSize: 20,
+      outerRadius: 10,
+      bottomChamfer: 0,
       layerHeight: 0.12,
       lineWidth: 1.2,
     });
@@ -455,6 +469,14 @@ describe("settings", () => {
     const unknown = { sizeMode: "shelf", alignment: "middle", pocketProfile: "rebuilt", screws: "yes" } as unknown as Partial<BaseplateSettings>;
     expect(clampSettings(unknown)).toMatchObject({ sizeMode: "drawer", alignment: "c", pocketProfile: "hybrid", screws: false });
     expect(clampSettings({ screwShank: 4, screwHead: 3.5 })).toMatchObject({ screwShank: 4, screwHead: 4 });
+  });
+
+  it("tells the advanced settings that differ from their default", () => {
+    expect(ADVANCED_SETTINGS).toEqual(["cellSize", "outerRadius", "bottomChamfer", "drawerGap", "holeGap"]);
+    expect(changedAdvancedSettings(DEFAULT_SETTINGS)).toEqual([]);
+    // The size, the screws or the print are not advanced settings.
+    expect(changedAdvancedSettings({ ...DEFAULT_SETTINGS, drawerWidth: 500, screws: true, layerHeight: 0.28 })).toEqual([]);
+    expect(changedAdvancedSettings({ ...DEFAULT_SETTINGS, holeGap: 0.3, cellSize: 30 })).toEqual(["cellSize", "holeGap"]);
   });
 
   it("computes the settings as brought into range", async () => {

@@ -124,7 +124,23 @@ export const strings = {
   lessHoleGap: "Moins de jeu aux trous",
   moreHoleGap: "Plus de jeu aux trous",
   holeGapHint: "Ajouté au Ø de la tige et de la tête, pour que les vis entrent sans forcer.",
-  advancedSummary: (drawerGap: string, holeGap: string) => `Jeu au tiroir ${drawerGap} mm, jeu des trous ${holeGap} mm`,
+  advancedDefaults: "Valeurs par défaut",
+  /** The advanced settings that differ from their default, in the order of the family. */
+  advancedChanges: {
+    cellSize: (value: string) => `cellule ${value} mm`,
+    outerRadius: (value: string) => `coins ${value} mm`,
+    bottomChamfer: (value: string) => `chanfrein ${value} mm`,
+    drawerGap: (value: string) => `jeu au tiroir ${value} mm`,
+    holeGap: (value: string) => `jeu des trous ${value} mm`,
+  },
+  advancedWarning:
+    "Réglages avancés modifiés : hors des valeurs par défaut, les bacs standard risquent de ne plus s'emboîter.",
+  cellSize: "Taille de cellule",
+  cellSizeHint: "42 mm dans le standard Gridfinity. La poche garde le profil du standard : seule sa largeur suit la cellule.",
+  outerRadius: "Rayon des coins",
+  outerRadiusHint: "Coins extérieurs de la baseplate, jamais plus que la moitié de son plus petit côté.",
+  bottomChamfer: "Chanfrein du dessous",
+  bottomChamferHint: "À 45° sur tout le pourtour du dessous, marge comprise, contre le pied d'éléphant de la première couche.",
   columns: "Colonnes",
   fewerColumns: "Une colonne de moins",
   moreColumns: "Une colonne de plus",
@@ -138,8 +154,8 @@ export const strings = {
   flushDescription: "4,25 mm, sans marche : le bac repose sur le fond du tiroir, avec un léger jeu.",
   recommended: "Recommandé",
   testKit: "Kit de test",
-  testKitHint:
-    "Une baseplate 1 × 2 de 42 × 84 mm : une cellule hybride à l'avant, une cellule ras à l'arrière, 0,35 mm plus basse. Essayez-y vos bacs avant d'imprimer une grande baseplate.",
+  testKitHint: (size: string) =>
+    `Une baseplate 1 × 2 de ${size} : une cellule hybride à l'avant, une cellule ras à l'arrière, 0,35 mm plus basse. Essayez-y vos bacs avant d'imprimer une grande baseplate.`,
   downloadTestKit: "Télécharger le kit de test",
   preparingTestKit: "Préparation du kit…",
   // Download

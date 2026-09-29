@@ -1,6 +1,6 @@
 "use client";
 
-import type { Baseplate, BaseplateSettings, Quality } from "@repo/geometry";
+import { changedAdvancedSettings, type Baseplate, type BaseplateSettings, type Quality } from "@repo/geometry";
 import { focusRing, glass } from "@repo/ui";
 import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
@@ -9,7 +9,7 @@ import { createEngineClient, type EngineClient } from "@/lib/engine/client";
 import type { ExportFormat, ExportPiece } from "@/lib/engine/protocol";
 import { MEDIA_TYPES } from "@/lib/export-file";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
-import { generatorLink, resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
+import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
 import { strings as t } from "@/lib/strings";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { DownloadButton } from "./download-button";
@@ -128,6 +128,7 @@ export function BaseplateGenerator() {
       final={final}
       buildPlate={preferences.buildPlate}
       fits={fits}
+      advancedChanged={changedAdvancedSettings(settings).length > 0}
       className={className}
     />
   );
@@ -148,8 +149,8 @@ export function BaseplateGenerator() {
 
   /**
    * Downloads the baseplate of the settings, or the test kit (always a single 3MF). The 3MF
-   * carries the link that generates it again: the share link of the settings, or the page
-   * of the generator for the test kit, which only takes the print settings.
+   * carries the share link of the settings: the page that generates it again (the test kit
+   * from its button, since it takes the cell size, the outline and the print settings).
    */
   async function exportPiece(piece: ExportPiece, format: ExportFormat) {
     const client = engine.current;
@@ -157,8 +158,7 @@ export function BaseplateGenerator() {
     setExporting({ piece, format });
     setError(null);
     try {
-      const link = piece === "test-kit" ? generatorLink() : shareLinkOf(settings);
-      const { bytes, name } = await client.exportFile(piece, settings, format, link);
+      const { bytes, name } = await client.exportFile(piece, settings, format, shareLinkOf(settings));
       download(bytes as Uint8Array<ArrayBuffer>, `${name}.${format}`, MEDIA_TYPES[format]);
     } catch (reason) {
       console.error(reason);

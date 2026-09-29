@@ -48,6 +48,15 @@ export interface BaseplateSettings {
   screwHead: number;
   /** Gap added to the diameters of the holes so the screws go in without forcing, in millimetres. */
   holeGap: number;
+  /**
+   * Side of a cell, in millimetres: the pitch of the grid, 42 in the Gridfinity standard. The
+   * pocket keeps the vertical profile of the standard; only its footprint follows the cell.
+   */
+  cellSize: number;
+  /** Radius of the outer corners of the baseplate, in millimetres, never more than half its smallest side. */
+  outerRadius: number;
+  /** 45° chamfer along the bottom of the whole outline, margin included, in millimetres (0: none). */
+  bottomChamfer: number;
   /** Layer height of the print, in millimetres: thicknesses the generator chooses are multiples of it. */
   layerHeight: number;
   /** Line width of the print, in millimetres: widths the generator chooses are multiples of it. */
@@ -72,6 +81,9 @@ export interface FlagSetting {
   default: boolean;
 }
 
+/** Side of a Gridfinity cell in the standard, in millimetres: the default cell size. */
+export const STANDARD_CELL_SIZE_MM = 42;
+
 /** The 9 alignments, row by row from the back left to the front right (the order of a keypad). */
 export const ALIGNMENTS: readonly Alignment[] = ["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"];
 
@@ -94,6 +106,9 @@ export const BASEPLATE_SETTINGS = {
   screwShank: { min: 2, max: 6, default: 3, integer: false },
   screwHead: { min: 2, max: 8, default: 6, integer: false },
   holeGap: { min: 0, max: 1, default: 0.5, integer: false },
+  cellSize: { min: 20, max: 80, default: STANDARD_CELL_SIZE_MM, integer: false },
+  outerRadius: { min: 0, max: 10, default: 4, integer: false },
+  bottomChamfer: { min: 0, max: 3, default: 0, integer: false },
   layerHeight: { min: 0.12, max: 0.28, default: 0.2, integer: false },
   lineWidth: { min: 0.1, max: 1.2, default: 0.4, integer: false },
 } as const satisfies {
@@ -116,9 +131,25 @@ export const DEFAULT_SETTINGS: BaseplateSettings = {
   screwShank: BASEPLATE_SETTINGS.screwShank.default,
   screwHead: BASEPLATE_SETTINGS.screwHead.default,
   holeGap: BASEPLATE_SETTINGS.holeGap.default,
+  cellSize: BASEPLATE_SETTINGS.cellSize.default,
+  outerRadius: BASEPLATE_SETTINGS.outerRadius.default,
+  bottomChamfer: BASEPLATE_SETTINGS.bottomChamfer.default,
   layerHeight: BASEPLATE_SETTINGS.layerHeight.default,
   lineWidth: BASEPLATE_SETTINGS.lineWidth.default,
 };
+
+/**
+ * The advanced settings (family "Avancé" of the interface, spec v1): away from their
+ * defaults, standard bins may no longer fit, and the interface says so.
+ */
+export const ADVANCED_SETTINGS = ["cellSize", "outerRadius", "bottomChamfer", "drawerGap", "holeGap"] as const;
+
+export type AdvancedSetting = (typeof ADVANCED_SETTINGS)[number];
+
+/** The advanced settings that differ from their default, in the order of ADVANCED_SETTINGS. */
+export function changedAdvancedSettings(settings: BaseplateSettings): AdvancedSetting[] {
+  return ADVANCED_SETTINGS.filter((key) => settings[key] !== BASEPLATE_SETTINGS[key].default);
+}
 
 /**
  * Brings every setting into its range, rounding the whole ones; a missing setting, or one

@@ -83,6 +83,30 @@ export function pocketOpening(contours: [number, number][][], [cx, cy]: [number,
   return best;
 }
 
+/** Whether a point lies in the material of a horizontal section (even-odd rule over its contours). */
+export function inSection(contours: [number, number][][], [px, py]: [number, number]): boolean {
+  let inside = false;
+  for (const contour of contours) {
+    contour.forEach(([x0, y0], i) => {
+      const [x1, y1] = contour[(i + 1) % contour.length] as [number, number];
+      if (y0 > py !== y1 > py && px < x0 + ((py - y0) * (x1 - x0)) / (y1 - y0)) inside = !inside;
+    });
+  }
+  return inside;
+}
+
+/** The outer contour of a section: the one whose bounding box is the largest. */
+export function outerContour(contours: [number, number][][]): { width: number; depth: number; area: number } {
+  let best = { width: 0, depth: 0, area: 0 };
+  for (const contour of contours) {
+    const xs = contour.map(([x]) => x);
+    const ys = contour.map(([, y]) => y);
+    const [width, depth] = [Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)];
+    if (width * depth > best.width * best.depth) best = { width, depth, area: Math.abs(shoelaceArea(contour)) };
+  }
+  return best;
+}
+
 /** A disc seen from above: centre and radius, in millimetres. */
 export interface Disc {
   x: number;

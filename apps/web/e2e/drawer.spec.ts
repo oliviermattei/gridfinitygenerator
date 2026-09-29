@@ -52,7 +52,7 @@ test("entering a drawer updates the cells, the preview and the statistics", asyn
   // Without the gap, the drawer itself: 500 × 300 mm.
   const advanced = page.getByRole("button", { name: /^Avancé/ });
   await advanced.click();
-  await expect(advanced).toHaveAccessibleName("Avancé Jeu au tiroir 1 mm, jeu des trous 0,5 mm");
+  await expect(advanced).toHaveAccessibleName("Avancé Valeurs par défaut");
   await numberField(page, "Jeu au tiroir").fill("0");
   await expect(readout(page, "dimensions")).toHaveText("500 × 300 mm");
   await expect(stat(page, "margin")).toHaveText("gauche 38, droite 0, arrière 6, avant 0 mm");

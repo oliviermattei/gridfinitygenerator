@@ -20,6 +20,11 @@ describe("generation time (wide CI thresholds)", { timeout: 60_000 }, () => {
     expect(await medianGenerationMs(LARGEST_DRAWER, "preview", 3)).toBeLessThan(500);
   });
 
+  it("computes the preview of the largest drawer in the smallest cells, chamfered, well under a second", async () => {
+    const smallest = { ...LARGEST_DRAWER, cellSize: 20, bottomChamfer: 3, outerRadius: 0 };
+    expect(await medianGenerationMs(smallest, "preview", 3)).toBeLessThan(500);
+  });
+
   it("computes the final 10 × 10 and 20 × 20 within a few seconds", async () => {
     expect(await medianGenerationMs(cells(10, 10), "final", 3)).toBeLessThan(3_000);
     expect(await medianGenerationMs(cells(20, 20), "final", 1)).toBeLessThan(9_000);

@@ -51,12 +51,14 @@ const CELL_EPSILON = 1e-9;
 /**
  * Cells and margins of the baseplate (spec v1, layout of the grid), from settings already
  * brought into their ranges.
- * - Drawer mode: the gap is taken off the drawer, then as many whole cells as fit (at least
- *   one per axis); the rest is the margin.
+ * - Drawer mode: the gap is taken off the drawer, then as many whole cells of the cell size
+ *   as fit, at least one and at most 24 per axis (the limit of the cells mode, whose grids
+ *   the performance targets are set for); the rest is the margin.
  * - Cells mode: the margins in width and depth are added to the grid.
  * The margin of each axis is then spread by the alignment.
  */
-export function layoutOf(settings: BaseplateSettings, cellSize: number): Omit<BaseplateLayout, "screws"> {
+export function layoutOf(settings: BaseplateSettings): Omit<BaseplateLayout, "screws"> {
+  const { cellSize } = settings;
   let columns: number;
   let rows: number;
   let restX: number;

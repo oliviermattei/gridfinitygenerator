@@ -1,5 +1,5 @@
 // Shapes shared by the assembly strategies: outlines, the pocket tool and mesh helpers.
-import type { Manifold, ManifoldToplevel } from "manifold-3d";
+import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
 import type { Margins } from "./layout";
 import type { Own } from "./manifold";
@@ -28,6 +28,8 @@ export interface GridFrame {
   depth: number;
   /** Radius of the rounded outer corners, already limited to the outline. */
   outerRadius: number;
+  /** 45° chamfer along the bottom of the outline, in millimetres; 0 for none. */
+  bottomChamfer: number;
   segmentsPerQuarter: number;
   /** Segments of the circle of a hole (spec v1: 16 in preview, 64 in final), a multiple of 4. */
   segmentsPerHole: number;
@@ -97,6 +99,81 @@ export function roundedRect(width: number, depth: number, radius: number, segmen
     }
   });
   return points;
+}
+
+/** Vertices closer than this to a level or to the outline are on it (they are built on them exactly). */
+const ON_SHAPE_MM = 1e-4;
+
+/**
+ * Corner radius of the foot of the chamfer, as a share of the outer corner radius, when the
+ * chamfer is wider than that radius: the foot of such a corner would be sharp, which would
+ * fold its arc onto a single point; a small radius keeps its vertices apart.
+ */
+const SHARP_FOOT_RADIUS_SHARE = 0.1;
+
+/**
+ * Prism of an area of the baseplate seen from above, as high as the frame, with the bottom
+ * chamfer of the outline: a 45° slope that sets the foot of the outline in by
+ * `bottomChamfer` and reaches the outline at that height. `at` is where the origin of the
+ * area lies in the baseplate (a cell brick is built around its cell centre).
+ *
+ * The chamfer is not a boolean. The prism gets a ring of vertices halfway up its walls,
+ * lowered to the top of the chamfer, and each vertex of its foot on the outline moves in
+ * (`footOfChamfer`): the sides by the chamfer, the corners onto smaller arcs. A point of the outline moves the same way whatever brick it
+ * belongs to, so the seams of the cell bricks still weld (ADR 0004); nothing else moves,
+ * since the margin keeps its holes farther than the chamfer from the outline.
+ */
+export function slabOf(
+  wasm: ManifoldToplevel,
+  own: Own,
+  area: CrossSection,
+  frame: GridFrame,
+  at: readonly [x: number, y: number] = [0, 0],
+): Manifold {
+  const { profile, bottomChamfer } = frame;
+  if (bottomChamfer <= 0) return own(wasm.Manifold.extrude(area, profile.height));
+  const middle = profile.height / 2;
+  const foot = footOfChamfer(frame);
+  const prism = own(wasm.Manifold.extrude(area, profile.height, 1));
+  return own(
+    prism.warp((vertex) => {
+      if (Math.abs(vertex[2] - middle) < ON_SHAPE_MM) {
+        vertex[2] = bottomChamfer;
+      } else if (Math.abs(vertex[2]) < ON_SHAPE_MM) {
+        const moved = foot(vertex[0] + at[0], vertex[1] + at[1]);
+        if (moved) [vertex[0], vertex[1]] = [moved[0] - at[0], moved[1] - at[1]];
+      }
+    }),
+  );
+}
+
+/**
+ * Where a point of the outline lies at the foot of the chamfer, null for a point off the
+ * outline. The foot is the outline set in by the chamfer: its sides move in by the chamfer,
+ * its corner arcs shrink by it around their centres. A corner sharper than the chamfer
+ * (radius under it) has a foot of a tenth of its radius, a little inside the true sharp foot.
+ */
+function footOfChamfer({ width, depth, outerRadius: radius, bottomChamfer: chamfer }: GridFrame) {
+  const [hx, hy] = [width / 2, depth / 2];
+  // Centres of the corner arcs of the outline and of the foot, in the first quadrant.
+  const [cx, cy] = [hx - radius, hy - radius];
+  const footRadius = Math.max(radius - chamfer, radius * SHARP_FOOT_RADIUS_SHARE);
+  const [fx, fy] = [hx - chamfer - footRadius, hy - chamfer - footRadius];
+  return (x: number, y: number): [number, number] | null => {
+    const [sx, sy] = [x < 0 ? -1 : 1, y < 0 ? -1 : 1];
+    const [dx, dy] = [Math.abs(x) - cx, Math.abs(y) - cy];
+    // On a corner arc, its ends included.
+    if (radius > 0 && dx > -ON_SHAPE_MM && dy > -ON_SHAPE_MM) {
+      const distance = Math.hypot(dx, dy);
+      if (Math.abs(distance - radius) > ON_SHAPE_MM) return null;
+      return [sx * (fx + (footRadius * dx) / distance), sy * (fy + (footRadius * dy) / distance)];
+    }
+    // On a side, or on both at a sharp corner.
+    const onX = Math.abs(Math.abs(x) - hx) < ON_SHAPE_MM;
+    const onY = Math.abs(Math.abs(y) - hy) < ON_SHAPE_MM;
+    if (!onX && !onY) return null;
+    return [onX ? sx * (hx - chamfer) : x, onY ? sy * (hy - chamfer) : y];
+  };
 }
 
 /**

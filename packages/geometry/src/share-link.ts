@@ -94,6 +94,9 @@ const LINK_KEYS = {
   screwShank: "ss",
   screwHead: "sh",
   holeGap: "tol",
+  cellSize: "cs",
+  outerRadius: "or",
+  bottomChamfer: "ch",
   layerHeight: "lh",
   lineWidth: "lw",
 } as const satisfies Record<keyof BaseplateSettings, LinkKey>;

@@ -32,6 +32,11 @@ const DRAWERS: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["default drawer with its 40 screws", { screws: true }],
   ["20 × 20 with its 361 screws", { sizeMode: "cells", columns: 20, rows: 20, screws: true }],
   ["drawer 1000 × 1000 with its 484 screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
+  // Advanced settings (#13): the smallest cells fill a drawer up to 24 × 24 cells, the rest in the margin.
+  ["drawer 1000 × 1000 in 20 mm cells (24 × 24, margin)", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20 }],
+  ["drawer 1000 × 1000 in 20 mm cells with its 529 screws", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20, screws: true }],
+  ["drawer 1000 × 1000 in 20 mm cells, sharp corners, 3 mm chamfer", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20, outerRadius: 0, bottomChamfer: 3 }],
+  ["24 × 24 cells of 80 mm, 3 mm chamfer, 529 screws", { sizeMode: "cells", columns: 24, rows: 24, cellSize: 80, bottomChamfer: 3, screws: true }],
 ];
 
 describe("spec v1 performance targets (local)", () => {

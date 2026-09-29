@@ -4,10 +4,11 @@ import { MARGIN } from "./margin";
 import { withArena, type Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
 import { screwPositions, screwTool } from "./screws";
-import { TOOL_OVERSHOOT_MM, cellCentre, gridRect, meshOf, pocketTool, roundedRect, type GridFrame } from "./shapes";
+import { TOOL_OVERSHOOT_MM, cellCentre, gridRect, meshOf, pocketTool, roundedRect, slabOf, type GridFrame } from "./shapes";
 
 /**
- * Grouped boolean assembly (ADR 0004 fallback): the slab of the outline minus every pocket
+ * Grouped boolean assembly (ADR 0004 fallback): the slab of the outline (with its bottom
+ * chamfer, less the margin's holes) minus every pocket
  * tool and the margin's cut at once, then minus the tops of the lower cells, then minus
  * every screw hole. Works for any grid, including single rows and columns and grids of
  * mixed pocket profiles (the test kit).
@@ -18,7 +19,7 @@ export function assembleWithBooleans(wasm: ManifoldToplevel, frame: GridFrame): 
     const margin = MARGIN.prepare(wasm, own, frame);
     const outline = own(new wasm.CrossSection([roundedRect(width, depth, outerRadius, segmentsPerQuarter)]));
     const holes = margin?.holes();
-    const slab = own(wasm.Manifold.extrude(holes ? own(outline.subtract(holes)) : outline, profile.height));
+    const slab = slabOf(wasm, own, holes ? own(outline.subtract(holes)) : outline, frame);
     const lower = new Map(frame.lowerCells.map((cell) => [`${cell.i},${cell.j}`, cell.profile]));
     const pockets = new Map<PocketProfile, Manifold>();
     const pocketOf = (cellProfile: PocketProfile) => {

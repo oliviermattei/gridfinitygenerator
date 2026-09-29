@@ -3,7 +3,7 @@ import type { TriangleMesh } from "./mesh";
 import { MARGIN } from "./margin";
 import { withArena, type Own } from "./manifold";
 import { hasScrew, screwTool } from "./screws";
-import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, type GridFrame } from "./shapes";
+import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, slabOf, type GridFrame } from "./shapes";
 
 /**
  * Cell-brick assembly (ADR 0004, `brickMesh` in prototypes/geometry-perf): one brick per
@@ -83,22 +83,23 @@ function brickKey(i: number, j: number, frame: GridFrame): string {
 
 /**
  * Kind of cell (i, j): its sides on the outline. An edge cell on a side without margin is
- * an inner cell; a corner stays a corner, since the outline rounds it.
+ * an inner cell, unless the bottom of the outline is chamfered; a corner stays a corner,
+ * since the outline rounds it.
  */
 function kindOf(i: number, j: number, frame: GridFrame): [sx: Side, sy: Side] {
   const { columns, rows } = frame;
   const sx: Side = i === columns - 1 ? 1 : i === 0 ? -1 : 0;
   const sy: Side = j === rows - 1 ? 1 : j === 0 ? -1 : 0;
-  if (sx !== 0 && sy !== 0) return [sx, sy];
+  if ((sx !== 0 && sy !== 0) || frame.bottomChamfer > 0) return [sx, sy];
   return [marginX(frame, sx) > 0 ? sx : 0, marginY(frame, sy) > 0 ? sy : 0];
 }
 
 /**
  * One brick per kind of cell present in the grid, centred on its cell centre: the inner
  * brick is a cell block minus the pocket tool; the others are the slab of their footprint
- * (cell plus margin, cut by the outline at the corners, less the margin's holes) minus the
- * pocket tool and the margin's solid cut. Then the quarter of a screw hole is removed at
- * each corner of the brick that holds a screw.
+ * (cell plus margin, cut by the outline at the corners, less the margin's holes, with the
+ * bottom chamfer of the outline) minus the pocket tool and the margin's solid cut. Then the
+ * quarter of a screw hole is removed at each corner of the brick that holds a screw.
  */
 function cellBricks(wasm: ManifoldToplevel, frame: GridFrame): Map<string, Brick> {
   const { columns, rows, cellSize, profile } = frame;
@@ -136,7 +137,7 @@ function cellBricks(wasm: ManifoldToplevel, frame: GridFrame): Map<string, Brick
       const tools = [pocket];
       const cut = margin?.solid(window);
       if (cut) tools.push(own(cut.translate([-cx, -cy, 0])));
-      const slab = own(wasm.Manifold.extrude(area, profile.height));
+      const slab = slabOf(wasm, own, area, frame, [cx, cy]);
       return own(slab.subtract(own(wasm.Manifold.compose(tools))));
     };
     const solids = new Map<string, Manifold>();
@@ -257,7 +258,29 @@ function joinBricks(bricks: Map<string, Brick>, frame: GridFrame): TriangleMesh 
         indices[written++] = remap[brick.indices[3 * t + 2] as number] as number;
       }
     }
-  return { positions: positions.slice(0, vertices * 3), indices: indices.slice(0, written) };
+  return withoutUnusedVertices({ positions: positions.subarray(0, vertices * 3), indices: indices.subarray(0, written) });
+}
+
+/**
+ * Drops the vertices no triangle uses: a seam vertex that only the dropped faces between
+ * bricks held (the ring the bottom chamfer adds halfway up the walls, on a seam inside the
+ * grid). Copies the buffers either way, so that they own no more memory than they use.
+ */
+function withoutUnusedVertices({ positions, indices }: TriangleMesh): TriangleMesh {
+  const count = positions.length / 3;
+  const remap = new Int32Array(count).fill(-1);
+  for (let t = 0; t < indices.length; t++) remap[indices[t] as number] = 0;
+  let kept = 0;
+  for (let v = 0; v < count; v++) if (remap[v] === 0) remap[v] = kept++;
+  if (kept === count) return { positions: positions.slice(), indices: indices.slice() };
+  const compact = new Float32Array(kept * 3);
+  for (let v = 0; v < count; v++) {
+    const to = remap[v] as number;
+    if (to >= 0) compact.set(positions.subarray(3 * v, 3 * v + 3), 3 * to);
+  }
+  const reindexed = new Uint32Array(indices.length);
+  for (let t = 0; t < indices.length; t++) reindexed[t] = remap[indices[t] as number] as number;
+  return { positions: compact, indices: reindexed };
 }
 
 /** Rebuilds the joined mesh as a manifold solid: the seams must close it (`NoError`). */

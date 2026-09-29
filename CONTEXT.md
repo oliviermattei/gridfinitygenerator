@@ -58,6 +58,10 @@ _Avoid_: nervure (réservé au rejet de « muret »), rib, entretoise
 La position de la grille dans la baseplate, parmi 9 (arrière gauche … avant droite), quand il reste une marge ; la marge prend le reste. L'arrière est le fond du tiroir.
 _Avoid_: position, ancrage
 
+**Chanfrein du dessous**:
+La pente à 45° qui retire l'arête du bas sur tout le pourtour de la baseplate, marge comprise (0 mm par défaut) ; elle compense le « pied d'éléphant » de la première couche. Le mur extérieur de la marge s'épaissit d'autant vers l'intérieur, pour garder sa largeur au pied.
+_Avoid_: bevel, biseau
+
 **Jeu au tiroir**:
 Le jeu retiré à la largeur et à la profondeur du tiroir pour que la baseplate y entre sans forcer (1 mm par défaut).
 _Avoid_: tolérance, clearance

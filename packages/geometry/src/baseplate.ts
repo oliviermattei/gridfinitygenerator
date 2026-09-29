@@ -11,12 +11,6 @@ import type { GridFrame } from "./shapes";
 
 export type { BaseplateLayout, Margins, TriangleMesh };
 
-/** Side of a Gridfinity cell in the standard, in millimetres (default cell size). */
-export const STANDARD_CELL_SIZE_MM = 42;
-
-/** Outer corner radius of the baseplate (spec default `or`). */
-const OUTER_RADIUS_MM = 4;
-
 export type Quality = "preview" | "final";
 
 /** Segments per quarter circle for rounded corners (spec v1: 8 in preview, 32 in final). */
@@ -65,7 +59,8 @@ export interface Baseplate {
 
 /**
  * Generates a baseplate: a grid of open pockets with the profile of the settings (hybrid by
- * default, ADR 0002, or flush), sized for a drawer or by its number of cells, and its margin
+ * default, ADR 0002, or flush) on a pitch of the cell size, sized for a drawer or by its
+ * number of cells, its outline rounded and chamfered at the bottom by the settings, and its margin
  * (a frame of crossbars for now, see margin.ts), with a countersunk screw hole on each inner
  * intersection of the grid when the screws are on (screws.ts, ADR 0006). The settings are
  * first brought into their ranges, and a missing one takes its default (`clampSettings`):
@@ -87,7 +82,9 @@ export async function generateBaseplate(
  * baseplate. It is as high as its hybrid cell (4.60 mm); the flush cell is 0.35 mm lower,
  * and the muret between them steps down on the line between the cells. Of the settings, it
  * only takes those that are not about the size, the alignment, the pocket profile or the
- * screws (a 1 × 2 grid has no inner intersection): the print settings, today.
+ * screws (a 1 × 2 grid has no inner intersection): the cell size, the outer corner radius
+ * and the bottom chamfer, so that it tries the pockets and the outline of the baseplate to
+ * print, and the print settings.
  */
 export async function generateTestKit(input: Partial<BaseplateSettings>, quality: Quality): Promise<Baseplate> {
   const settings = clampSettings({
@@ -111,7 +108,7 @@ async function buildBaseplate(
   options: GenerateOptions = {},
 ): Promise<Baseplate> {
   const wasm = await loadManifold();
-  const cells = layoutOf(settings, STANDARD_CELL_SIZE_MM);
+  const cells = layoutOf(settings);
   const { margins } = cells;
   const width = cells.columns * cells.cellSize + margins.left + margins.right;
   const depth = cells.rows * cells.cellSize + margins.back + margins.front;
@@ -125,7 +122,9 @@ async function buildBaseplate(
     margins,
     width,
     depth,
-    outerRadius: Math.min(OUTER_RADIUS_MM, width / 2, depth / 2),
+    // Never more than half the smallest side: a single row of cells gets round ends.
+    outerRadius: Math.min(settings.outerRadius, width / 2, depth / 2),
+    bottomChamfer: settings.bottomChamfer,
     segmentsPerQuarter: SEGMENTS_PER_QUARTER[quality],
     segmentsPerHole: SEGMENTS_PER_HOLE[quality],
     screws: screwHolesOf(settings, profile),
