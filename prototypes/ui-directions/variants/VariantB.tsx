@@ -4,7 +4,7 @@
 // flottants aux formes douces. Panneau de réglages à GAUCHE, familles en accordéon exclusif (en ouvrir
 // une referme les autres), téléchargement en bas du panneau. Tout ce qui n'est pas un réglage de la
 // baseplate (langue, unités, imprimante, couleur de l'aperçu, partage, réinitialisation, don) vit dans
-// le menu Préférences en haut à droite. Neutres blanc cassé + un seul accent bleu outremer. Typo : Outfit.
+// le menu Préférences en haut à droite. Neutres blanc cassé + un seul accent (candidats dans lib/accents.ts). Typo : Outfit.
 import dynamic from "next/dynamic";
 import { useState, type ReactNode } from "react";
 import { Collapsible } from "@base-ui/react/collapsible";
@@ -13,6 +13,7 @@ import { Select } from "@base-ui/react/select";
 import { Drawer } from "@base-ui/react/drawer";
 import { Check, ChevronDown, ChevronsUpDown, Coffee, Link2, LocateFixed, RotateCcw, Settings, SlidersHorizontal, X } from "lucide-react";
 import type { Ctx } from "@/lib/settings";
+import { ACCENTS, type Accent } from "@/lib/accents";
 import { copyLink, summaries } from "@/lib/summary";
 import { DownloadSplit, Segmented, Swatches, Toggler, focusRing, useMedia, useSheetInset } from "@/components/kit";
 import { AdvancedBody, AlignBody, MagnetsBody, PrintBody, ProfileBody, ScrewsBody, SizeBody } from "@/components/families";
@@ -20,12 +21,17 @@ import { AdvancedIcon, AlignIcon, MagnetIcon, PocketMark, ProfileIcon, ScrewIcon
 
 const Preview3D = dynamic(() => import("@/components/Preview3D"), { ssr: false });
 
-export const FILAMENTS_B: { hex: string; render?: string; fr: string; en: string }[] = [
-  { hex: "#3450F0", render: "#4A66EE", fr: "Outremer", en: "Ultramarine" },
+type Filament = { hex: string; render?: string; fr: string; en: string };
+// Le premier filament est la couleur de la marque ; les autres sont des neutres.
+const NEUTRALS: Filament[] = [
   { hex: "#F0F0EC", fr: "Blanc", en: "White" },
   { hex: "#A4A8AF", fr: "Galet", en: "Pebble" },
   { hex: "#2E3137", fr: "Graphite", en: "Graphite" },
   { hex: "#D8C7A4", fr: "Sable", en: "Sand" },
+];
+const filaments = (a: Accent): Filament[] => [
+  { hex: a.plastic, render: a.plasticRender, fr: a.fr, en: a.en },
+  ...NEUTRALS.filter((n) => n.hex !== a.plastic),
 ];
 
 const STAGE = { kind: "studio" as const, background: "#F6F6F7", backgroundEdge: "#DADBE0" };
@@ -38,6 +44,7 @@ type FamilyKey = "size" | "align" | "profile" | "magnets" | "screws" | "advanced
 export default function VariantB(ctx: Ctx) {
   const { s, layout, t } = ctx;
   const sum = summaries(ctx);
+  const fil = filaments(ACCENTS[s.accent])[s.filament];
   const mobile = useMedia("(max-width: 767px)");
   const [toast, setToast] = useState<string | null>(null);
   const [recenter, setRecenter] = useState(0);
@@ -51,7 +58,7 @@ export default function VariantB(ctx: Ctx) {
 
   return (
     <div className="dir-b relative h-dvh overflow-hidden bg-[var(--bg)] text-[14px]">
-      <Preview3D className="absolute inset-0" s={s} layout={layout} color={FILAMENTS_B[s.filament].render ?? FILAMENTS_B[s.filament].hex} stage={STAGE} recenter={recenter}
+      <Preview3D className="absolute inset-0" s={s} layout={layout} color={fil.render ?? fil.hex} stage={STAGE} recenter={recenter}
         insetLeft={mobile ? 0 : PANEL_W + 32} insetTop={mobile ? 64 : 40} insetBottom={mobile ? (sheet ? sheetInset : 150) : 40} />
 
       {/* ---------- Marque ---------- */}
@@ -153,7 +160,7 @@ function Item({ icon, title, summary, control, on, open, onOpenChange, children 
       className={`rounded-[16px] transition-colors duration-200 ${open ? "bg-[var(--sunken)]" : "hover:bg-[var(--sunken)]"}`}>
       <div className="flex items-center gap-2 pr-3">
         <Collapsible.Trigger className={`group flex min-w-0 flex-1 items-center gap-3 rounded-[16px] py-2.5 pl-2.5 text-left ${focusRing} focus-visible:ring-offset-0`}>
-          <span className={`grid size-9 shrink-0 place-items-center rounded-[11px] transition-colors ${on ? "bg-[var(--accent)] text-white" : "bg-[var(--surface)] text-[var(--ink-soft)] shadow-[0_0_0_1px_var(--line)]"}`}>
+          <span className={`grid size-9 shrink-0 place-items-center rounded-[11px] transition-colors ${on ? "bg-[var(--accent)] text-[var(--accent-ink)]" : "bg-[var(--surface)] text-[var(--ink-soft)] shadow-[0_0_0_1px_var(--line)]"}`}>
             {icon}
           </span>
           <span className="min-w-0 flex-1">
@@ -175,7 +182,7 @@ function Item({ icon, title, summary, control, on, open, onOpenChange, children 
 
 function PreferencesMenu({ ctx, share }: { ctx: Ctx; share: () => void }) {
   const { s, set, reset, t } = ctx;
-  const colors = FILAMENTS_B.map((f) => ({ hex: f.hex, name: f[s.lang] }));
+  const colors = filaments(ACCENTS[s.accent]).map((f) => ({ hex: f.hex, name: f[s.lang] }));
   const row = "flex items-center justify-between gap-4";
   const label = "text-[13.5px] font-medium text-[var(--ink)]";
   const action = `flex h-10 w-full items-center gap-3 rounded-[10px] px-2.5 text-[13.5px] font-medium text-[var(--ink-soft)] transition-colors hover:bg-[var(--sunken)] hover:text-[var(--ink)] ${focusRing} focus-visible:ring-offset-0`;

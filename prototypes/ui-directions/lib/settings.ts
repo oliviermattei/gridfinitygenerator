@@ -33,6 +33,8 @@ export type Settings = {
   lang: "fr" | "en";
   /** Couleur de filament de l'aperçu (index dans la palette de la variante). */
   filament: number;
+  /** Accent de l'interface (index dans lib/accents.ts) : choix de prototype, pas un réglage produit. */
+  accent: number;
 };
 
 export const DEFAULTS: Settings = {
@@ -61,6 +63,7 @@ export const DEFAULTS: Settings = {
   unit: "mm",
   lang: "fr",
   filament: 0,
+  accent: 0,
 };
 
 export type Layout = {
@@ -113,7 +116,7 @@ export function computeLayout(s: Settings): Layout {
 export function useSettings() {
   const [s, setS] = useState<Settings>(DEFAULTS);
   const set = useCallback((patch: Partial<Settings>) => setS((p) => ({ ...p, ...patch })), []);
-  const reset = useCallback(() => setS((p) => ({ ...DEFAULTS, lang: p.lang, unit: p.unit, filament: p.filament })), []);
+  const reset = useCallback(() => setS((p) => ({ ...DEFAULTS, lang: p.lang, unit: p.unit, filament: p.filament, accent: p.accent })), []);
   const layout = useMemo(() => computeLayout(s), [s]);
   const t = STRINGS[s.lang];
   return { s, set, reset, layout, t };

@@ -37,15 +37,16 @@ Retour de l'utilisateur sur le design : palette sobre avec un seul accent. extra
 
 ## Décisions de design (29/09/2026, prototype v3)
 
-- Direction **Studio** retenue (aperçu plein écran sur fond studio, panneaux flottants, accent outremer, typo Outfit). Calibre abandonnée.
+- Direction **Studio** retenue (aperçu plein écran sur fond studio, panneaux flottants, typo Outfit). Calibre abandonnée.
+- Accent **outremer rejeté** ; six candidats à comparer dans le prototype (`lib/accents.ts`).
 - Panneau de réglages **à gauche**.
 - Familles de réglages en **accordéon exclusif** : en ouvrir une referme les autres.
 - Menu **Préférences** (engrenage) en haut à droite : langue en liste déroulante, unités, imprimante (buse, hauteur de couche), couleur de l'aperçu, puis Partager, Réinitialiser, Offrir un café. La couleur de l'aperçu n'a pas sa place dans la mise en page principale.
 
 ## En attente
 
-1. Valider le prototype v3 (Studio retravaillé) ; confirmer l'accent outremer et la typo Outfit.
-2. Valider deux choix faits par l'agent du prototype de géométrie : surépaisseur de 2,8 mm sous le profil avec aimants, blocs d'aimant de 10,5 mm dans les coins.
+1. Choisir l'accent parmi les candidats du prototype v3 (l'outremer est rejeté) ; confirmer la typo Outfit.
+2. Reporté après le développement du moteur : surépaisseur de 2,8 mm sous le profil avec aimants, blocs d'aimant de 10,5 mm dans les coins.
 3. Nom du site : « Pocketfit » est un nom provisoire, rien n'est décidé (éviter « Gridfinity » dans le nom, le statut de marque n'a pas été vérifié).
 
 ## Étape suivante

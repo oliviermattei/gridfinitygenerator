@@ -12,11 +12,12 @@ pnpm install
 pnpm dev            # http://localhost:3100/
 ```
 
-Raccourcis d'URL pour les captures : `?magnets`, `&screws`, `&release`, `&lang=en`. Pastille jaune `{ }` : état des réglages en JSON (hors design évalué).
+Raccourcis d'URL pour les captures : `?accent=<clé>`, `&magnets`, `&screws`, `&release`, `&lang=en`. Pastille jaune `{ }` : état des réglages en JSON (hors design évalué).
 
 ## Décisions de design (retours du 29/09/2026)
 
-- **Direction Studio** : aperçu 3D plein écran sur fond studio, panneaux flottants aux formes douces, un seul accent bleu outremer, typo Outfit.
+- **Direction Studio** : aperçu 3D plein écran sur fond studio, panneaux flottants aux formes douces, un seul accent, typo Outfit.
+- **Accent : l'outremer est rejeté** (« pas beau »). Six candidats à comparer dans `lib/accents.ts` : orange signal, terre cuite, sapin, pétrole, moutarde, graphite (monochrome, plastique blanc). Texte sur l'accent ≥ 4,5:1 pour chacun. Pilule jaune en bas (‹ › ou ← →) ou `?accent=terracotta` dans l'URL. La baseplate prend la couleur de l'accent par défaut.
 - **Panneau de réglages à gauche** (et non plus à droite). L'aperçu se recadre dans la zone restée visible (`insetLeft` dans `Preview3D`).
 - **Familles en accordéon exclusif** : en ouvrir une referme les autres. Activer les aimants ou les vis ouvre leur section.
 - **Menu Préférences en haut à droite** (icône engrenage) : langue (liste déroulante), unités, imprimante (buse, hauteur de couche), couleur de l'aperçu, puis Partager, Réinitialiser, Offrir un café. Rien de tout cela n'est dans la mise en page principale : la couleur de l'aperçu n'est pas un réglage de la baseplate.
@@ -30,6 +31,9 @@ Raccourcis d'URL pour les captures : `?magnets`, `&screws`, `&release`, `&lang=e
 | Aimants activés (section ouverte, les autres fermées) | `desktop-aimants.png` | `mobile-reglages.png` (panneau ouvert) |
 | Menu Préférences | `desktop-preferences.png`, `desktop-langue.png` (liste ouverte) | `mobile-preferences.png` |
 | EN, aimants + vis | `desktop-en.png` | |
+| Accents candidats (aimants activés) | `accent-orange.png`, `accent-terracotta.png`, `accent-fir.png`, `accent-petrol.png`, `accent-mustard.png`, `accent-graphite.png` | |
+
+Les captures `desktop*.png` et `mobile*.png` datent d'avant le rejet de l'outremer.
 
 Note : les captures sont faites en Chromium headless (rendu WebGL logiciel). Ce rendu est si lent que les animations d'ouverture des menus n'avancent pas ; le script de capture les neutralise. Dans un vrai navigateur, elles se jouent normalement.
 
