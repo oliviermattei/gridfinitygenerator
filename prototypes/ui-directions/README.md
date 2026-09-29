@@ -1,21 +1,41 @@
-# PROTOTYPE JETABLE v2 : 2 directions visuelles du générateur de baseplates
+# PROTOTYPE JETABLE v3 : direction « Studio » du générateur de baseplates
 
 > Question posée : **à quoi doit ressembler l'écran du générateur de baseplates v1 ?**
-> Deuxième itération, après le rejet des trois directions v1 (aperçu 3D plat et gris, contrôles peu soignés, une couleur par famille de réglages).
-> Deux directions sur une seule route, choisies avec `?variant=A|B`. Ce code ne sera pas repris tel quel : il vit sur la branche `prototype/ui-directions-v2` et ne doit pas être mergé dans `main`.
+> Troisième itération. La direction B « Studio » de la v2 est retenue (29/09/2026) ; A « Calibre » est abandonnée (son code reste dans l'historique git).
+> Les prototypes vivent désormais sur `main`, dans `prototypes/`. Ce code ne sera pas repris tel quel dans `apps/web`.
 
 ## Lancer
 
 ```bash
 cd prototypes/ui-directions
 pnpm install
-pnpm dev            # http://localhost:3100/?variant=A  (ou B)
+pnpm dev            # http://localhost:3100/
 ```
 
-- Pilule jaune (en bas au centre sur desktop, en haut à droite sur mobile) : **‹ ›** ou les flèches ← → du clavier pour changer de direction.
-- Pastille jaune `{ }` : l'état des réglages et la mise en page calculée, en JSON (exigence du skill prototype ; hors design évalué).
-- Raccourcis d'URL pour les captures : `&magnets`, `&screws`, `&release` (trous d'éjection), `&lang=en`.
-- Les réglages sont conservés d'une direction à l'autre.
+Raccourcis d'URL pour les captures : `?magnets`, `&screws`, `&release`, `&lang=en`. Pastille jaune `{ }` : état des réglages en JSON (hors design évalué).
+
+## Décisions de design (retours du 29/09/2026)
+
+- **Direction Studio** : aperçu 3D plein écran sur fond studio, panneaux flottants aux formes douces, un seul accent bleu outremer, typo Outfit.
+- **Panneau de réglages à gauche** (et non plus à droite). L'aperçu se recadre dans la zone restée visible (`insetLeft` dans `Preview3D`).
+- **Familles en accordéon exclusif** : en ouvrir une referme les autres. Activer les aimants ou les vis ouvre leur section.
+- **Menu Préférences en haut à droite** (icône engrenage) : langue (liste déroulante), unités, imprimante (buse, hauteur de couche), couleur de l'aperçu, puis Partager, Réinitialiser, Offrir un café. Rien de tout cela n'est dans la mise en page principale : la couleur de l'aperçu n'est pas un réglage de la baseplate.
+- Mobile : même menu Préférences en haut à droite ; le dock du bas ne garde que les cotes, « Réglages » et « 3MF ».
+
+## Captures v3 (`screenshots/v3/`)
+
+| | Desktop 1440 px | Mobile 390 px |
+|---|---|---|
+| Par défaut | `desktop.png` | `mobile.png` |
+| Aimants activés (section ouverte, les autres fermées) | `desktop-aimants.png` | `mobile-reglages.png` (panneau ouvert) |
+| Menu Préférences | `desktop-preferences.png`, `desktop-langue.png` (liste ouverte) | `mobile-preferences.png` |
+| EN, aimants + vis | `desktop-en.png` | |
+
+Note : les captures sont faites en Chromium headless (rendu WebGL logiciel). Ce rendu est si lent que les animations d'ouverture des menus n'avancent pas ; le script de capture les neutralise. Dans un vrai navigateur, elles se jouent normalement.
+
+---
+
+# Historique : v2 (2 directions visuelles, sur la branche `prototype/ui-directions-v2`)
 
 Stack : Next.js 16, Tailwind v4, Base UI (`@base-ui/react` 1.8 : Tabs, Switch, Slider, NumberField, ToggleGroup, Collapsible, Menu, Popover, Drawer), react-three-fiber 9 + drei 10 + `@react-three/postprocessing` (N8AO, SMAA, ToneMapping), lucide pour les petites icônes utilitaires.
 

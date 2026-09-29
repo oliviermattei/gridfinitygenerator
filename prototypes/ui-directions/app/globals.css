@@ -3,30 +3,6 @@
 /* PROTOTYPE JETABLE v2 — une palette sobre par direction : neutres + UN accent.
    Les briques de components/kit.tsx ne lisent que ces jetons. */
 
-/* A « Calibre » : gris froids d'atelier, orange signal, angles serrés, filets plutôt qu'ombres. */
-.dir-a {
-  --font: var(--font-instrument), system-ui, sans-serif;
-  --bg: #eceef1;
-  --surface: #ffffff;
-  --sunken: #f2f3f5;
-  --track: #e3e5e9;
-  --line: #e2e4e8;
-  --line-strong: #c9cdd4;
-  --ink: #15171c;
-  --ink-soft: #3a3e47;
-  --muted: #676d78;
-  --faint: #9aa0aa;
-  --accent: #f26a21;
-  --accent-strong: #b8470c;
-  --accent-ink: #1a0f08;
-  --accent-tint: #fff0e6;
-  --accent-ring: rgb(242 106 33 / 0.28);
-  --r-ctl: 6px;
-  --r-card: 8px;
-  --r-switch: 5px;
-  --shadow-pop: 0 1px 0 rgb(21 23 28 / 0.04), 0 12px 32px -12px rgb(21 23 28 / 0.28);
-}
-
 /* B « Studio » : blanc cassé lumineux, bleu outremer, formes douces, panneaux flottants. */
 .dir-b {
   --font: var(--font-outfit), system-ui, sans-serif;
@@ -51,7 +27,6 @@
   --shadow-pop: 0 1px 1px rgb(18 19 25 / 0.04), 0 18px 48px -16px rgb(18 19 25 / 0.28);
 }
 
-.dir-a,
 .dir-b,
 .kit-popup {
   font-family: var(--font);

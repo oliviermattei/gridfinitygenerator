@@ -5,7 +5,7 @@ Ce fichier permet de reprendre le travail sur une autre machine : la mémoire de
 ## À lire d'abord
 
 - `CONTEXT.md` : glossaire (cellule, poche, muret, pied, assise, marge, pièce, plateau, tiroir…).
-- `docs/adr/` : décisions difficiles à défaire (0001 Next.js, 0002 profil de poche 4,60 mm, 0003 monorepo, 0004 manifold-3d par briques, statut *proposé*).
+- `docs/adr/` : décisions difficiles à défaire (0001 Next.js, 0002 profil de poche 4,60 mm, 0003 monorepo, 0004 manifold-3d par briques, *acceptée* le 29/09).
 - `docs/research/` : rétro-ingénierie d'extrabold (avec mesures réelles d'un export), spec Gridfinity, licence (MIT), ModuBOX.
 - `docs/diagrams/profil-poche.svg` : comparaison des profils spec / extrabold / ModuBOX.
 
@@ -30,14 +30,22 @@ Ce fichier permet de reprendre le travail sur une autre machine : la mémoire de
 
 - `prototype/geometry-perf` : bench manifold contre JSCAD ; verdict dans `prototypes/geometry-perf/RESULTS.md`.
 - `prototype/ui-directions` : maquettes v1, rejetées (aperçu 3D terne, contrôles, trop de couleurs).
-- `prototype/ui-directions-v2` : maquettes v2, A « Calibre » (accent orange, Instrument Sans) et B « Studio » (accent outremer, Outfit). Pour lancer : `cd prototypes/ui-directions && pnpm install && pnpm dev`, puis http://localhost:3100/?variant=A ou `?variant=B`.
+- `prototype/ui-directions-v2` : maquettes v2, A « Calibre » (accent orange, Instrument Sans) et B « Studio » (accent outremer, Outfit).
+- Depuis le 29/09, les prototypes sont fusionnés dans `main` et on les fait évoluer directement dans `prototypes/` sur `main`. Lancer le prototype d'interface : `cd prototypes/ui-directions && pnpm install && pnpm dev`, puis http://localhost:3100/ (décisions et captures dans son README).
 
 Retour de l'utilisateur sur le design : palette sobre avec un seul accent. extrabold sert de référence de qualité, mais l'identité doit être la nôtre.
 
+## Décisions de design (29/09/2026, prototype v3)
+
+- Direction **Studio** retenue (aperçu plein écran sur fond studio, panneaux flottants, accent outremer, typo Outfit). Calibre abandonnée.
+- Panneau de réglages **à gauche**.
+- Familles de réglages en **accordéon exclusif** : en ouvrir une referme les autres.
+- Menu **Préférences** (engrenage) en haut à droite : langue en liste déroulante, unités, imprimante (buse, hauteur de couche), couleur de l'aperçu, puis Partager, Réinitialiser, Offrir un café. La couleur de l'aperçu n'a pas sa place dans la mise en page principale.
+
 ## En attente
 
-1. Choisir la direction visuelle : A, B ou un mélange ; couleur d'accent ; typo.
-2. Valider l'ADR 0004 (manifold-3d + briques de cellule) et deux choix faits par l'agent du prototype : surépaisseur de 2,8 mm sous le profil avec aimants, blocs d'aimant de 10,5 mm dans les coins.
+1. Valider le prototype v3 (Studio retravaillé) ; confirmer l'accent outremer et la typo Outfit.
+2. Valider deux choix faits par l'agent du prototype de géométrie : surépaisseur de 2,8 mm sous le profil avec aimants, blocs d'aimant de 10,5 mm dans les coins.
 3. Nom du site : « Pocketfit » est un nom provisoire, rien n'est décidé (éviter « Gridfinity » dans le nom, le statut de marque n'a pas été vérifié).
 
 ## Étape suivante

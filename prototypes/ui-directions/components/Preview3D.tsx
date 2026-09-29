@@ -28,6 +28,7 @@ type Props = {
   stage: Stage;
   className?: string;
   /** Surface masquée par un panneau flottant (px) : l'objet est recentré dans ce qui reste visible. */
+  insetLeft?: number;
   insetRight?: number;
   insetBottom?: number;
   insetTop?: number;
@@ -127,33 +128,33 @@ function Plate({ s, layout, color }: { s: Settings; layout: Layout; color: strin
 
 /** Cadrage automatique : anime la caméra vers une vue 3/4 qui contient toute la baseplate. */
 function AutoFit({ span, width, depth, insets, recenter }: {
-  span: number; width: number; depth: number; insets: [number, number, number]; recenter: number;
+  span: number; width: number; depth: number; insets: [number, number, number, number]; recenter: number;
 }) {
   const { camera, size, controls } = useThree() as unknown as {
     camera: THREE.PerspectiveCamera; size: { width: number; height: number }; controls: OrbitControlsImpl | null;
   };
   const anim = useRef<{ from: THREE.Vector3; to: THREE.Vector3; t: number } | null>(null);
-  const [ir, ib, it] = insets;
+  const [il, ir, ib, it] = insets;
 
   // Décale le centre de projection pour que l'objet soit centré dans la zone non masquée.
   useLayoutEffect(() => {
     const W = size.width, H = size.height;
-    camera.setViewOffset(W, H, ir / 2, (ib - it) / 2, W, H);
+    camera.setViewOffset(W, H, (ir - il) / 2, (ib - it) / 2, W, H);
     camera.updateProjectionMatrix();
-  }, [camera, size.width, size.height, ir, ib, it]);
+  }, [camera, size.width, size.height, il, ir, ib, it]);
 
   useEffect(() => {
     const W = Math.max(1, size.width), H = Math.max(1, size.height);
     // En portrait, vue plus plongeante : la baseplate occupe davantage la hauteur disponible.
-    const visAspect = (W - ir) / Math.max(1, H - ib - it);
+    const visAspect = (W - il - ir) / Math.max(1, H - ib - it);
     const az = THREE.MathUtils.degToRad(visAspect < 0.9 ? (width > depth ? 64 : 22) : 30);
     const el = THREE.MathUtils.degToRad(visAspect < 0.9 ? 50 : 33);
     const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
     // Caméra-sonde identique (même décalage) ; zone visible en NDC, marge de 8 %.
     const probe = new THREE.PerspectiveCamera(camera.fov, W / H, 1, 50000);
-    probe.setViewOffset(W, H, ir / 2, (ib - it) / 2, W, H);
+    probe.setViewOffset(W, H, (ir - il) / 2, (ib - it) / 2, W, H);
     probe.updateProjectionMatrix();
-    const x0 = -1, x1 = 1 - (2 * ir) / W, y0 = -1 + (2 * ib) / H, y1 = 1 - (2 * it) / H;
+    const x0 = -1 + (2 * il) / W, x1 = 1 - (2 * ir) / W, y0 = -1 + (2 * ib) / H, y1 = 1 - (2 * it) / H;
     const padX = (x1 - x0) * 0.05, padY = (y1 - y0) * 0.06;
     const corners: THREE.Vector3[] = [];
     for (const x of [-width / 2, width / 2]) for (const y of [0, 8]) for (const z of [-depth / 2, depth / 2]) corners.push(new THREE.Vector3(x, y, z));
@@ -179,7 +180,7 @@ function AutoFit({ span, width, depth, insets, recenter }: {
       controls.minDistance = Math.max(20, hi * 0.08);
       controls.maxDistance = hi * 2.5;
     }
-  }, [span, width, depth, size.width, size.height, ir, ib, it, recenter, camera, controls]);
+  }, [span, width, depth, size.width, size.height, il, ir, ib, it, recenter, camera, controls]);
 
   useFrame((_, dt) => {
     const a = anim.current;
@@ -257,7 +258,7 @@ function Backdrop({ stage }: { stage: Stage }) {
   );
 }
 
-export default function Preview3D({ s, layout, color, stage, className, insetRight = 0, insetBottom = 0, insetTop = 0, recenter = 0 }: Props) {
+export default function Preview3D({ s, layout, color, stage, className, insetLeft = 0, insetRight = 0, insetBottom = 0, insetTop = 0, recenter = 0 }: Props) {
   const span = Math.max(layout.width, layout.depth);
   const shadowKey = `${layout.width}-${layout.depth}-${layout.nx}-${layout.ny}-${s.magnets || s.screws}-${s.profile}`;
   return (
@@ -270,7 +271,7 @@ export default function Preview3D({ s, layout, color, stage, className, insetRig
       >
         <Backdrop stage={stage} />
         <AutoClearForShadows />
-        <AutoFit span={span} width={layout.width} depth={layout.depth} insets={[insetRight, insetBottom, insetTop]} recenter={recenter} />
+        <AutoFit span={span} width={layout.width} depth={layout.depth} insets={[insetLeft, insetRight, insetBottom, insetTop]} recenter={recenter} />
 
         {/* Studio procédural (softboxes) : pas de HDRI téléchargé, rendu identique hors ligne. */}
         <Environment resolution={256} frames={1} environmentIntensity={0.85}>

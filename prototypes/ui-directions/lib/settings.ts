@@ -216,6 +216,10 @@ const fr = {
   orbitHint: "Glisser pour tourner, pincer ou molette pour zoomer",
   mmOnly: "Toujours en mm",
   print: "Impression",
+  preferences: "Préférences",
+  printer: "Imprimante",
+  previewColor: "Couleur de l'aperçu",
+  languageNames: { fr: "Français", en: "English" },
 };
 
 const en: typeof fr = {
@@ -294,6 +298,10 @@ const en: typeof fr = {
   orbitHint: "Drag to orbit, pinch or scroll to zoom",
   mmOnly: "Always in mm",
   print: "Print",
+  preferences: "Preferences",
+  printer: "Printer",
+  previewColor: "Preview color",
+  languageNames: { fr: "Français", en: "English" },
 };
 
 export const STRINGS = { fr, en };

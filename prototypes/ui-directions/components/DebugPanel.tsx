@@ -7,7 +7,7 @@ export function DebugPanel({ s, layout, variant }: { s: Settings; layout: Layout
   const [open, setOpen] = useState(false);
   return (
     <div
-      className="fixed right-2 top-[104px] md:top-auto md:bottom-2 z-[9998] flex flex-col md:flex-col-reverse items-end text-[11px] text-black"
+      className="fixed right-2 top-[104px] md:top-auto md:right-auto md:left-1/2 md:bottom-2 md:-translate-x-1/2 z-[9998] flex flex-col md:flex-col-reverse items-end text-[11px] text-black"
       style={{ fontFamily: "ui-monospace, Menlo, monospace" }}
     >
       <button
