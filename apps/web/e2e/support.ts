@@ -22,6 +22,20 @@ export async function closeSettings(page: Page, testInfo: TestInfo) {
   await expect(sheet).toBeHidden();
 }
 
+/** Opens the gear menu: "Paramètres" on desktop, "Menu" (with the actions) on mobile. */
+export async function openMenu(page: Page, testInfo: TestInfo) {
+  const name = isMobile(testInfo) ? "Menu" : "Paramètres";
+  await page.getByRole("button", { name }).click();
+  const menu = page.getByRole("dialog", { name });
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+export async function closeMenu(page: Page) {
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: /^(Paramètres|Menu)$/ })).toBeHidden();
+}
+
 /** A number field of the settings, by its label. */
 export function numberField(page: Page, label: string) {
   return page.getByRole("textbox", { name: label, exact: true });

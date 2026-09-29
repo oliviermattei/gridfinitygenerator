@@ -1,5 +1,5 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
-import { closeSettings, isMobile, numberField, openSettings, readout } from "./support";
+import { expect, test, type Page } from "@playwright/test";
+import { closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings, readout } from "./support";
 
 /** A value of the statistics frame on screen: on the right on desktop, in the sheet on mobile. */
 function stat(page: Page, id: "dimensions" | "cells" | "margin" | "layers" | "volume" | "screws" | "pieces" | "fit") {
@@ -9,20 +9,6 @@ function stat(page: Page, id: "dimensions" | "cells" | "margin" | "layers" | "vo
 /** The warning of a build plate too small, in the statistics frame on screen. */
 function plateWarning(page: Page) {
   return page.getByRole("alert").filter({ hasText: "dépasse votre plateau", visible: true });
-}
-
-/** Opens the gear menu: "Paramètres" on desktop, "Menu" (with the actions) on mobile. */
-async function openMenu(page: Page, testInfo: TestInfo) {
-  const name = isMobile(testInfo) ? "Menu" : "Paramètres";
-  await page.getByRole("button", { name }).click();
-  const menu = page.getByRole("dialog", { name });
-  await expect(menu).toBeVisible();
-  return menu;
-}
-
-async function closeMenu(page: Page) {
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: /^(Paramètres|Menu)$/ })).toBeHidden();
 }
 
 test("the statistics frame shows the real numbers of the baseplate, and … while the final volume is computed", async ({ page }, testInfo) => {

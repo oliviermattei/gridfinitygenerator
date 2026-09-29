@@ -19,5 +19,12 @@ export {
   type BaseplateSettings,
   type NumericSetting,
 } from "./settings";
+export {
+  decodeSettings,
+  encodeSettings,
+  openingSettings,
+  readShareLink,
+  type ShareLinkSettings,
+} from "./share-link";
 export { fitsOnBuildPlate, roundUpToLayer, type BuildPlate } from "./print";
 export { serializeStl } from "./stl";

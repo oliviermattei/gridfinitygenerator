@@ -66,9 +66,8 @@ test.describe("desktop", () => {
 
   test("the top bar holds the actions, and the gear menu parameters only", async ({ page }) => {
     await page.goto("/fr/baseplate");
-    // Share and reset arrive with #8: shown, inactive.
-    await expect(page.getByRole("button", { name: "Partager" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Réinitialiser" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Partager" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Réinitialiser" })).toBeEnabled();
     // Donation: a link when NEXT_PUBLIC_DONATION_URL is set at build time, inactive otherwise.
     await expect(page.getByRole("button", { name: "Offrir un café" }).or(page.getByRole("link", { name: "Offrir un café" }))).toBeVisible();
 
@@ -206,8 +205,8 @@ test.describe("mobile", () => {
     await page.goto("/fr/baseplate");
     await page.getByRole("button", { name: "Menu" }).click();
     const menu = page.getByRole("dialog", { name: "Menu" });
-    await expect(menu.getByRole("button", { name: "Partager" })).toBeDisabled();
-    await expect(menu.getByRole("button", { name: "Réinitialiser" })).toBeDisabled();
+    await expect(menu.getByRole("button", { name: "Partager" })).toBeEnabled();
+    await expect(menu.getByRole("button", { name: "Réinitialiser" })).toBeEnabled();
     await expect(menu.getByRole("button", { name: "Offrir un café" }).or(menu.getByRole("link", { name: "Offrir un café" }))).toBeVisible();
     await expect(menu.getByRole("radiogroup", { name: "Couleur de l'aperçu" })).toBeVisible();
   });

@@ -4,7 +4,7 @@ import { Popover } from "@base-ui/react/popover";
 import { BASEPLATE_SETTINGS, type BaseplateSettings } from "@repo/geometry";
 import { NumberStepper, Segmented, Swatches, focusRing, glass } from "@repo/ui";
 import { Coffee, Link2, RotateCcw, Settings } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { DONATION_URL } from "@/lib/links";
 import { BUILD_PLATE_RANGE, NOZZLES, PREVIEW_COLORS, type Nozzle, type Preferences, type PreviewColor } from "@/lib/preferences";
 import { strings as t } from "@/lib/strings";
@@ -13,16 +13,26 @@ interface Action {
   key: string;
   label: string;
   icon: ReactNode;
-  /** Link target; an action without one is shown inactive until its ticket lands. */
-  href: string | null;
+  /** Runs the action; an action with neither this nor a link is shown inactive. */
+  onSelect?: () => void;
+  /** Link opened in a new tab. */
+  href?: string | null;
 }
 
-// Share and reset arrive with #8; the donation link is configured at build time.
-const ACTIONS: Action[] = [
-  { key: "share", label: t.share, icon: <Link2 className="size-4" aria-hidden />, href: null },
-  { key: "reset", label: t.reset, icon: <RotateCcw className="size-4" aria-hidden />, href: null },
-  { key: "donate", label: t.donate, icon: <Coffee className="size-4" aria-hidden />, href: DONATION_URL },
-];
+/** Handlers of the top bar actions. */
+export interface TopBarActions {
+  onShare: () => void;
+  onReset: () => void;
+}
+
+// The donation link is configured at build time.
+function actionsOf({ onShare, onReset }: TopBarActions): Action[] {
+  return [
+    { key: "share", label: t.share, icon: <Link2 className="size-4" aria-hidden />, onSelect: onShare },
+    { key: "reset", label: t.reset, icon: <RotateCcw className="size-4" aria-hidden />, onSelect: onReset },
+    { key: "donate", label: t.donate, icon: <Coffee className="size-4" aria-hidden />, href: DONATION_URL },
+  ];
+}
 
 function ActionControl({ action, className }: { action: Action; className: string }) {
   if (action.href) {
@@ -32,6 +42,14 @@ function ActionControl({ action, className }: { action: Action; className: strin
         {action.label}
         <span className="sr-only"> ({t.newTab})</span>
       </a>
+    );
+  }
+  if (action.onSelect) {
+    return (
+      <button type="button" onClick={action.onSelect} className={className}>
+        {action.icon}
+        {action.label}
+      </button>
     );
   }
   return (
@@ -44,11 +62,11 @@ function ActionControl({ action, className }: { action: Action; className: strin
 }
 
 /** Desktop actions of the top bar: share, reset, donate. On mobile they live in the menu. */
-export function TopActions() {
+export function TopActions(handlers: TopBarActions) {
   const pill = `flex h-11 items-center gap-2 rounded-full px-4 text-[13.5px] font-medium text-ink-soft transition-colors hover:text-ink ${glass} ${focusRing}`;
   return (
     <div className="hidden items-center gap-2 md:flex">
-      {ACTIONS.map((action) => (
+      {actionsOf(handlers).map((action) => (
         <ActionControl key={action.key} action={action} className={pill} />
       ))}
     </div>
@@ -63,8 +81,8 @@ export interface SettingsMenuProps {
   onPreferencesChange: (patch: Partial<Preferences>) => void;
   settings: PrintSettings;
   onSettingsChange: (patch: Partial<PrintSettings>) => void;
-  /** Mobile: the menu also holds the top bar actions. */
-  withActions: boolean;
+  /** Mobile: the menu also holds the top bar actions, run with these handlers. */
+  actions: TopBarActions | null;
 }
 
 /** Drops the floating-point noise of a stepped value (0.2 + 0.04 = 0.24000000000000002). */
@@ -77,12 +95,19 @@ const nozzleFormat = new Intl.NumberFormat(t.locale, { minimumFractionDigits: 1 
  * preview colour. Layer height and line width are baseplate settings, shared in the link;
  * the others are preferences of this browser. Language and units join them with #14.
  */
-export function SettingsMenu({ preferences, onPreferencesChange, settings, onSettingsChange, withActions }: SettingsMenuProps) {
+export function SettingsMenu({ preferences, onPreferencesChange, settings, onSettingsChange, actions }: SettingsMenuProps) {
+  const [open, setOpen] = useState(false);
   const { previewColor, nozzle, buildPlate } = preferences;
+  const withActions = actions !== null;
+  // An action closes the menu first: the reset confirmation or the notification replaces it.
+  const closingMenu = (run: () => void) => () => {
+    setOpen(false);
+    run();
+  };
   const label = withActions ? t.menu : t.parameters;
   const row = `flex h-10 w-full items-center gap-3 rounded-[10px] px-2.5 text-[13.5px] font-medium text-ink-soft transition-colors hover:bg-sunken hover:text-ink ${focusRing} focus-visible:ring-offset-0`;
   return (
-    <Popover.Root>
+    <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         aria-label={label}
         title={label}
@@ -197,9 +222,9 @@ export function SettingsMenu({ preferences, onPreferencesChange, settings, onSet
               </div>
             </section>
 
-            {withActions && (
+            {actions && (
               <section aria-label={t.actions} className="flex flex-col border-t border-line p-1.5">
-                {ACTIONS.map((action) => (
+                {actionsOf({ onShare: closingMenu(actions.onShare), onReset: closingMenu(actions.onReset) }).map((action) => (
                   <ActionControl key={action.key} action={action} className={row} />
                 ))}
               </section>

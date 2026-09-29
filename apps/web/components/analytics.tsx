@@ -12,5 +12,6 @@ export function Analytics() {
   if (!websiteId) return null;
 
   const src = process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL?.trim() || UMAMI_CLOUD_SCRIPT;
-  return <Script src={src} data-website-id={websiteId} strategy="afterInteractive" />;
+  // Query strings are not recorded: they carry share links, one per baseplate.
+  return <Script src={src} data-website-id={websiteId} data-exclude-search="true" strategy="afterInteractive" />;
 }

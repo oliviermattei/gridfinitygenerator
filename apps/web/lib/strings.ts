@@ -16,6 +16,12 @@ export const strings = {
   parameters: "Paramètres",
   menu: "Menu",
   actions: "Actions",
+  linkCopied: "Lien copié",
+  copyFailed: "Copie impossible : copiez le lien ci-dessous.",
+  resetTitle: "Réinitialiser les réglages ?",
+  resetDescription:
+    "La baseplate revient aux réglages par défaut. Vos paramètres sont conservés : buse, hauteur de couche, largeur de ligne, plateau et couleur de l'aperçu.",
+  cancel: "Annuler",
   previewColor: "Couleur de l'aperçu",
   previewColors: {
     brand: BRAND_ACCENT_NAME.fr,

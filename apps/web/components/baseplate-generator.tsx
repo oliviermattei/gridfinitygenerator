@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_SETTINGS, type Baseplate, type BaseplateSettings, type Quality } from "@repo/geometry";
+import type { Baseplate, BaseplateSettings, Quality } from "@repo/geometry";
 import { focusRing, glass } from "@repo/ui";
 import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
@@ -8,14 +8,17 @@ import { useEffect, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
+import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
 import { strings as t } from "@/lib/strings";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { DownloadButton } from "./download-button";
 import { PocketMark } from "./illustrations";
 import { DOCK_OFFSET, MobileDock } from "./mobile-dock";
+import { Notifications, notify } from "./notifications";
+import { ResetDialog } from "./reset-dialog";
 import { Families, Readout, type Family } from "./settings-panel";
 import { StatsCard, fitsOn } from "./stats-card";
-import { SettingsMenu, TopActions } from "./top-bar";
+import { SettingsMenu, TopActions, type TopBarActions } from "./top-bar";
 
 /** Space kept between a floating panel and the framed model, in CSS pixels. */
 const GAP = 16;
@@ -66,7 +69,10 @@ function useElementSize(element: HTMLElement | null): { width: number; height: n
 
 export function BaseplateGenerator() {
   const engine = useRef<EngineClient | null>(null);
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  // Restored from a shared link or this browser once hydrated; the server renders the defaults.
+  const [settings, setSettings] = useSavedSettings();
+  const hydrated = useHydrated();
+  const [resetOpen, setResetOpen] = useState(false);
   const [shown, setShown] = useState<OnScreen | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -103,9 +109,10 @@ export function BaseplateGenerator() {
     };
   }, []);
 
+  // Nothing is computed for the server defaults that hydration shows first.
   useEffect(() => {
-    engine.current?.show(settings);
-  }, [settings]);
+    if (hydrated) engine.current?.show(settings);
+  }, [settings, hydrated]);
 
   const baseplate = shown?.baseplate ?? null;
   // The volume is measured on the final mesh: "…" until it answers for the current settings.
@@ -122,6 +129,20 @@ export function BaseplateGenerator() {
       className={className}
     />
   );
+
+  async function share() {
+    const link = shareLinkOf(settings);
+    try {
+      await navigator.clipboard.writeText(link);
+      notify(t.linkCopied);
+    } catch (reason) {
+      // Clipboard refused (permission, insecure context): the link is shown to copy by hand.
+      console.error(reason);
+      notify(t.copyFailed, link);
+    }
+  }
+
+  const actions: TopBarActions = { onShare: share, onReset: () => setResetOpen(true) };
 
   async function exportStl() {
     const client = engine.current;
@@ -178,13 +199,13 @@ export function BaseplateGenerator() {
       </header>
 
       <div className="absolute top-3 right-3 flex items-center gap-2 md:top-4 md:right-4">
-        <TopActions />
+        <TopActions {...actions} />
         <SettingsMenu
           preferences={preferences}
           onPreferencesChange={setPreferences}
           settings={settings}
           onSettingsChange={updateSettings}
-          withActions={!desktop}
+          actions={desktop ? null : actions}
         />
       </div>
 
@@ -233,6 +254,9 @@ export function BaseplateGenerator() {
       >
         {families}
       </MobileDock>
+
+      <ResetDialog open={resetOpen} onOpenChange={setResetOpen} onConfirm={() => setSettings(resetSettings)} />
+      <Notifications />
 
       {error && (
         <p

@@ -1,6 +1,8 @@
 /**
- * Settings of a baseplate: everything the share link carries (spec v1). Their defaults and
- * ranges live here only, for the engine, the interface and the settings codec alike.
+ * Settings of a baseplate that the engine implements: what the share link carries (spec v1).
+ * Their current defaults and ranges live here only, for the engine and the interface. The
+ * settings codec (share-link.ts) keeps its own frozen table per link version, so that an old
+ * link keeps its meaning when a default changes here.
  * Local preferences (nozzle, build plate, preview colour…) are not baseplate settings.
  */
 export interface BaseplateSettings {
