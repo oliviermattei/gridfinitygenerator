@@ -37,7 +37,7 @@ Retour de l'utilisateur sur le design : palette sobre avec un seul accent. extra
 
 ## Décisions de design (29/09/2026, prototype v3)
 
-- Direction **Studio** retenue (aperçu plein écran sur fond studio, panneaux flottants, typo Outfit). Calibre abandonnée.
+- Direction **Studio** retenue (aperçu plein écran sur fond studio, panneaux flottants, typo **Outfit**, confirmée le 29/09). Calibre abandonnée.
 - Accent **terre cuite** `#C4502F` (l'outremer a été rejeté). Il doit rester facile à changer : une seule source (`BRAND_ACCENT` dans `lib/accents.ts` du prototype), à reprendre telle quelle dans `packages/ui`.
 - Panneau de réglages **à gauche**.
 - Familles de réglages en **accordéon exclusif** : en ouvrir une referme les autres.
@@ -45,10 +45,10 @@ Retour de l'utilisateur sur le design : palette sobre avec un seul accent. extra
 
 ## En attente
 
-1. Confirmer la typo Outfit.
-2. Reporté après le développement du moteur : surépaisseur de 2,8 mm sous le profil avec aimants, blocs d'aimant de 10,5 mm dans les coins.
+1. Reporté après le développement du moteur : taille des blocs d'aimant (10,5 mm dans les coins). Le socle n'est plus une valeur fixe : il est calculé et arrondi à la couche (`docs/spec.md`, 5.3).
+2. Aimants ou base à clips : les aimants restent en v1 ; une base à clips maison (CLICKbase est CC BY-NC-SA) est envisagée pour plus tard.
 3. Nom du site : « Pocketfit » est un nom provisoire, rien n'est décidé (éviter « Gridfinity » dans le nom, le statut de marque n'a pas été vérifié).
 
 ## Étape suivante
 
-`/to-spec` (à partir de ce fichier, du glossaire et des ADR), puis `/to-tickets`, puis `/implement` ticket par ticket.
+Spec v1 validée : `docs/spec.md` (décisions en section 12). Prochaine étape : découpage en tickets, puis implémentation ticket par ticket (d'abord le monorepo et `packages/geometry` en TDD).
