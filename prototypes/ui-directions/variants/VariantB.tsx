@@ -17,8 +17,8 @@ import { AdvancedIcon, AlignIcon, MagnetIcon, NozzleIcon, PocketMark, ProfileIco
 
 const Preview3D = dynamic(() => import("@/components/Preview3D"), { ssr: false });
 
-export const FILAMENTS_B = [
-  { hex: "#4560EE", fr: "Outremer", en: "Ultramarine" },
+export const FILAMENTS_B: { hex: string; render?: string; fr: string; en: string }[] = [
+  { hex: "#3450F0", render: "#4A66EE", fr: "Outremer", en: "Ultramarine" },
   { hex: "#F0F0EC", fr: "Blanc", en: "White" },
   { hex: "#A4A8AF", fr: "Galet", en: "Pebble" },
   { hex: "#2E3137", fr: "Graphite", en: "Graphite" },
@@ -45,7 +45,7 @@ export default function VariantB(ctx: Ctx) {
 
   return (
     <div className="dir-b relative h-dvh overflow-hidden bg-[var(--bg)] text-[14px]">
-      <Preview3D className="absolute inset-0" s={s} layout={layout} color={FILAMENTS_B[s.filament].hex} stage={STAGE} recenter={recenter}
+      <Preview3D className="absolute inset-0" s={s} layout={layout} color={FILAMENTS_B[s.filament].render ?? FILAMENTS_B[s.filament].hex} stage={STAGE} recenter={recenter}
         insetRight={mobile ? 0 : 412} insetTop={mobile ? 64 : 40} insetBottom={mobile ? (sheet ? sheetInset : 190) : 70} />
 
       {/* ---------- Marque ---------- */}

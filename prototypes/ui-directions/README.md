@@ -1,102 +1,130 @@
-# PROTOTYPE JETABLE : 3 directions visuelles du générateur de baseplates
+# PROTOTYPE JETABLE v2 : 2 directions visuelles du générateur de baseplates
 
 > Question posée : **à quoi doit ressembler l'écran du générateur de baseplates v1 ?**
-> Trois directions radicalement différentes sur une seule route, qu'on choisit avec `?variant=A|B|C`.
-> Ce code ne sera pas repris tel quel : il vit sur la branche `prototype/ui-directions` et ne doit pas être mergé dans `main`.
+> Deuxième itération, après le rejet des trois directions v1 (aperçu 3D plat et gris, contrôles peu soignés, une couleur par famille de réglages).
+> Deux directions sur une seule route, choisies avec `?variant=A|B`. Ce code ne sera pas repris tel quel : il vit sur la branche `prototype/ui-directions-v2` et ne doit pas être mergé dans `main`.
 
 ## Lancer
 
 ```bash
 cd prototypes/ui-directions
 pnpm install
-pnpm dev            # http://localhost:3100/?variant=A  (ou B, C)
+pnpm dev            # http://localhost:3100/?variant=A  (ou B)
 ```
 
-- Barre jaune en bas : **‹ ›** ou les flèches ← → du clavier pour changer de direction. L'URL garde la variante.
-- Pastille jaune `{ } état` en bas à gauche : l'état courant des réglages et la mise en page calculée, en JSON.
-- Les réglages sont conservés d'une direction à l'autre, ce qui permet de comparer le même état.
-- Mobile : ouvrir les DevTools en 390 px, ou utiliser le réseau local affiché par `pnpm dev`.
+- Pilule jaune (en bas au centre sur desktop, en haut à droite sur mobile) : **‹ ›** ou les flèches ← → du clavier pour changer de direction.
+- Pastille jaune `{ }` : l'état des réglages et la mise en page calculée, en JSON (exigence du skill prototype ; hors design évalué).
+- Raccourcis d'URL pour les captures : `&magnets`, `&screws`, `&release` (trous d'éjection), `&lang=en`.
+- Les réglages sont conservés d'une direction à l'autre.
 
-Stack : Next.js 16 (App Router), Tailwind v4, **Base UI** (`@base-ui/react` 1.8 : Tabs, Switch, Slider, NumberField, ToggleGroup, Collapsible, Accordion, Menu, Popover, Drawer), react-three-fiber pour l'aperçu, lucide pour les petites icônes utilitaires. Toutes les illustrations des boutons (profils de poche, aimant, vis, alignement, tiroir, cellules, logo) sont à nous, en SVG inline : `components/illustrations.tsx`.
+Stack : Next.js 16, Tailwind v4, Base UI (`@base-ui/react` 1.8 : Tabs, Switch, Slider, NumberField, ToggleGroup, Collapsible, Menu, Popover, Drawer), react-three-fiber 9 + drei 10 + `@react-three/postprocessing` (N8AO, SMAA, ToneMapping), lucide pour les petites icônes utilitaires.
 
-## Ce qui est commun aux trois directions
+## 1. Ce qui rend extrabold.tools réussi (étude du 29/09/2026)
 
-- Même contenu : en-tête (nom provisoire **Pocketfit**, mm/in, FR/EN, profil d'impression buse + hauteur de couche, Télécharger avec menu 3MF/STL, Partager, Réinitialiser, Offrir un café) ; réglages Taille (onglets « Tiroir en mm » / « Nombre de cellules » + marge), Alignement (9 positions illustrées), Profil de poche (Hybride / Ras illustrés en coupe), Aimants, Vis, Avancé.
-- Libellés FR tirés du glossaire (`CONTEXT.md`) : baseplate, cellule, poche, muret, marge, tiroir. Les textes EN sont dans `lib/settings.ts`.
-- **Une couleur par famille**, reprise dans l'aperçu 3D : les aimants s'affichent dans la couleur de la famille Aimants et les vis dans celle de la famille Vis. La couleur sert donc à relier un réglage à son effet, pas seulement à décorer.
-- L'aperçu 3D est un décor (dalle + murets en boîtes, aimants et vis en cylindres). Il suit la taille, l'alignement, les aimants, les vis et le rayon des coins, mais ce n'est pas la vraie géométrie.
+Captures de référence (usage interne) : `screenshots/reference/extrabold-*.png` (1440 px et 390 px).
 
-## A « Nuancier » : la référence extrabold, en plus coloré
+- **Une seule couleur.** Neutres « slate » (`#F8FAFC` fond, `#E2E8F0` bordures, `#64748B` texte secondaire, `#1E293B` encre) et un seul accent corail `#F75069`. L'accent sert à l'état actif, au CTA… et au modèle 3D lui-même : le produit est la couleur de la marque, tout l'écran est cohérent.
+- **Typo unique**, Space Grotesk : titre d'outil 18 px/600, catégories en petites capitales 12 px/600 grises, nom du réglage 14–15 px/500, valeurs 14 px. Trois niveaux nets : catégorie > réglage > valeur.
+- **Bordures plutôt qu'ombres.** Filets 1 px partout, aucune ombre sauf les popovers. Rayons petits et constants (4–8 px) ; le CTA « Download 3MF » est même à angle vif.
+- **Contrôles :** curseur à piste fine (6 px, gris) remplie d'accent, pouce rond, et champ numérique « 6 mm » éditable à droite ; interrupteurs presque carrés (48 × 28, r 8, pouce carré) ; segmented « Direct / Grid / Preset / Path » avec icône + libellé ; **boutons-images** 90 × 108 (vignette claire avec pictogramme, libellé dessous), sélection = fond teinté à 20 % + libellé accent. Chaque réglage a son petit ↺ de remise à zéro.
+- **Densité :** panneau de 400 px, tout visible, long défilement ; CTA collé en bas du panneau.
+- **Rendu 3D :** three.js r182, env map HDRI (`/hdri.hdr`), plastique uni couleur accent, vue quasi isométrique très plongeante, fond blanc avec grille isométrique pointillée ton sur ton, pas d'ombre portée. Le cadrage remplit tout le canevas (quitte à déborder).
+- **Mobile :** barre d'outils d'icônes en haut, aperçu sur ~45 % de l'écran, panneau qui défile dessous, CTA collant pleine largeur.
+- **Limites** (où on peut faire mieux) : capitales pour chaque catégorie, défilement très long, pop-ups au démarrage (cookies, imprimante), pub dans l'aperçu, 3D plate (peu de volume, pas d'ombre, pas d'occlusion dans les poches).
 
-Intention : garder ce qui marche chez extrabold (panneau latéral qui défile, toutes les familles visibles d'un coup, aperçu à droite) et remplacer le rouge unique par un nuancier. Chaque section commence par une pastille carrée de sa couleur ; ses contrôles actifs (onglet, bouton illustré, interrupteur, curseur) prennent cette couleur. C'est la direction la plus sage et la plus dense.
+On garde : une couleur, la rigueur des gris, les boutons-images, curseur + champ, le modèle teinté comme la marque. On ne reprend ni leurs illustrations, ni leur logo, ni leur corail, ni leurs capitales.
 
-| Famille | Couleur |
+## 2. Ce qui est commun aux deux directions
+
+- **Aperçu 3D (priorité n° 1)**, `components/Preview3D.tsx` + `components/plateGeometry.ts` :
+  - Vraie silhouette de baseplate : dalle à coins arrondis, **poches au profil de la spec** (45° 0,7 mm / vertical 1,8 mm / 45° 2,15 mm, rayon 4 → 1,15 mm, plat de muret de 0,8 mm = Top Cutoff 0,4), une géométrie de poche instanciée (`InstancedMesh`) par cellule ; profil Hybride = 0,35 mm de muret vertical sous le profil.
+  - Sans aimants ni vis : cadre **ouvert** (comme la baseplate réelle et extrabold). Avec aimants ou vis : dalle pleine de 2,8 mm percée de 4 logements Ø d + tolérance par cellule (13 mm du centre), fonds assombris, trous d'éjection traversants ; vis = fraisage conique + tige.
+  - Plastique PLA : `meshPhysicalMaterial` (rugosité 0,48, clearcoat 0,2). Éclairage **studio procédural** (5 `Lightformer` dans un `Environment` : plafond, grande boîte arrière pour le reflet, clé chaude, contre froide, débouchage) + lampe directionnelle à ombres + hémisphère. Pas de HDRI téléchargé : rendu identique hors ligne, pas de question de licence.
+  - Occlusion ambiante N8AO (fond des poches), `ContactShadows` + ombre portée sur sol invisible, SMAA, tone mapping **ACES** (le fond est précompensé pour garder la teinte CSS exacte).
+  - `OrbitControls` amortis, pan désactivé, zoom borné. **Cadrage automatique animé** (0,7 s) à chaque changement de taille : recherche de la distance où les 8 coins tiennent dans la zone réellement visible (décalage de projection pour ne pas passer sous un panneau flottant ou le panneau mobile). En portrait, vue plus plongeante et baseplate tournée pour occuper la hauteur. Bouton « Recentrer la vue ».
+  - Sélecteur de filament (5 pastilles). La couleur rendue est légèrement corrigée (`render`) pour qu'après ACES le plastique ait la même teinte que la pastille.
+- **Kit de contrôles** (`components/kit.tsx`), sans couleur propre : tout passe par des jetons CSS (`--accent`, `--ink`, `--line`, `--r-ctl`…) posés par chaque direction. Segmented, interrupteur, curseur + champ libre (virgule acceptée, ↑/↓ au clavier, validation à Entrée/sortie), longueur avec −/+ et « scrub » sur le libellé, boutons-images avec coche, pavé d'alignement 3 × 3, pastilles, bouton de téléchargement scindé 3MF/STL. États survol / focus clavier (anneau accent) / actif / désactivé visibles ; tout est atteignable au clavier (Base UI).
+- **Illustrations maison** (`components/illustrations.tsx`) : coupes Hybride/Ras aux proportions de la spec, logement d'aimant plein / avec trou d'éjection, vis fraisée, tiroir coté, grille comptée, pavés d'alignement, marque « poche vue de dessus ». Trait 1,5 px, matière à 10 %, et **l'accent n'apparaît que sur l'option sélectionnée** (variable `--art`), le reste est monochrome.
+- **Mobile :** le panneau s'ouvre par le bas sur 58 % de la hauteur, sans voile : l'aperçu reste visible au-dessus et se recadre, on voit l'effet de chaque réglage.
+- Contenu identique à la v1 (libellés du glossaire `CONTEXT.md`, textes EN dans `lib/settings.ts`).
+
+## 3. Direction A « Calibre » : l'instrument de mesure
+
+Intention : la plus proche d'extrabold dans la structure (panneau latéral qui défile, tout visible, filets plutôt qu'ombres), mais avec sa propre voix : **les cotes**. La taille de la baseplate s'affiche en très gros chiffres tabulaires sur l'aperçu, comme sur un pied à coulisse, et la baseplate est posée sur un **tapis quadrillé au pas de 42 mm** : le fond de l'aperçu est lui-même une grille Gridfinity. Angles serrés, gris froids d'atelier, orange signal.
+
+| Jeton | Hex |
 |---|---|
-| Taille | cobalt `#2459E0` |
-| Alignement | violet `#7A3FE0` |
-| Profil de poche | sarcelle `#0B8F83` |
-| Aimants | rouge aimant `#E0264F` |
-| Vis | laiton `#C7820A` |
-| Avancé | ardoise `#56627A` |
-| Profil d'impression | bleu buse `#0C7FB0` |
+| Fond de page | `#ECEEF1` (aperçu `#E9EBEE`, tapis `#D6D9DE` / `#B9BEC7`) |
+| Surface | `#FFFFFF` |
+| Creux (pistes, onglets) | `#F2F3F5` |
+| Filet / filet fort | `#E2E4E8` / `#C9CDD4` |
+| Encre / secondaire / discret | `#15171C` / `#676D78` / `#9AA0AA` |
+| **Accent orange signal** | `#F26A21` (texte d'accent `#B8470C`, texte sur accent `#1A0F08`, teinte `#FFF0E6`) |
 
-Fond gris bleuté froid `#EDF0F5` à points, panneau blanc, encre `#171C28`. Typo : **Onest**, une seule famille, chiffres tabulaires. Mobile : barre « Réglages » avec le résumé et les pastilles des familles actives, qui ouvre un panneau par le bas contenant toute la liste.
+- Typo : **Instrument Sans** (grotesque étroite, précise), une seule famille, chiffres tabulaires. Titres de section 14,5 px/600 en casse normale (pas de capitales), cotes 40 px/600.
+- Rayons : 6 px contrôles, 8 px cartes, interrupteur à coins de 5 px. Texte **foncé sur l'orange** (contraste 7:1, look outillage).
+- Filaments : Orange signal, Blanc, Galet, Graphite, Sauge.
+- Mobile : barre fixe en bas (résumé + « Réglages » en noir), 3MF dans l'en-tête, unités/langue/impression/partage/don dans « … ».
 
-## B « Établi » : l'aperçu d'abord, une famille à la fois
+## 4. Direction B « Studio » : la photo produit
 
-Intention : un outil d'atelier. L'aperçu occupe tout l'écran, posé sur un **tapis de découpe vert** (quadrillage, règle graduée, diagonale à 45°) : c'est l'élément mémorable. À gauche, un rail d'outils colorés : on n'ouvre qu'une famille à la fois dans un panneau flottant, et l'aperçu se décale pour rester visible. Contrôles « atelier » : pas-à-pas −/+ avec gros chiffres, curseur fin en dessous, interrupteurs presque carrés. Une pastille sur le rail indique si les aimants ou les vis sont activés.
+Intention : l'aperçu d'abord. La baseplate occupe tout l'écran sur un **fond studio** (dégradé radial clair) et tout le reste flotte : pilule de marque, pilule d'actions, **panneau de réglages flottant à droite** en accordéon (une ligne par famille avec icône et résumé ; l'icône passe en bleu quand Aimants ou Vis sont activés), cotes en tête de panneau, **gros CTA en bas du panneau**. Formes douces, ombres légères, bleu outremer.
 
-| Famille | Couleur |
+| Jeton | Hex |
 |---|---|
-| Taille | bleu `#3D7BFF` |
-| Alignement | lilas `#9E6BFF` |
-| Profil de poche | orange `#FF7A2F` |
-| Aimants | rouge `#FF3B5C` |
-| Vis | jaune `#F5B800` |
-| Avancé | gris `#7E8A99` |
-| Profil d'impression | cyan `#2DBFE0` |
+| Fond / studio | `#F1F1F3` ; dégradé `#F6F6F7` → `#DADBE0` |
+| Surface | `#FFFFFF` (pilules : blanc à 86 % + flou) |
+| Creux | `#F3F3F6` |
+| Filet / filet fort | `#E8E8ED` / `#CFD0D8` |
+| Encre / secondaire / discret | `#121319` / `#6B6D78` / `#A0A2AD` |
+| **Accent outremer** | `#2F4BF5` (texte blanc sur accent, teinte `#EEF1FF`) |
 
-Tapis `#1D4638`, panneaux papier `#FAF8F3`, encre `#14201B`, plaque couleur PLA naturel. Typo : **Archivo**, titres en largeur étendue (125 %) pour un côté catalogue d'outillage. Mobile : le rail devient une barre d'outils en bas (+ « Plus » pour unités, langue, impression, partage…) ; chaque outil ouvre sa famille dans un panneau par le bas.
+- Typo : **Outfit** (géométrique, ronde, compacte), une seule famille. Cotes 28 px/600 serrées.
+- Rayons : 10 px contrôles, 14 px cartes, 22 px panneau, interrupteurs en pilule.
+- Filaments : Outremer, Blanc, Galet, Graphite, Sable.
+- Mobile : dock flottant en bas (cotes + « Réglages » + « 3MF »), pastilles de filament au-dessus, « … » en haut à droite.
 
-## C « Blocs » : des blocs de couleur franche, faits pour le doigt
+## Captures (`screenshots/v2/`)
 
-Intention : la plus colorée et la plus « produit grand public ». Chaque famille est un bloc plein de sa couleur, replié sur une ligne de résumé (« 9 × 6 cellules », « 6 × 2 mm »). Un seul bloc est ouvert à la fois ; son contenu est une carte blanche encadrée par la couleur. Une famille désactivée (aimants, vis) devient un bloc blanc : l'état se voit de loin. Sous l'aperçu, une « recette » de jetons colorés résume la baseplate, et cliquer un jeton ouvre le bloc correspondant. Contrôles gros et ronds : curseurs épais, grands chiffres, pilules.
-
-| Famille | Couleur |
-|---|---|
-| Taille | bleu électrique `#3B55F6` |
-| Alignement | violet `#8B3FEA` |
-| Profil de poche | émeraude `#00A375` |
-| Aimants | rose aimant `#FF3D7A` |
-| Vis | ambre `#FFB21C` (texte foncé) |
-| Avancé | aubergine nuit `#2C2940` |
-| Profil d'impression | cyan `#17B3D3` |
-
-Fond `#F3F3F6`, carte d'aperçu bleu lavande en dégradé, encre `#1D1A2E`. Typo : **Unbounded** (titres, cotes, nom en minuscules) + **Figtree** (texte). Mobile : aperçu + recette en haut, gros boutons « Réglages » et « 3MF » en bas ; le panneau par le bas contient les blocs, et toucher un jeton ouvre directement le bon bloc.
-
-## Captures (`screenshots/`)
-
-| Direction | Desktop 1440 px | Mobile 390 px |
+| | Desktop 1440 px | Mobile 390 px |
 |---|---|---|
-| A | `A-desktop.png`, `A-desktop-aimants-vis.png` | `A-mobile.png`, `A-mobile-reglages.png` |
-| B | `B-desktop.png`, `B-desktop-aimants.png` | `B-mobile.png`, `B-mobile-aimants.png` |
-| C | `C-desktop.png`, `C-desktop-en-magnets.png` (EN) | `C-mobile.png`, `C-mobile-aimants.png` |
+| A sans aimants | `A-desktop.png` | `A-mobile.png` |
+| A avec aimants | `A-desktop-aimants-vis.png` (+ vis) | `A-mobile-reglages-aimants.png` (panneau ouvert) |
+| B sans aimants | `B-desktop.png` | `B-mobile.png` |
+| B avec aimants | `B-desktop-aimants-vis.png` (+ vis) | `B-mobile-reglages-aimants.png` (panneau ouvert) |
+| Détail 3D | `B-desktop-zoom-3d.png` (aimants, trous d'éjection, vis) | |
+
+Les captures v1 rejetées restent dans `screenshots/` (A/B/C-*.png).
+
+## Autocritique (contre extrabold) et corrections faites
+
+1er passage → corrigé :
+- Plastique délavé et « saumon » (ACES + trop de lumière) → lumières baissées, reflet de boîte arrière, couleur de rendu corrigée par filament.
+- Fond d'aperçu grisâtre au lieu de la teinte voulue (le dégradé 8 bits saturait avant ACES) → fond en shader précompensé.
+- Aucune ombre au sol, puis carré gris sous la plaque (le compositeur coupe `autoClear` et le canevas opaque vide en alpha 1) → correctif `AutoClearForShadows`.
+- Plaque coupée à droite (cadrage calculé sur la mauvaise zone) → cadrage sur la zone visible réelle.
+- Tapis 42 mm invisible → fondu calculé depuis l'origine, contraste relevé.
+- Accent partout dans les illustrations (9 pavés orange) → accent réservé à l'option choisie.
+- Mobile : plaque minuscule en portrait, panneau qui masquait l'aperçu → vue plongeante tournée, panneau à 58 % sans voile et recadrage.
+
+Reste perfectible : le bleu vire au marine sur les chants (ACES) ; petites lignes de z-fighting visibles de très près en bord de marge ; le panneau B vide en bas quand tout est replié ; la pilule de prototype masque un peu de contenu sur mobile.
 
 ## Choix faits sans toi (à valider)
 
-- **Base UI** : le paquet `@base-ui-components/react` a été renommé `@base-ui/react` à la v1 ; j'ai pris `@base-ui/react` 1.8.
-- **Unités** : la bascule mm/in convertit le tiroir et les marges. Les aimants et les vis restent en mm, puisqu'ils se vendent en mm.
-- **Marge en mode « Nombre de cellules »** : j'ai mis une marge totale en largeur et une en profondeur, répartie ensuite selon l'alignement.
-- **Alignement** : « haut » = arrière du tiroir, « bas » = avant (libellés « Arrière gauche », « Avant »…). À confirmer.
-- **Profil d'impression** : buse et hauteur de couche en choix rapides. La hauteur de la baseplate est affichée en nombre de couches.
-- **Don** : lien générique `buymeacoffee.com`, placeholder.
+- **Pas de HDRI** : environnement procédural (Lightformers). Plus léger, sans licence, identique hors ligne. Un vrai HDRI studio pourrait être essayé plus tard.
+- **ACES** comme demandé, avec deux compensations (fond précompensé, couleur de rendu par filament). `NeutralToneMapping` garderait mieux les couleurs de marque sans correction : à tester.
+- **Filament par défaut = couleur d'accent**, comme extrabold : l'écran reste d'une seule couleur.
+- **Vis** placées au centre des cellules dans l'aperçu (extrabold les met aux intersections) : décor, à caler sur le vrai moteur.
+- **Sans aimants ni vis, cadre ouvert** ; avec l'un des deux, dalle pleine de 2,8 mm (hauteur affichée en conséquence).
+- Le profil **Ras** n'est plus décrit « comme extrabold » (on ne cite pas un concurrent dans l'interface).
+- Mobile : panneau non modal à 58 % au lieu d'un plein écran, pour garder l'aperçu vivant.
 
 ## Points à trancher
 
-1. **Quelle structure ?** A (tout visible, défilement), B (une famille à la fois, aperçu plein écran) ou C (blocs repliés avec résumé). On peut aussi mélanger, par exemple le rail de B avec les blocs de C.
-2. **Quelle ambiance ?** Claire et neutre (A), atelier / tapis de découpe (B) ou colorée grand public (C).
-3. **Palette par famille** : garder le lien couleur réglage → aperçu 3D (aimants et vis colorés dans la vue) ? Quelles teintes pour les deux familles les plus visibles, Aimants et Vis ?
-4. **Typo** : Onest (neutre, proche d'extrabold), Archivo étendu (outillage) ou Unbounded + Figtree (ronde, affirmée).
-5. **Densité des contrôles** : champ + curseur (A), pas-à-pas −/+ (B) ou gros curseurs (C). Sur mobile, B et C sont nettement plus confortables.
-6. **Téléchargement** : bouton dans l'en-tête (A, B) ou gros bouton en bas de la colonne (C) ?
-7. **Nom** : « Pocketfit » est un placeholder.
+1. **Structure** : A (panneau fixe, tout visible, dense) ou B (aperçu plein écran, panneau flottant en accordéon) ?
+2. **Accent** : orange signal (texte foncé) ou outremer (texte blanc) ? Ou un autre, avec le même système.
+3. **Typo** : Instrument Sans (étroite, technique) ou Outfit (ronde, produit) ?
+4. **Fond d'aperçu** : tapis quadrillé 42 mm (A) ou studio neutre (B) ?
+5. **Place du téléchargement** : en-tête (A) ou bas du panneau (B) ?
+6. **Coût du rendu** : N8AO + ombres coûtent sur les petites machines ; prévoir un mode « léger » automatique ?
+7. **Nom** : « Pocketfit » reste un placeholder.

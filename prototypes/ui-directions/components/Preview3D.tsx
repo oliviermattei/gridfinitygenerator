@@ -70,7 +70,7 @@ function Plate({ s, layout, color }: { s: Settings; layout: Layout; color: strin
       new THREE.MeshPhysicalMaterial({
         roughness: 0.48,
         metalness: 0,
-        clearcoat: 0.35,
+        clearcoat: 0.2,
         clearcoatRoughness: 0.42,
         sheen: 0,
         sheenRoughness: 0.8,
@@ -147,7 +147,7 @@ function AutoFit({ span, width, depth, insets, recenter }: {
     // En portrait, vue plus plongeante : la baseplate occupe davantage la hauteur disponible.
     const visAspect = (W - ir) / Math.max(1, H - ib - it);
     const az = THREE.MathUtils.degToRad(visAspect < 0.9 ? (width > depth ? 64 : 22) : 30);
-    const el = THREE.MathUtils.degToRad(visAspect < 0.9 ? 58 : 33);
+    const el = THREE.MathUtils.degToRad(visAspect < 0.9 ? 50 : 33);
     const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
     // Caméra-sonde identique (même décalage) ; zone visible en NDC, marge de 8 %.
     const probe = new THREE.PerspectiveCamera(camera.fov, W / H, 1, 50000);
@@ -194,6 +194,15 @@ function AutoFit({ span, width, depth, insets, recenter }: {
   return null;
 }
 
+/** Le compositeur coupe gl.autoClear ; ContactShadows en a besoin pour vider sa cible à chaque passe. */
+function AutoClearForShadows() {
+  const gl = useThree((st) => st.gl);
+  // …et d'un fond transparent (le canevas est opaque, donc clearAlpha vaut 1 par défaut).
+  useFrame(() => { gl.autoClear = true; gl.setClearAlpha(0); }, -1);
+  useFrame(() => { gl.autoClear = false; gl.setClearAlpha(1); }, 0.5);
+  return null;
+}
+
 /* Le fond passe par le tone mapping ACES du compositeur : on précompense pour obtenir la teinte CSS exacte. */
 function acesFwd([r, g, b]: number[]) {
   const e = 1 / 0.6;
@@ -234,8 +243,15 @@ function Backdrop({ stage }: { stage: Stage }) {
     mat.uniforms.cIn.value.copy(preToneMapped(stage.background));
     mat.uniforms.cOut.value.copy(preToneMapped(stage.backgroundEdge ?? stage.background));
   }, [mat, stage.background, stage.backgroundEdge]);
+  // Calque 1 : vu par la caméra principale, ignoré par les caméras d'ombre (ContactShadows).
+  const ref = useRef<THREE.Mesh>(null);
+  const camera = useThree((st) => st.camera);
+  useLayoutEffect(() => {
+    ref.current?.layers.set(1);
+    camera.layers.enable(1);
+  }, [camera]);
   return (
-    <mesh frustumCulled={false} renderOrder={-100} material={mat}>
+    <mesh ref={ref} frustumCulled={false} renderOrder={-100} material={mat}>
       <planeGeometry args={[2, 2]} />
     </mesh>
   );
@@ -253,6 +269,7 @@ export default function Preview3D({ s, layout, color, stage, className, insetRig
         camera={{ position: [180, 320, 420], fov: 24, near: 1, far: 50000 }}
       >
         <Backdrop stage={stage} />
+        <AutoClearForShadows />
         <AutoFit span={span} width={layout.width} depth={layout.depth} insets={[insetRight, insetBottom, insetTop]} recenter={recenter} />
 
         {/* Studio procédural (softboxes) : pas de HDRI téléchargé, rendu identique hors ligne. */}
@@ -287,13 +304,13 @@ export default function Preview3D({ s, layout, color, stage, className, insetRig
         <Plate s={s} layout={layout} color={color} />
 
         {/* Sol invisible qui ne reçoit que l'ombre portée de la lampe principale. */}
-        <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 0]} receiveShadow>
+        <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 0]} receiveShadow ref={(m) => { m?.layers.set(1); }}>
           <planeGeometry args={[span * 4, span * 4]} />
           <shadowMaterial transparent opacity={stage.kind === "studio" ? 0.22 : 0.18} color="#1b1f2a" />
         </mesh>
         <ContactShadows
           key={shadowKey}
-          frames={1}
+          frames={40}
           position={[0, -0.02, 0]}
           scale={span * 1.6}
           far={Math.max(12, span * 0.06)}
@@ -313,7 +330,8 @@ export default function Preview3D({ s, layout, color, stage, className, insetRig
             cellColor={stage.gridCell}
             sectionColor={stage.gridSection}
             infiniteGrid
-            fadeDistance={span * 3.2}
+            fadeDistance={span * 1.3}
+            fadeFrom={0}
             fadeStrength={1.6}
             followCamera={false}
           />

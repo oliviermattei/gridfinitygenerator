@@ -17,15 +17,15 @@ import { NozzleIcon, PocketMark } from "@/components/illustrations";
 
 const Preview3D = dynamic(() => import("@/components/Preview3D"), { ssr: false });
 
-export const FILAMENTS_A = [
-  { hex: "#F26A21", fr: "Orange signal", en: "Signal orange" },
+export const FILAMENTS_A: { hex: string; render?: string; fr: string; en: string }[] = [
+  { hex: "#F26A21", render: "#F57A12", fr: "Orange signal", en: "Signal orange" },
   { hex: "#EDEDE9", fr: "Blanc", en: "White" },
   { hex: "#9EA2A8", fr: "Galet", en: "Pebble" },
   { hex: "#33363C", fr: "Graphite", en: "Graphite" },
   { hex: "#8EA68C", fr: "Sauge", en: "Sage" },
 ];
 
-const STAGE = { kind: "mat" as const, background: "#E9EBEE", gridCell: "#D9DCE1", gridSection: "#C3C7CF" };
+const STAGE = { kind: "mat" as const, background: "#E9EBEE", gridCell: "#D6D9DE", gridSection: "#B9BEC7" };
 
 export default function VariantA(ctx: Ctx) {
   const { s, set, reset, layout, t } = ctx;
@@ -81,7 +81,7 @@ export default function VariantA(ctx: Ctx) {
 
         {/* ---------- Aperçu ---------- */}
         <main className="relative min-w-0 flex-1">
-          <Preview3D className="absolute inset-0" s={s} layout={layout} color={FILAMENTS_A[s.filament].hex} stage={STAGE} recenter={recenter}
+          <Preview3D className="absolute inset-0" s={s} layout={layout} color={FILAMENTS_A[s.filament].render ?? FILAMENTS_A[s.filament].hex} stage={STAGE} recenter={recenter}
             insetTop={mobile ? 70 : 90} insetBottom={mobile ? (sheet ? sheetInset : 120) : 60} />
 
           <div className="pointer-events-none absolute top-4 left-4 md:top-6 md:left-7">
@@ -232,7 +232,7 @@ function MobileBar({ ctx, sum, open, onOpenChange }: { ctx: Ctx; sum: ReturnType
       <div className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-center gap-3 border-t border-[var(--line)] bg-[var(--surface)] px-4 md:hidden">
         <div className="min-w-0 flex-1">
           <div className="tnum truncate text-[14px] font-semibold">{sum.cells}</div>
-          <div className="tnum truncate text-[12px] text-[var(--muted)]">{sum.profile}, {t.magnets.toLowerCase()} {sum.magnets.toLowerCase()}</div>
+          <div className="tnum truncate text-[12px] text-[var(--muted)]">{sum.profile}, {t.magnets.toLowerCase()}{t.sep}{sum.magnets.toLowerCase()}</div>
         </div>
         <Drawer.Trigger className={`flex h-10 items-center gap-2 rounded-[var(--r-ctl)] bg-[var(--ink)] px-4 text-[14px] font-semibold text-white ${focusRing}`}>
           <SlidersHorizontal className="size-4" /> {t.settings}
