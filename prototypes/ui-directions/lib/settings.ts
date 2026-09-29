@@ -31,6 +31,8 @@ export type Settings = {
   layer: number;
   unit: "mm" | "in";
   lang: "fr" | "en";
+  /** Couleur de filament de l'aperçu (index dans la palette de la variante). */
+  filament: number;
 };
 
 export const DEFAULTS: Settings = {
@@ -58,6 +60,7 @@ export const DEFAULTS: Settings = {
   layer: 0.2,
   unit: "mm",
   lang: "fr",
+  filament: 0,
 };
 
 export type Layout = {
@@ -103,14 +106,14 @@ export function computeLayout(s: Settings): Layout {
     marginRight: restX - marginLeft,
     marginBack,
     marginFront: restY - marginBack,
-    height: base + (s.magnets ? 2.8 : 0),
+    height: base + (s.magnets || s.screws ? 2.8 : 0),
   };
 }
 
 export function useSettings() {
   const [s, setS] = useState<Settings>(DEFAULTS);
   const set = useCallback((patch: Partial<Settings>) => setS((p) => ({ ...p, ...patch })), []);
-  const reset = useCallback(() => setS((p) => ({ ...DEFAULTS, lang: p.lang, unit: p.unit })), []);
+  const reset = useCallback(() => setS((p) => ({ ...DEFAULTS, lang: p.lang, unit: p.unit, filament: p.filament })), []);
   const layout = useMemo(() => computeLayout(s), [s]);
   const t = STRINGS[s.lang];
   return { s, set, reset, layout, t };
@@ -175,7 +178,7 @@ const fr = {
   hybrid: "Hybride",
   hybridDesc: "Muret de 0,35 mm : le bac est tenu par les pentes, sans jeu.",
   flush: "Ras",
-  flushDesc: "Sans muret, comme extrabold. Plus fin de 0,35 mm.",
+  flushDesc: "Sans muret : baseplate plus fine de 0,35 mm.",
   recommended: "Recommandé",
   magnets: "Aimants",
   magnetsDesc: "Logements pour aimants sous chaque cellule.",
@@ -204,6 +207,15 @@ const fr = {
   close: "Fermer",
   cellsUnit: "cellules",
   sep: " : ",
+  filament: "Filament",
+  recenter: "Recentrer la vue",
+  releaseNone: "Fond plein",
+  releaseThrough: "Trou d'éjection",
+  magnetsOffHint: "Active-les pour tenir la baseplate sur une tôle ou les bacs sur la baseplate.",
+  screwsOffHint: "Pour fixer la baseplate au fond du tiroir.",
+  orbitHint: "Glisser pour tourner, pincer ou molette pour zoomer",
+  mmOnly: "Toujours en mm",
+  print: "Impression",
 };
 
 const en: typeof fr = {
@@ -244,7 +256,7 @@ const en: typeof fr = {
   hybrid: "Hybrid",
   hybridDesc: "0.35 mm wall: the bin rests on the slopes, no play.",
   flush: "Flush",
-  flushDesc: "No wall, like extrabold. 0.35 mm thinner.",
+  flushDesc: "No wall: a 0.35 mm thinner baseplate.",
   recommended: "Recommended",
   magnets: "Magnets",
   magnetsDesc: "Magnet pockets under every cell.",
@@ -273,6 +285,15 @@ const en: typeof fr = {
   close: "Close",
   cellsUnit: "cells",
   sep: ": ",
+  filament: "Filament",
+  recenter: "Recenter view",
+  releaseNone: "Solid floor",
+  releaseThrough: "Release hole",
+  magnetsOffHint: "Turn on to hold the baseplate on steel, or the bins on the baseplate.",
+  screwsOffHint: "To fix the baseplate to the drawer floor.",
+  orbitHint: "Drag to orbit, pinch or scroll to zoom",
+  mmOnly: "Always in mm",
+  print: "Print",
 };
 
 export const STRINGS = { fr, en };

@@ -34,7 +34,7 @@ export function PrototypeSwitcher({ variants }: { variants: { key: string; name:
   const v = variants[idx];
   return (
     <div
-      className="fixed bottom-2 left-1/2 z-[9999] flex -translate-x-1/2 items-center gap-1 rounded-full bg-[#fffb00] p-1 text-[13px] text-black shadow-[0_0_0_2px_#000,0_6px_20px_rgba(0,0,0,.35)]"
+      className="fixed top-[62px] right-2 md:top-auto md:right-auto md:bottom-2 md:left-1/2 z-[9999] flex md:-translate-x-1/2 items-center gap-1 rounded-full bg-[#fffb00] p-1 text-[13px] text-black shadow-[0_0_0_2px_#000,0_6px_20px_rgba(0,0,0,.35)]"
       style={{ fontFamily: "ui-monospace, Menlo, monospace" }}
     >
       <button onClick={() => go(-1)} className="grid size-7 place-items-center rounded-full hover:bg-black hover:text-[#fffb00]" aria-label="Variante précédente">
