@@ -2,7 +2,7 @@
 // currentColor at 10 %, and the element that changes in var(--art), which turns to the
 // accent when its control is selected.
 
-import { ALIGNMENTS, type Alignment } from "@repo/geometry";
+import { ALIGNMENTS, type Alignment, type PocketProfileName } from "@repo/geometry";
 
 interface ArtProps {
   className?: string;
@@ -124,7 +124,7 @@ export function ProfileIcon({ className }: ArtProps) {
  * hybrid profile lifts the foot on a 0.35 mm step; the flush one lays it on the floor.
  * Proportions follow the standard profile (0.7 / 1.8 / 2.15 mm).
  */
-export function ProfileArt({ kind, className }: ArtProps & { kind: "hybrid" | "flush" }) {
+export function ProfileArt({ kind, className }: ArtProps & { kind: PocketProfileName }) {
   const hybrid = kind === "hybrid";
   const floor = hybrid ? 45 : 40;
   const step = hybrid ? `V${floor}` : "";
@@ -145,6 +145,22 @@ export function ProfileArt({ kind, className }: ArtProps & { kind: "hybrid" | "f
       ) : (
         <path d="M33.5 40 H86.5" stroke={ART} strokeWidth={2.6} strokeLinecap="round" strokeOpacity={0.9} />
       )}
+    </svg>
+  );
+}
+
+/**
+ * Test kit in section, front to back: the hybrid cell, then the flush cell, 0.35 mm lower;
+ * the muret between them steps down (in var(--art)).
+ */
+export function TestKitArt({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 64 44" className={className} aria-hidden fill="none">
+      <path d="M2 40 H62" {...stroke} strokeOpacity={0.35} />
+      <path d="M4 40 V12 H5 L11 18 V40 Z" {...stroke} {...material} />
+      <path d="M26 40 V18 L31 12 H32 V17 H33 L38 22 V40 Z" {...stroke} {...material} />
+      <path d="M60 40 V17 H59 L54 22 V40 Z" {...stroke} {...material} />
+      <path d="M32 12 V17" stroke={ART} strokeWidth={2.4} strokeLinecap="round" />
     </svg>
   );
 }

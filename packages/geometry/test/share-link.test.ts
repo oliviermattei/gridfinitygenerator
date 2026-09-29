@@ -22,6 +22,8 @@ describe("share link round trip", () => {
     expect(decodeSettings(encodeSettings(cells))).toEqual(cells);
     const screwed: BaseplateSettings = { ...DEFAULT_SETTINGS, screws: true, screwShank: 3.5, screwHead: 7.2, holeGap: 0.3 };
     expect(decodeSettings(encodeSettings(screwed))).toEqual(screwed);
+    const flush: BaseplateSettings = { ...DEFAULT_SETTINGS, pocketProfile: "flush" };
+    expect(decodeSettings(encodeSettings(flush))).toEqual(flush);
     expect(decodeSettings(encodeSettings(DEFAULT_SETTINGS))).toEqual(DEFAULT_SETTINGS);
   });
 });
@@ -34,6 +36,9 @@ describe("share link content", () => {
     expect(encodeSettings({ ...CELLS, columns: 6, layerHeight: 0.28 })).toBe("v=1&mode=cells&cx=6&lh=0.28");
     expect(encodeSettings({ ...CELLS, marginWidth: 10, marginDepth: 4.5 })).toBe("v=1&mode=cells&mx=10&my=4.5");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, screws: true, screwShank: 4, screwHead: 8, holeGap: 0.3 })).toBe("v=1&sc=1&ss=4&sh=8&tol=0.3");
+    // The hybrid pocket profile is the v1 default: only the flush one is written.
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, pocketProfile: "flush" })).toBe("v=1&pr=flush");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, pocketProfile: "hybrid" })).toBe("v=1");
     // The diameters and the hole gap are kept when the screws are off: turning them back on finds them again.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, screwShank: 4 })).toBe("v=1&ss=4");
   });
@@ -102,6 +107,8 @@ describe("frozen v1 links", () => {
       marginWidth: 12.5,
       marginDepth: 30,
       alignment: "tr",
+      // `pr` was in the v1 table from the start; the engine reads it since the flush profile (#12).
+      pocketProfile: "flush",
       screws: true,
       screwShank: 4,
       screwHead: 8,
@@ -155,6 +162,7 @@ describe("reading any link", () => {
   it("takes the default for a value it cannot read, and accepts a decimal comma", () => {
     expect(decodeSettings("v=1&cx=abc&cy=&lh=0,28")).toEqual({ ...DEFAULT_SETTINGS, layerHeight: 0.28 });
     expect(readShareLink("v=1&mode=shelf&al=middle&sc=maybe")).toMatchObject({ mode: "drawer", al: "c", sc: false });
+    expect(decodeSettings("v=1&pr=rebuilt")).toEqual(DEFAULT_SETTINGS);
     // Plain decimals only: no hexadecimal, exponent or Infinity.
     expect(decodeSettings("v=1&cx=0x10&cy=1e1&lw=Infinity")).toEqual(DEFAULT_SETTINGS);
   });

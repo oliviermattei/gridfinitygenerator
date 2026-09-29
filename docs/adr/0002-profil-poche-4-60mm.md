@@ -10,3 +10,12 @@ La poche reprend le profil Gridfinity 0,7 / 1,8 / 2,15 mm et le jeu horizontal d
 ## Consequences
 
 Le profil hybride est le profil par défaut, mais le profil de poche est une donnée du moteur, pas une valeur codée en dur. On peut donc proposer d'autres profils en option (par exemple le profil ras d'extrabold, sans muret) pour comparer à l'impression, et plus tard d'autres systèmes de grille.
+
+## Mise en œuvre du profil ras (#12)
+
+- Le profil ras est la seconde donnée du moteur (`FLUSH_PROFILE`) : 45° 0,7 / vertical 1,8 / 45° jusqu'au plat de 0,4 mm, 4,25 mm de haut. Ses ouvertures de poche retrouvent celles de l'export extrabold (36,32 / 37,70 / 41,18 mm, recherche C.2). Il se choisit par le réglage `pocketProfile`, clé de lien `pr=flush` (déjà dans la table v1).
+- Le kit de test met les deux profils dans une même baseplate 1 × 2 (hybride à l'avant, ras à l'arrière). Chaque cellule garde sa propre hauteur, sans raccord en pente : le muret commun a une marche verticale de 0,35 mm exactement sur la ligne entre les cellules. Un bac ne dépasse jamais sa cellule (dessus du pied 41,5 mm), donc il ne touche pas la marche, et la cellule la plus haute se reconnaît à l'œil après impression.
+- Le kit passe par la voie booléenne (une grille 1 × N y passe déjà). Les briques de cellule n'acceptent qu'un seul profil par grille.
+- Avec le profil ras, la marge garde sa règle (2,00 mm arrondis à la couche, sous le cadre de 4,25 mm) et les vis gardent la leur, avec une assise sous la pente supérieure du ras (ADR 0006).
+- Le nom d'un fichier au profil ras finit par `-flush` (`baseplate-9x6-399x279mm-flush.3mf`), pour distinguer deux fichiers à comparer. Le kit se nomme `baseplate-test-kit-hybrid-flush-42x84mm.3mf` et ne sort qu'en 3MF.
+- Le kit ne prend des réglages que ceux d'impression : son 3MF porte donc le lien de la page du générateur, sans réglages, et non un lien de partage. Aucune clé de lien ne le régénère : il suffit de recliquer sur son bouton.

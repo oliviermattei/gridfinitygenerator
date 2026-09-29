@@ -1,15 +1,15 @@
 "use client";
 
 import { Collapsible } from "@base-ui/react/collapsible";
-import { BASEPLATE_SETTINGS, type BaseplateSettings, type SizeMode } from "@repo/geometry";
+import { BASEPLATE_SETTINGS, type BaseplateSettings, type PocketProfileName, type SizeMode } from "@repo/geometry";
 import { ChoiceGroup, NumberStepper, Segmented, SliderField, ToggleSwitch, focusRing } from "@repo/ui";
-import { ChevronDown, TriangleAlert } from "lucide-react";
+import { ChevronDown, Download, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import { fine, footprint as footprintOf, lengths } from "@/lib/format";
 import { strings as t } from "@/lib/strings";
 import { AlignmentPad } from "./alignment-pad";
-import { AdvancedIcon, AlignIcon, ProfileArt, ProfileIcon, ScrewArt, ScrewIcon, SizeIcon } from "./illustrations";
+import { AdvancedIcon, AlignIcon, ProfileArt, ProfileIcon, ScrewArt, ScrewIcon, SizeIcon, TestKitArt } from "./illustrations";
 
 /**
  * Families of settings in the panel. The advanced family gets its other settings with #13;
@@ -88,10 +88,25 @@ export interface FamiliesProps {
   /** The only open family (exclusive accordion), or null when all are closed. */
   open: Family | null;
   onOpenChange: (family: Family | null) => void;
+  /** Downloads the test kit, one cell of each pocket profile. */
+  onDownloadTestKit: () => void;
+  /** Whether the test kit is being prepared. */
+  exportingTestKit: boolean;
+  /** Whether a download is being prepared: every download waits for it. */
+  downloadBusy: boolean;
 }
 
 /** Families of settings as an exclusive accordion: opening one closes the others. */
-export function Families({ settings, onSettingsChange, summary, open, onOpenChange }: FamiliesProps) {
+export function Families({
+  settings,
+  onSettingsChange,
+  summary,
+  open,
+  onOpenChange,
+  onDownloadTestKit,
+  exportingTestKit,
+  downloadBusy,
+}: FamiliesProps) {
   const bind = (family: Family) => ({
     open: open === family,
     onOpenChange: (isOpen: boolean) => onOpenChange(isOpen ? family : null),
@@ -121,13 +136,12 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
         {...bind("profile")}
         icon={<ProfileIcon className="size-[18px]" />}
         title={t.pocketProfile}
-        summary={t.hybrid}
+        summary={settings.pocketProfile === "flush" ? t.flush : t.hybrid}
       >
-        {/* The flush profile arrives with #12: shown, not selectable yet. */}
-        <ChoiceGroup
+        <ChoiceGroup<PocketProfileName>
           label={t.pocketProfile}
-          value="hybrid"
-          onChange={() => {}}
+          value={settings.pocketProfile}
+          onChange={(pocketProfile) => onSettingsChange({ pocketProfile })}
           options={[
             {
               value: "hybrid",
@@ -139,13 +153,12 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
             {
               value: "flush",
               label: t.flush,
-              badge: t.soon,
               description: t.flushDescription,
               art: <ProfileArt kind="flush" className="h-auto w-full max-w-[128px]" />,
-              disabled: true,
             },
           ]}
         />
+        <TestKit onDownload={onDownloadTestKit} exporting={exportingTestKit} disabled={downloadBusy} />
       </FamilyItem>
       <FamilyItem
         {...bind("screws")}
@@ -203,6 +216,33 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
         <p className="mt-2 text-[12px] leading-snug text-muted">{t.drawerGapHint}</p>
         <p className="mt-1 text-[12px] leading-snug text-muted">{t.holeGapHint}</p>
       </FamilyItem>
+    </div>
+  );
+}
+
+/**
+ * The test kit, under the two profiles it compares: a 1 × 2 baseplate with one cell of
+ * each, to print before a large baseplate. Always a single 3MF.
+ */
+function TestKit({ onDownload, exporting, disabled }: { onDownload: () => void; exporting: boolean; disabled: boolean }) {
+  return (
+    <div className="mt-3 flex items-start gap-3 rounded-card border border-line bg-surface p-3">
+      <span className="grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-sunken text-muted [--art:var(--accent)]">
+        <TestKitArt className="h-9 w-12" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13.5px] font-semibold">{t.testKit}</p>
+        <p className="mt-0.5 text-[12px] leading-snug text-muted">{t.testKitHint}</p>
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={disabled}
+          className={`mt-2.5 flex h-10 items-center gap-2 rounded-ctl border border-line-strong bg-surface px-3 text-[13px] font-semibold transition-colors hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+        >
+          <Download className="size-4 shrink-0" aria-hidden />
+          {exporting ? t.preparingTestKit : t.downloadTestKit}
+        </button>
+      </div>
     </div>
   );
 }

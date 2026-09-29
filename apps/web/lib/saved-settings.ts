@@ -89,6 +89,12 @@ export function shareLinkOf(settings: BaseplateSettings): string {
   return `${origin}${pathname}?${encodeSettings(settings)}`;
 }
 
+/** The page of the generator, without settings: the link the test kit carries. */
+export function generatorLink(): string {
+  const { origin, pathname } = window.location;
+  return `${origin}${pathname}`;
+}
+
 /**
  * The settings after a reset: the defaults of the baseplate. Layer height and line width
  * are kept: they belong to the share link, but they describe the printer, like the

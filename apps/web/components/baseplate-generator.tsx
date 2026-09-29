@@ -6,10 +6,10 @@ import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
-import type { ExportFormat } from "@/lib/engine/protocol";
-import { MEDIA_TYPES, exportFileName } from "@/lib/export-file";
+import type { ExportFormat, ExportPiece } from "@/lib/engine/protocol";
+import { MEDIA_TYPES } from "@/lib/export-file";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
-import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
+import { generatorLink, resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
 import { strings as t } from "@/lib/strings";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { DownloadButton } from "./download-button";
@@ -29,6 +29,12 @@ const PANEL = { top: 72, edge: 16, width: 380 };
 const MOBILE_TOP_BAR = 64;
 /** Desktop statistics frame, in CSS pixels: under the gear menu, on the right edge. */
 const STATS = { top: PANEL.top, edge: PANEL.edge, width: 272 };
+
+/** A download being prepared: every download waits for it. */
+interface Exporting {
+  piece: ExportPiece;
+  format: ExportFormat;
+}
 
 /** The baseplate on screen, with the quality and the settings it was computed for. */
 interface OnScreen {
@@ -70,7 +76,7 @@ export function BaseplateGenerator() {
   const [resetOpen, setResetOpen] = useState(false);
   const [shown, setShown] = useState<OnScreen | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [exporting, setExporting] = useState<Exporting | null>(null);
   const [openFamily, setOpenFamily] = useState<Family | null>("size");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [recenter, setRecenter] = useState(0);
@@ -140,14 +146,20 @@ export function BaseplateGenerator() {
 
   const actions: TopBarActions = { onShare: share, onReset: () => setResetOpen(true) };
 
-  async function exportBaseplate(format: ExportFormat) {
+  /**
+   * Downloads the baseplate of the settings, or the test kit (always a single 3MF). The 3MF
+   * carries the link that generates it again: the share link of the settings, or the page
+   * of the generator for the test kit, which only takes the print settings.
+   */
+  async function exportPiece(piece: ExportPiece, format: ExportFormat) {
     const client = engine.current;
     if (!client) return;
-    setExporting(format);
+    setExporting({ piece, format });
     setError(null);
     try {
-      const { bytes, baseplate: exported } = await client.exportFile(settings, format, shareLinkOf(settings));
-      download(bytes as Uint8Array<ArrayBuffer>, exportFileName(exported, format), MEDIA_TYPES[format]);
+      const link = piece === "test-kit" ? generatorLink() : shareLinkOf(settings);
+      const { bytes, name } = await client.exportFile(piece, settings, format, link);
+      download(bytes as Uint8Array<ArrayBuffer>, `${name}.${format}`, MEDIA_TYPES[format]);
     } catch (reason) {
       console.error(reason);
       setError(t.exportFailed);
@@ -166,6 +178,16 @@ export function BaseplateGenerator() {
         left: 0,
       };
 
+  /** The download of the baseplate: in the panel on desktop, in the dock (compact) on mobile. */
+  const downloadButton = (compact: boolean) => (
+    <DownloadButton
+      onDownload={(format) => void exportPiece("baseplate", format)}
+      exporting={exporting?.piece === "baseplate" ? exporting.format : null}
+      disabled={exporting !== null}
+      compact={compact}
+    />
+  );
+
   const families = (
     <Families
       settings={settings}
@@ -173,6 +195,9 @@ export function BaseplateGenerator() {
       summary={baseplate}
       open={openFamily}
       onOpenChange={setOpenFamily}
+      onDownloadTestKit={() => void exportPiece("test-kit", "3mf")}
+      exportingTestKit={exporting?.piece === "test-kit"}
+      downloadBusy={exporting !== null}
     />
   );
 
@@ -223,7 +248,7 @@ export function BaseplateGenerator() {
         <Readout summary={baseplate} live />
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-2.5 pb-3">{families}</div>
         <div className="border-t border-line p-3.5">
-          <DownloadButton onDownload={exportBaseplate} exporting={exporting} />
+          {downloadButton(false)}
         </div>
       </aside>
 
@@ -244,7 +269,7 @@ export function BaseplateGenerator() {
         stats={renderStats("mb-2 rounded-2xl bg-sunken")}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        download={<DownloadButton onDownload={exportBaseplate} exporting={exporting} compact />}
+        download={downloadButton(true)}
         dockRef={setDock}
         sheetRef={setSheet}
       >

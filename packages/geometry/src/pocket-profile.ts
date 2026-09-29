@@ -27,3 +27,27 @@ export const HYBRID_PROFILE: PocketProfile = {
     [4.6, 0.4],
   ],
 };
+
+/**
+ * Flush profile, extrabold's (docs/research/gridfinity-baseplate.md, C.2), bottom to top:
+ * 45° 0.7, vertical 1.8, then 45° up to the 0.4 mm flat, without the vertical step. 4.25 mm
+ * high: a seated bin stands on the bottom of the drawer, with a little play (ADR 0002).
+ */
+export const FLUSH_PROFILE: PocketProfile = {
+  height: 4.25,
+  topRadius: 4,
+  points: [
+    [0, 2.85],
+    [0.7, 2.15],
+    [2.5, 2.15],
+    [4.25, 0.4],
+  ],
+};
+
+/** Name of a pocket profile in the settings and in the share link (`pr`). */
+export type PocketProfileName = "hybrid" | "flush";
+
+export const POCKET_PROFILES: Record<PocketProfileName, PocketProfile> = {
+  hybrid: HYBRID_PROFILE,
+  flush: FLUSH_PROFILE,
+};

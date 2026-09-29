@@ -14,12 +14,13 @@ import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect,
  * Kinds of cells: the inner cell, the edge cells of a side with a margin (the brick carries
  * its piece of margin), and the four corners (rounded like the outline, with their margin).
  * A corner is only a corner on both axes, so every axis needs at least two cells; single
- * rows and columns go through the boolean fallback. With screws, a kind of cell is also told
- * apart by its corners that hold a screw: the brick carries a quarter of each of their holes,
- * whose circles have a vertex on the seams, so that neighbouring quarters weld.
+ * rows and columns go through the boolean fallback, and so does a grid of mixed pocket
+ * profiles (the test kit). With screws, a kind of cell is also told apart by its corners
+ * that hold a screw: the brick carries a quarter of each of their holes, whose circles have
+ * a vertex on the seams, so that neighbouring quarters weld.
  */
-export function canAssembleWithBricks({ columns, rows }: GridFrame): boolean {
-  return columns >= 2 && rows >= 2;
+export function canAssembleWithBricks({ columns, rows, lowerCells }: GridFrame): boolean {
+  return columns >= 2 && rows >= 2 && lowerCells.length === 0;
 }
 
 /**
@@ -29,7 +30,9 @@ export function canAssembleWithBricks({ columns, rows }: GridFrame): boolean {
  */
 export function assembleWithBricks(wasm: ManifoldToplevel, frame: GridFrame, checked: boolean): TriangleMesh {
   if (!canAssembleWithBricks(frame)) {
-    throw new RangeError(`Cell bricks need at least 2 × 2 cells, not ${frame.columns} × ${frame.rows}`);
+    throw new RangeError(
+      `Cell bricks need at least 2 × 2 cells of a single pocket profile, not ${frame.columns} × ${frame.rows}`,
+    );
   }
   const mesh = joinBricks(cellBricks(wasm, frame), frame);
   if (checked) assertManifold(wasm, mesh);

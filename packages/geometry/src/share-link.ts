@@ -89,6 +89,7 @@ const LINK_KEYS = {
   marginWidth: "mx",
   marginDepth: "my",
   alignment: "al",
+  pocketProfile: "pr",
   screws: "sc",
   screwShank: "ss",
   screwHead: "sh",

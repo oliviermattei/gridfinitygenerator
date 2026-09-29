@@ -3,6 +3,7 @@
 export {
   STANDARD_CELL_SIZE_MM,
   generateBaseplate,
+  generateTestKit,
   loadEngine,
   type AssemblyStrategy,
   type Baseplate,
@@ -23,6 +24,7 @@ export {
   type ChoiceSetting,
   type FlagSetting,
   type NumericSetting,
+  type PocketProfileName,
   type SizeMode,
 } from "./settings";
 export {

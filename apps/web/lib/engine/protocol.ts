@@ -6,16 +6,26 @@ export type BaseplateSummary = Omit<Baseplate, "mesh">;
 /** File formats of the download: 3MF by default, STL for the slicers that cannot read it. */
 export type ExportFormat = "3mf" | "stl";
 
+/**
+ * What a download holds: the baseplate of the settings, or the test kit (a 1 × 2 baseplate
+ * with one cell of each pocket profile, which takes the print settings only).
+ */
+export type ExportPiece = "baseplate" | "test-kit";
+
 /** Requests from the page to the engine worker; each one gets a response with its id. */
 export type EngineRequest =
   | { id: number; type: "generate"; settings: BaseplateSettings; quality: Quality }
   | {
       id: number;
       type: "export";
+      piece: ExportPiece;
       settings: BaseplateSettings;
       format: ExportFormat;
-      /** Absolute share link of the settings, written into the 3MF. */
-      shareLink: string;
+      /**
+       * Absolute link written into the 3MF to generate the piece again: the share link of
+       * the settings for a baseplate, the generator's page for the test kit.
+       */
+      link: string;
     };
 
 /** Loads the WASM ahead of the first request; it gets no response. */
@@ -31,6 +41,8 @@ export type EngineResponse =
       type: "export";
       /** The file, in the requested format. */
       bytes: Uint8Array;
+      /** Name of the file without its extension, also the name of the object in a 3MF. */
+      name: string;
       baseplate: BaseplateSummary;
       /** Triangles of the exported mesh (final quality). */
       triangles: number;

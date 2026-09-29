@@ -30,6 +30,14 @@ _Avoid_: arête, nervure, lip
 La partie profilée sous un bac, qui s'emboîte dans une poche.
 _Avoid_: base, socle, foot
 
+**Profil de poche**:
+La forme de la paroi d'une poche, du fond de la baseplate au plat du muret. Deux profils : **hybride** (par défaut, 4,60 mm, avec la marche verticale de 0,35 mm qui fait porter le bac par ses pentes, ADR 0002) et **ras** (4,25 mm, celui d'extrabold, sans cette marche : le bac repose sur le fond du tiroir).
+_Avoid_: profil de base, socket profile, flush (sauf dans le code)
+
+**Kit de test**:
+Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arrière le profil ras, à imprimer pour essayer ses bacs dans chacun avant une grande baseplate. Chaque cellule garde sa hauteur : le muret entre les deux descend d'une marche de 0,35 mm sur la ligne qui les sépare.
+_Avoid_: échantillon, sample, test print
+
 **Assise**:
 Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le bac ; un bac bien assis n'a aucun jeu latéral.
 _Avoid_: appui, contact

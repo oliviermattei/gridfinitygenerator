@@ -133,11 +133,15 @@ export const strings = {
   moreRows: "Une rangée de plus",
   pocketProfile: "Profil de poche",
   hybrid: "Hybride",
-  hybridDescription: "Muret de 0,35 mm : le bac est bien assis sur ses pentes, sans jeu.",
+  hybridDescription: "4,6 mm. Marche de 0,35 mm sous les pentes : le bac est bien assis, sans jeu.",
   flush: "Ras",
-  flushDescription: "Sans le muret de 0,35 mm : baseplate plus fine.",
+  flushDescription: "4,25 mm, sans marche : le bac repose sur le fond du tiroir, avec un léger jeu.",
   recommended: "Recommandé",
-  soon: "Bientôt",
+  testKit: "Kit de test",
+  testKitHint:
+    "Une baseplate 1 × 2 de 42 × 84 mm : une cellule hybride à l'avant, une cellule ras à l'arrière, 0,35 mm plus basse. Essayez-y vos bacs avant d'imprimer une grande baseplate.",
+  downloadTestKit: "Télécharger le kit de test",
+  preparingTestKit: "Préparation du kit…",
   // Download
   download: { "3mf": "Télécharger le 3MF", stl: "Télécharger le STL" },
   preparing: { "3mf": "Préparation du 3MF…", stl: "Préparation du STL…" },

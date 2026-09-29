@@ -384,6 +384,7 @@ describe("settings", () => {
       marginWidth: 0,
       marginDepth: 0,
       alignment: "c",
+      pocketProfile: "hybrid",
       screws: false,
       screwShank: 3,
       screwHead: 6,
@@ -402,6 +403,7 @@ describe("settings", () => {
     expect(BASEPLATE_SETTINGS.lineWidth).toMatchObject({ min: 0.1, max: 1.2, default: 0.4 });
     expect(BASEPLATE_SETTINGS.columns).toMatchObject({ min: 1, max: 24, default: 4 });
     expect(BASEPLATE_SETTINGS.rows).toMatchObject({ min: 1, max: 24, default: 3 });
+    expect(BASEPLATE_SETTINGS.pocketProfile).toMatchObject({ options: ["hybrid", "flush"], default: "hybrid" });
     expect(BASEPLATE_SETTINGS.screws).toMatchObject({ default: false });
     expect(BASEPLATE_SETTINGS.screwShank).toMatchObject({ min: 2, max: 6, default: 3 });
     expect(BASEPLATE_SETTINGS.screwHead).toMatchObject({ min: 2, max: 8, default: 6 });
@@ -420,6 +422,7 @@ describe("settings", () => {
         marginWidth: 600,
         marginDepth: -2,
         alignment: "tr",
+        pocketProfile: "flush",
         screws: true,
         screwShank: 7,
         screwHead: 1,
@@ -437,6 +440,7 @@ describe("settings", () => {
       marginWidth: 500,
       marginDepth: 0,
       alignment: "tr",
+      pocketProfile: "flush",
       screws: true,
       screwShank: 6,
       // A screw head narrower than its shank would not hold: raised to the shank.
@@ -448,8 +452,8 @@ describe("settings", () => {
     expect(clampSettings({ layerHeight: 0.5, lineWidth: 0 })).toEqual({ ...DEFAULT_SETTINGS, layerHeight: 0.28, lineWidth: 0.1 });
     expect(clampSettings({ layerHeight: Number.NaN, lineWidth: 0.45 })).toMatchObject({ layerHeight: 0.2, lineWidth: 0.45 });
     // A choice that is not one of its options takes its default.
-    const unknown = { sizeMode: "shelf", alignment: "middle", screws: "yes" } as unknown as Partial<BaseplateSettings>;
-    expect(clampSettings(unknown)).toMatchObject({ sizeMode: "drawer", alignment: "c", screws: false });
+    const unknown = { sizeMode: "shelf", alignment: "middle", pocketProfile: "rebuilt", screws: "yes" } as unknown as Partial<BaseplateSettings>;
+    expect(clampSettings(unknown)).toMatchObject({ sizeMode: "drawer", alignment: "c", pocketProfile: "hybrid", screws: false });
     expect(clampSettings({ screwShank: 4, screwHead: 3.5 })).toMatchObject({ screwShank: 4, screwHead: 4 });
   });
 

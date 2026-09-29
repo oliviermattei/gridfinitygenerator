@@ -2,7 +2,7 @@ import { assembleWithBooleans } from "./boolean-assembly";
 import { assembleWithBricks, canAssembleWithBricks } from "./brick-assembly";
 import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold } from "./manifold";
-import { HYBRID_PROFILE } from "./pocket-profile";
+import { FLUSH_PROFILE, POCKET_PROFILES } from "./pocket-profile";
 import { layerCount } from "./print";
 import { screwHolesOf, screwPositions } from "./screws";
 import { clampSettings, type BaseplateSettings } from "./settings";
@@ -64,37 +64,71 @@ export interface Baseplate {
 }
 
 /**
- * Generates a baseplate: a grid of open pockets with the hybrid profile (ADR 0002), sized
- * for a drawer or by its number of cells, and its margin (a frame of crossbars for now, see
- * margin.ts), with a countersunk screw hole on each inner intersection of the grid when the
- * screws are on (screws.ts, ADR 0006). The settings are first brought into their ranges,
- * and a missing one takes its default (`clampSettings`): without settings, the baseplate of
- * the default drawer. The mesh is always closed; the final mesh, the one that gets exported, is also checked by manifold
- * (`NoError`) before it is returned.
+ * Generates a baseplate: a grid of open pockets with the profile of the settings (hybrid by
+ * default, ADR 0002, or flush), sized for a drawer or by its number of cells, and its margin
+ * (a frame of crossbars for now, see margin.ts), with a countersunk screw hole on each inner
+ * intersection of the grid when the screws are on (screws.ts, ADR 0006). The settings are
+ * first brought into their ranges, and a missing one takes its default (`clampSettings`):
+ * without settings, the baseplate of the default drawer. The mesh is always closed; the
+ * final mesh, the one that gets exported, is also checked by manifold (`NoError`) before it
+ * is returned.
  */
 export async function generateBaseplate(
   input: Partial<BaseplateSettings>,
   quality: Quality,
   options: GenerateOptions = {},
 ): Promise<Baseplate> {
+  return buildBaseplate(clampSettings(input), quality, [], options);
+}
+
+/**
+ * Generates the test kit: a 1 × 2 baseplate whose front cell has the hybrid profile and
+ * whose back cell has the flush one, to try how bins seat in each before printing a large
+ * baseplate. It is as high as its hybrid cell (4.60 mm); the flush cell is 0.35 mm lower,
+ * and the muret between them steps down on the line between the cells. Of the settings, it
+ * only takes those that are not about the size, the alignment, the pocket profile or the
+ * screws (a 1 × 2 grid has no inner intersection): the print settings, today.
+ */
+export async function generateTestKit(input: Partial<BaseplateSettings>, quality: Quality): Promise<Baseplate> {
+  const settings = clampSettings({
+    ...input,
+    sizeMode: "cells",
+    columns: 1,
+    rows: 2,
+    marginWidth: 0,
+    marginDepth: 0,
+    pocketProfile: "hybrid",
+    screws: false,
+  });
+  return buildBaseplate(settings, quality, [{ i: 0, j: 1, profile: FLUSH_PROFILE }]);
+}
+
+/** Builds the baseplate of settings brought into their ranges, some cells cut lower. */
+async function buildBaseplate(
+  settings: BaseplateSettings,
+  quality: Quality,
+  lowerCells: GridFrame["lowerCells"],
+  options: GenerateOptions = {},
+): Promise<Baseplate> {
   const wasm = await loadManifold();
-  const settings = clampSettings(input);
   const cells = layoutOf(settings, STANDARD_CELL_SIZE_MM);
   const { margins } = cells;
   const width = cells.columns * cells.cellSize + margins.left + margins.right;
   const depth = cells.rows * cells.cellSize + margins.back + margins.front;
+  const profile = POCKET_PROFILES[settings.pocketProfile];
   const frame: GridFrame = {
     columns: cells.columns,
     rows: cells.rows,
     cellSize: cells.cellSize,
-    profile: HYBRID_PROFILE,
+    profile,
+    lowerCells,
     margins,
     width,
     depth,
     outerRadius: Math.min(OUTER_RADIUS_MM, width / 2, depth / 2),
     segmentsPerQuarter: SEGMENTS_PER_QUARTER[quality],
     segmentsPerHole: SEGMENTS_PER_HOLE[quality],
-    screws: screwHolesOf(settings, HYBRID_PROFILE),
+    screws: screwHolesOf(settings, profile),
     layerHeight: settings.layerHeight,
     lineWidth: settings.lineWidth,
   };

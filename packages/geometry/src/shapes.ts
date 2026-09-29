@@ -14,7 +14,14 @@ export interface GridFrame {
   columns: number;
   rows: number;
   cellSize: number;
+  /** Pocket profile of the cells; the frame is as high as it. */
   profile: PocketProfile;
+  /**
+   * Cells cut to a lower profile than `profile` (the test kit): each one is lowered to the
+   * height of its own profile, down to the line between it and its neighbours. Only the
+   * boolean assembly builds them; empty for a baseplate.
+   */
+  lowerCells: readonly LowerCell[];
   margins: Margins;
   /** Size of the outline, grid and margins included. */
   width: number;
@@ -29,6 +36,13 @@ export interface GridFrame {
   /** Print settings the thicknesses and widths chosen by the generator follow. */
   layerHeight: number;
   lineWidth: number;
+}
+
+/** A cell (i along X, j along Y) cut to a lower pocket profile than the rest of the grid. */
+export interface LowerCell {
+  i: number;
+  j: number;
+  profile: PocketProfile;
 }
 
 /** Overshoot of cutting tools below and above the frame, to avoid coplanar faces. */
@@ -85,14 +99,22 @@ export function roundedRect(width: number, depth: number, radius: number, segmen
   return points;
 }
 
-/** Solid removed for one cell, centred on the origin: a loft of the profile's layers. */
-export function pocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame): Manifold {
-  const { profile, cellSize, segmentsPerQuarter } = frame;
-  const first = profile.points[0];
+/**
+ * Solid removed for one cell, centred on the origin: a loft of the layers of its profile,
+ * the frame's own by default. Below the frame, the first segment of the profile goes on
+ * straight (a vertical step stays vertical, a slope widens), so that the bottom of the
+ * frame cuts the tool across a face, not along a ring of its edges; above the frame, the
+ * tool goes up vertically from the top flat.
+ */
+export function pocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame, profile = frame.profile): Manifold {
+  const { cellSize, segmentsPerQuarter } = frame;
+  const [first, second] = profile.points;
   const last = profile.points[profile.points.length - 1];
-  if (!first || !last) throw new Error("A pocket profile needs at least one point");
+  if (!first || !second || !last) throw new Error("A pocket profile needs at least two points");
+  if (second[0] <= first[0]) throw new Error("A pocket profile rises from its first point to its second");
+  const slope = (second[1] - first[1]) / (second[0] - first[0]);
   const layers = [
-    [first[0] - TOOL_OVERSHOOT_MM, first[1]] as const,
+    [first[0] - TOOL_OVERSHOOT_MM, first[1] - slope * TOOL_OVERSHOOT_MM] as const,
     ...profile.points.slice(1),
     [last[0] + TOOL_OVERSHOOT_MM, last[1]] as const,
   ].map(([z, inset]) => ({

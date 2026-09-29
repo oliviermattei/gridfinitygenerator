@@ -1,19 +1,20 @@
-import type { BaseplateSummary, ExportFormat } from "./engine/protocol";
+import type { BaseplateSettings } from "@repo/geometry";
+import type { BaseplateSummary, ExportFormat, ExportPiece } from "./engine/protocol";
 
 /** Media type of each download format. */
 export const MEDIA_TYPES: Record<ExportFormat, string> = { "3mf": "model/3mf", stl: "model/stl" };
 
 /**
- * `baseplate-{nx}x{ny}-{W}x{D}mm`, the naming of the spec: the name of the downloaded file
- * without its extension, and the name of the object inside a 3MF.
+ * Name of a downloaded file without its extension, which is also the name of the object
+ * inside a 3MF:
+ * - a baseplate, `baseplate-{nx}x{ny}-{W}x{D}mm` (the naming of the spec), with `-flush`
+ *   when its pockets have the flush profile, so that two files to compare tell apart;
+ * - the test kit, `baseplate-test-kit-hybrid-flush-{W}x{D}mm`: its profiles, front to back.
  */
-export function exportName({ layout, stats }: BaseplateSummary): string {
+export function exportName(piece: ExportPiece, { layout, stats }: BaseplateSummary, settings: BaseplateSettings): string {
   const mm = (value: number) => String(Number(value.toFixed(1)));
-  const { width, depth } = stats.dimensions;
-  return `baseplate-${layout.columns}x${layout.rows}-${mm(width)}x${mm(depth)}mm`;
-}
-
-/** Name of the downloaded file: `baseplate-{nx}x{ny}-{W}x{D}mm.{ext}`. */
-export function exportFileName(summary: BaseplateSummary, format: ExportFormat): string {
-  return `${exportName(summary)}.${format}`;
+  const size = `${mm(stats.dimensions.width)}x${mm(stats.dimensions.depth)}mm`;
+  if (piece === "test-kit") return `baseplate-test-kit-hybrid-flush-${size}`;
+  const profile = settings.pocketProfile === "flush" ? "-flush" : "";
+  return `baseplate-${layout.columns}x${layout.rows}-${size}${profile}`;
 }

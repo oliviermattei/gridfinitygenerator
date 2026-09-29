@@ -8,8 +8,10 @@ import { strings as t } from "@/lib/strings";
 
 export interface DownloadButtonProps {
   onDownload: (format: ExportFormat) => void;
-  /** Format being prepared, if any: every download waits for it. */
+  /** Format of the baseplate being prepared, if any. */
   exporting: ExportFormat | null;
+  /** Whether a download is being prepared (the baseplate or the test kit): every download waits for it. */
+  disabled: boolean;
   /** Dock variant: the format alone as visible text. */
   compact?: boolean;
 }
@@ -23,7 +25,7 @@ const FORMATS: readonly { format: ExportFormat; description: string }[] = [
  * Download of the baseplate: the main button downloads a 3MF, the cheapest path to the
  * slicer (named object, share link inside); its menu also offers the STL.
  */
-export function DownloadButton({ onDownload, exporting, compact = false }: DownloadButtonProps) {
+export function DownloadButton({ onDownload, exporting, disabled, compact = false }: DownloadButtonProps) {
   const label = exporting ? t.preparing[exporting] : t.download["3mf"];
   const accent = `h-12 bg-accent text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-70 ${focusRing}`;
   return (
@@ -31,7 +33,7 @@ export function DownloadButton({ onDownload, exporting, compact = false }: Downl
       <button
         type="button"
         onClick={() => onDownload("3mf")}
-        disabled={exporting !== null}
+        disabled={disabled}
         aria-label={compact ? label : undefined}
         className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-l-ctl px-3 text-[15px] font-semibold ${accent}`}
       >
@@ -42,7 +44,7 @@ export function DownloadButton({ onDownload, exporting, compact = false }: Downl
         <Menu.Trigger
           aria-label={t.otherFormats}
           title={t.otherFormats}
-          disabled={exporting !== null}
+          disabled={disabled}
           className={`grid w-10 shrink-0 place-items-center rounded-r-ctl border-l border-accent-ink/25 ${accent}`}
         >
           <ChevronDown className="size-4" aria-hidden />

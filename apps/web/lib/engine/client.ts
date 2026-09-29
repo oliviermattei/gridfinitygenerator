@@ -1,5 +1,5 @@
 import type { Baseplate, BaseplateSettings, Quality } from "@repo/geometry";
-import type { BaseplateSummary, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat } from "./protocol";
+import type { BaseplateSummary, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat, ExportPiece } from "./protocol";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
@@ -19,14 +19,15 @@ export interface EngineClient {
    */
   show(settings: BaseplateSettings): void;
   /**
-   * The file of `settings` in `format`, computed in final quality. A 3MF carries
-   * `shareLink`, the absolute share link of the settings.
+   * The file of `piece` for `settings` in `format`, computed in final quality, and its name
+   * without extension. A 3MF carries `link`, the absolute link that generates it again.
    */
   exportFile(
+    piece: ExportPiece,
     settings: BaseplateSettings,
     format: ExportFormat,
-    shareLink: string,
-  ): Promise<{ bytes: Uint8Array; baseplate: BaseplateSummary }>;
+    link: string,
+  ): Promise<{ bytes: Uint8Array; name: string; baseplate: BaseplateSummary }>;
   dispose(): void;
 }
 
@@ -50,7 +51,7 @@ const FINAL_AFTER_STILL_MS = 200;
 export const ENGINE_TIMING_PREFIX = "engine:";
 
 /** What a request computes, as named in its User Timing measure. */
-type RequestLabel = Quality | `export-${ExportFormat}`;
+type RequestLabel = Quality | `export-${ExportFormat}` | `export-test-kit-${ExportFormat}`;
 
 interface Pending {
   resolve: (response: EngineResponse) => void;
@@ -220,10 +221,11 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
       cancelStaleFinal();
       void render();
     },
-    async exportFile(settings, format, shareLink) {
-      const response = await send({ type: "export", settings, format, shareLink }, `export-${format}`).response;
+    async exportFile(piece, settings, format, link) {
+      const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : (`export-${format}` as const);
+      const response = await send({ type: "export", piece, settings, format, link }, label).response;
       if (response.type !== "export") throw new Error(`Unexpected engine response: ${response.type}`);
-      return { bytes: response.bytes, baseplate: response.baseplate };
+      return { bytes: response.bytes, name: response.name, baseplate: response.baseplate };
     },
     dispose() {
       shown = null;
