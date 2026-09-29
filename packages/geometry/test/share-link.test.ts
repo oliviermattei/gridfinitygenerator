@@ -20,6 +20,8 @@ describe("share link round trip", () => {
     expect(decodeSettings(encodeSettings(drawer))).toEqual(drawer);
     const cells: BaseplateSettings = { ...CELLS, columns: 7, rows: 5, marginWidth: 12.5, marginDepth: 30, alignment: "r" };
     expect(decodeSettings(encodeSettings(cells))).toEqual(cells);
+    const screwed: BaseplateSettings = { ...DEFAULT_SETTINGS, screws: true, screwShank: 3.5, screwHead: 7.2, holeGap: 0.3 };
+    expect(decodeSettings(encodeSettings(screwed))).toEqual(screwed);
     expect(decodeSettings(encodeSettings(DEFAULT_SETTINGS))).toEqual(DEFAULT_SETTINGS);
   });
 });
@@ -31,6 +33,9 @@ describe("share link content", () => {
     expect(encodeSettings({ ...DEFAULT_SETTINGS, drawerWidth: 512.5, drawerGap: 2, alignment: "t" })).toBe("v=1&w=512.5&al=t&gap=2");
     expect(encodeSettings({ ...CELLS, columns: 6, layerHeight: 0.28 })).toBe("v=1&mode=cells&cx=6&lh=0.28");
     expect(encodeSettings({ ...CELLS, marginWidth: 10, marginDepth: 4.5 })).toBe("v=1&mode=cells&mx=10&my=4.5");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, screws: true, screwShank: 4, screwHead: 8, holeGap: 0.3 })).toBe("v=1&sc=1&ss=4&sh=8&tol=0.3");
+    // The diameters and the hole gap are kept when the screws are off: turning them back on finds them again.
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, screwShank: 4 })).toBe("v=1&ss=4");
   });
 
   it("writes the settings brought into their ranges", () => {
@@ -97,6 +102,10 @@ describe("frozen v1 links", () => {
       marginWidth: 12.5,
       marginDepth: 30,
       alignment: "tr",
+      screws: true,
+      screwShank: 4,
+      screwHead: 8,
+      holeGap: 0.3,
       layerHeight: 0.28,
       lineWidth: 0.6,
     };
@@ -140,6 +149,7 @@ describe("reading any link", () => {
 
   it("keeps the screw head at least as wide as the shank", () => {
     expect(readShareLink("v=1&ss=5&sh=4")).toMatchObject({ ss: 5, sh: 5 });
+    expect(decodeSettings("v=1&ss=5&sh=4")).toMatchObject({ screwShank: 5, screwHead: 5 });
   });
 
   it("takes the default for a value it cannot read, and accepts a decimal comma", () => {

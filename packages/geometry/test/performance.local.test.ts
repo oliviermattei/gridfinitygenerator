@@ -29,6 +29,9 @@ const DRAWERS: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["20 × 20 + margins 21 × 27", { sizeMode: "cells", columns: 20, rows: 20, marginWidth: 21, marginDepth: 27 }],
   ["drawer 1000 × 1000 (23 × 23, margin)", { drawerWidth: 1000, drawerDepth: 1000 }],
   ["drawer 60 × 1000 (1 × 23, margin, boolean path)", { drawerWidth: 60, drawerDepth: 1000 }],
+  ["default drawer with its 40 screws", { screws: true }],
+  ["20 × 20 with its 361 screws", { sizeMode: "cells", columns: 20, rows: 20, screws: true }],
+  ["drawer 1000 × 1000 with its 484 screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
 ];
 
 describe("spec v1 performance targets (local)", () => {
@@ -63,6 +66,14 @@ describe("cell bricks against the boolean fallback (local)", () => {
     const fast = await medianGenerationMs(cells(10, 10), "final", RUNS);
     const fallback = await medianGenerationMs(cells(10, 10), "final", RUNS, { strategy: "boolean" });
     report.push(`| 10 × 10 final, boolean fallback / bricks | ×${(fallback / fast).toFixed(1)} | ×3 |`);
+    expect(fast * 3).toBeLessThan(fallback);
+  });
+
+  it("stays several times faster than the boolean fallback with screws", async () => {
+    const screwed = { ...cells(10, 10), screws: true };
+    const fast = await medianGenerationMs(screwed, "final", RUNS);
+    const fallback = await medianGenerationMs(screwed, "final", RUNS, { strategy: "boolean" });
+    report.push(`| 10 × 10 with screws final, boolean fallback / bricks | ×${(fallback / fast).toFixed(1)} | ×3 |`);
     expect(fast * 3).toBeLessThan(fallback);
   });
 });

@@ -29,6 +29,13 @@ describe("generation time (wide CI thresholds)", { timeout: 60_000 }, () => {
     expect(await medianGenerationMs({}, "final", 3)).toBeLessThan(3_000);
     expect(await medianGenerationMs(LARGEST_DRAWER, "final", 1)).toBeLessThan(9_000);
   });
+
+  // The final mesh of the cell bricks is checked NoError by the engine itself: a broken seam would throw.
+  it("computes a 20 × 20 with its 361 screws, preview well under a second and final within a few seconds", async () => {
+    const screwed = { ...cells(20, 20), screws: true };
+    expect(await medianGenerationMs(screwed, "preview", 3)).toBeLessThan(500);
+    expect(await medianGenerationMs(screwed, "final", 1)).toBeLessThan(9_000);
+  });
 });
 
 describe("export time (wide CI thresholds)", { timeout: 60_000 }, () => {

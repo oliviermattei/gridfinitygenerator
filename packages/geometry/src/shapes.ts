@@ -4,6 +4,7 @@ import type { TriangleMesh } from "./mesh";
 import type { Margins } from "./layout";
 import type { Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
+import type { ScrewHoles } from "./screws";
 
 /**
  * What an assembly strategy needs to build a baseplate: its grid, its margins and its
@@ -21,6 +22,10 @@ export interface GridFrame {
   /** Radius of the rounded outer corners, already limited to the outline. */
   outerRadius: number;
   segmentsPerQuarter: number;
+  /** Segments of the circle of a hole (spec v1: 16 in preview, 64 in final), a multiple of 4. */
+  segmentsPerHole: number;
+  /** Countersunk screw holes on the inner intersections of the grid, null without screws. */
+  screws: ScrewHoles | null;
   /** Print settings the thicknesses and widths chosen by the generator follow. */
   layerHeight: number;
   lineWidth: number;
@@ -99,7 +104,7 @@ export function pocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame): 
 }
 
 /** Closed mesh through horizontal layers with the same number of CCW points, bottom to top. */
-function loft(layers: { z: number; points: [number, number][] }[]): TriangleMesh {
+export function loft(layers: { z: number; points: [number, number][] }[]): TriangleMesh {
   const n = layers[0]?.points.length ?? 0;
   const positions = new Float32Array(layers.length * n * 3);
   layers.forEach(({ z, points }, layer) =>

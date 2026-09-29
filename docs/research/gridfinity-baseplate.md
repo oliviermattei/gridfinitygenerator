@@ -133,6 +133,7 @@ Remarques :
 - **Hauteur totale** = 4,65 + (aimants ? max(magnetBaseHeight 2,8 ; bottomPadding) : bottomPadding) ; `tray` = plancher plein à 2,8 mm [V `_x`, `Mx`, `_computeBaseplate`]. Puis `topCutoff` est retiré du haut [V `p_(A, E, plateHeight…)`].
 - **Aimants** : trou cylindrique Ø = d + tolérance, profondeur = épaisseur aimant, dans un bloc carré (d+4)² ; centre placé à `42/2 − 2 − (d+4)/2` = **14 mm** du centre de cellule pour d=6 (fonction `Ax`) [V code] → soit 7 mm du bord, contre 8 mm dans la spec. Écart confirmé par mesure sur export (C.3) [V].
 - **Vis** : loft circulaire tige Ø s puis cône vers Ø tête, tête cylindrique sur les 2 derniers mm (`_computeScrewHolePrototype`) [V].
+- **Disposition des vis** (relevé du 2026-09-29, #11) : une vis à chaque **intersection intérieure** de la grille, **aucune sur le bord de la grille ni dans la marge**. Code de v0.5.21 (`chunks/ZtMF-tzs.js`, fonction `be`, 3ᵉ étape) : pour chaque cellule (rangée r, colonne c), la vis est posée au barycentre des centres des cellules (r, c), (r, c+1), (r+1, c) et (r+1, c+1), seulement si les quatre existent ; les intersections sur une ligne de découpe sont retirées si `removeHolesOnSplitLines`. Soit (nx − 1) × (ny − 1) vis : 4 pour une 3 × 3, 1 pour une 2 × 2, aucune pour une grille 1 × N. En type Normal sans aimants, le trou est simplement soustrait du croisement des murets : pas de plot ni de socle, et **aucun jeu** ajouté aux Ø (`screwHolePrototype` ne dépend que de `toggleScrewHoles`, `screwHoleSize`, `screwHeadSize`, `quality`). Fraisure : tige jusqu’à z = h − a, avec a = (max(tête, 2·tige) − tige) / (2·tan 22,5°) ; cône à 45° (90° inclus) jusqu’au Ø tête, puis alésage cylindrique Ø tête jusqu’en haut, qui entaille les pentes des poches autour du croisement. Pour tige 3 / tête 6 et h = 4,65 : cône de z = 1,03 à 2,53 [V code ; l’aperçu 3D n’a pas pu être relu à l’écran].
 - **Skeleton** : prismes trapézoïdaux croisés sous chaque cellule (≠ du `profile_skeleton` de rebuilt) [V code, I géométrie].
 - **CLICKbase** : constantes `zx` (cutoutLength 11, cutoutDepth 1,075, aditionDepth 2,4…), sur la base de `42/4` ; le 5ᵉ anneau du profil est modifié [V].
 
@@ -208,7 +209,7 @@ Remarques :
 | Chanfrein d'entrée | — | +0,8 mm à 45° (l. 52-53) | — |
 | Position | 4,8 mm depuis le bord du dessous (35,6) → 13 mm du centre (8 mm du bord de 42) | `HOLE_DISTANCE_FROM_BOTTOM_EDGE = 4.8` (l. 35), `d_hole_from_side = 8` (l. 32), `hole_pattern()` (`gridfinity-rebuilt-baseplate.scad` l. 250-256) | 14 mm du centre [I, cf. A.4] |
 | Vis (bacs) | M3, Ø 3,0 | `SCREW_HOLE_RADIUS = 3/2` (l. 27) | — |
-| Vis de fixation de la plaque | — | fraisage `+5/2` de rayon, lamage Ø 5,5 × 3 (l. 56-58), `style_hole` 0/1/2 aux positions d'aimant | Fraisage aux intersections de grille, tige 3 / tête 6 |
+| Vis de fixation de la plaque | — | fraisage `+5/2` de rayon, lamage Ø 5,5 × 3 (l. 56-58), `style_hole` 0/1/2 aux positions d'aimant | Fraisage aux intersections **intérieures** de la grille (ni bord ni marge), tige 3 / tête 6, sans jeu (A.4) |
 | « Refined » | — | Ø 5,86, h 1,9 (l. 39-42) | — |
 
 ### B.5 Variantes de baseplate dans gridfinity-rebuilt

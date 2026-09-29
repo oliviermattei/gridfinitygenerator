@@ -2,11 +2,13 @@ import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
 import { MARGIN } from "./margin";
 import { withArena } from "./manifold";
+import { screwPositions, screwTool } from "./screws";
 import { cellCentre, meshOf, pocketTool, roundedRect, type GridFrame } from "./shapes";
 
 /**
  * Grouped boolean assembly (ADR 0004 fallback): the slab of the outline minus every pocket
- * tool and the margin's cut at once. Works for any grid, including single rows and columns.
+ * tool and the margin's cut at once, then minus every screw hole. Works for any grid,
+ * including single rows and columns.
  */
 export function assembleWithBooleans(wasm: ManifoldToplevel, frame: GridFrame): TriangleMesh {
   const { columns, rows, profile, width, depth, outerRadius, segmentsPerQuarter } = frame;
@@ -23,6 +25,15 @@ export function assembleWithBooleans(wasm: ManifoldToplevel, frame: GridFrame): 
         tools.push(own(tool.translate([...cellCentre(i, j, frame), 0])));
     const cut = margin?.solid();
     if (cut) tools.push(cut);
-    return meshOf(own(slab.subtract(own(wasm.Manifold.compose(tools)))));
+    let solid = own(slab.subtract(own(wasm.Manifold.compose(tools))));
+    // The bore of a screw head meets the corners of the pockets around it, so the screw
+    // holes are removed apart; they are far from each other and compose.
+    const positions = screwPositions(frame);
+    if (frame.screws && positions.length > 0) {
+      const screw = screwTool(wasm, own, { ...frame, screws: frame.screws });
+      const screws = positions.map((position) => own(screw.translate([...position, 0])));
+      solid = own(solid.subtract(own(wasm.Manifold.compose(screws))));
+    }
+    return meshOf(solid);
   });
 }

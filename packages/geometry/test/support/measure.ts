@@ -83,6 +83,36 @@ export function pocketOpening(contours: [number, number][][], [cx, cy]: [number,
   return best;
 }
 
+/** A disc seen from above: centre and radius, in millimetres. */
+export interface Disc {
+  x: number;
+  y: number;
+  radius: number;
+}
+
+/**
+ * Area of the part of section `a` that is neither in section `b` nor in any of `discs`,
+ * in mm²: zero when everything `a` has more than `b` lies in the discs. Sections are the
+ * contours of `MeshCheck.sections`.
+ */
+export async function areaOutside(a: [number, number][][], b: [number, number][][], discs: readonly Disc[] = []): Promise<number> {
+  const manifold = await manifoldModule();
+  const owned: { delete(): void }[] = [];
+  const own = <T extends { delete(): void }>(object: T) => {
+    owned.push(object);
+    return object;
+  };
+  try {
+    let rest = own(own(new manifold.CrossSection(a, "EvenOdd")).subtract(own(new manifold.CrossSection(b, "EvenOdd"))));
+    for (const { x, y, radius } of discs) {
+      rest = own(rest.subtract(own(own(manifold.CrossSection.circle(radius, 256)).translate([x, y]))));
+    }
+    return rest.area();
+  } finally {
+    for (const object of owned) object.delete();
+  }
+}
+
 function shoelaceArea(contour: [number, number][]): number {
   let twice = 0;
   contour.forEach(([x, y], i) => {

@@ -2,6 +2,7 @@ import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
 import { MARGIN } from "./margin";
 import { withArena, type Own } from "./manifold";
+import { hasScrew, screwTool } from "./screws";
 import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, type GridFrame } from "./shapes";
 
 /**
@@ -13,7 +14,9 @@ import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect,
  * Kinds of cells: the inner cell, the edge cells of a side with a margin (the brick carries
  * its piece of margin), and the four corners (rounded like the outline, with their margin).
  * A corner is only a corner on both axes, so every axis needs at least two cells; single
- * rows and columns go through the boolean fallback.
+ * rows and columns go through the boolean fallback. With screws, a kind of cell is also told
+ * apart by its corners that hold a screw: the brick carries a quarter of each of their holes,
+ * whose circles have a vertex on the seams, so that neighbouring quarters weld.
  */
 export function canAssembleWithBricks({ columns, rows }: GridFrame): boolean {
   return columns >= 2 && rows >= 2;
@@ -54,8 +57,26 @@ interface Brick extends TriangleMesh {
 /** Side of a cell on each axis: −1 on the first row or column, 1 on the last, 0 inside. */
 type Side = -1 | 0 | 1;
 
-/** Key of a kind of cell in the table of bricks. */
-const kindKey = (sx: Side, sy: Side) => `${sx},${sy}`;
+/** Key of a kind of cell in the table of bricks: its sides, and its corners that hold a screw. */
+const kindKey = (sx: Side, sy: Side, screws: number) => `${sx},${sy},${screws}`;
+
+/** Corners of a cell, as offsets of the intersection of grid lines from the cell index. */
+const CORNERS: readonly (readonly [da: 0 | 1, db: 0 | 1])[] = [
+  [1, 1],
+  [0, 1],
+  [0, 0],
+  [1, 0],
+];
+
+/** Bit set of the corners of cell (i, j) that hold a screw, one bit per entry of CORNERS. */
+function screwCorners(i: number, j: number, frame: GridFrame): number {
+  return CORNERS.reduce((bits, [da, db], corner) => (hasScrew(frame, i + da, j + db) ? bits | (1 << corner) : bits), 0);
+}
+
+/** Key of the brick of cell (i, j). */
+function brickKey(i: number, j: number, frame: GridFrame): string {
+  return kindKey(...kindOf(i, j, frame), screwCorners(i, j, frame));
+}
 
 /**
  * Kind of cell (i, j): its sides on the outline. An edge cell on a side without margin is
@@ -73,7 +94,8 @@ function kindOf(i: number, j: number, frame: GridFrame): [sx: Side, sy: Side] {
  * One brick per kind of cell present in the grid, centred on its cell centre: the inner
  * brick is a cell block minus the pocket tool; the others are the slab of their footprint
  * (cell plus margin, cut by the outline at the corners, less the margin's holes) minus the
- * pocket tool and the margin's solid cut.
+ * pocket tool and the margin's solid cut. Then the quarter of a screw hole is removed at
+ * each corner of the brick that holds a screw.
  */
 function cellBricks(wasm: ManifoldToplevel, frame: GridFrame): Map<string, Brick> {
   const { columns, rows, cellSize, profile } = frame;
@@ -81,31 +103,50 @@ function cellBricks(wasm: ManifoldToplevel, frame: GridFrame): Map<string, Brick
   return withArena((own) => {
     const pocket = pocketTool(wasm, own, frame);
     const margin = MARGIN.prepare(wasm, own, frame);
+    const screw = frame.screws && screwTool(wasm, own, { ...frame, screws: frame.screws });
+    // The corner screws of a brick, far from each other, compose; the bore of a head meets
+    // the corners of the pockets, so they are removed after the pocket.
+    const withScrews = (solid: Manifold, corners: number) => {
+      if (!screw || corners === 0) return solid;
+      const tools = CORNERS.filter((_, corner) => corners & (1 << corner)).map(([da, db]) =>
+        own(screw.translate([(2 * da - 1) * half, (2 * db - 1) * half, 0])),
+      );
+      return own(solid.subtract(own(wasm.Manifold.compose(tools))));
+    };
+    // The brick of a kind of cell without its screws, shared by the bricks of that kind whatever
+    // their screws: manifold computes it once.
+    const bases = new Map<string, Manifold>();
+    const baseOf = (i: number, j: number, sx: Side, sy: Side): Manifold => {
+      if (sx === 0 && sy === 0) {
+        const block = own(own(wasm.Manifold.cube([cellSize, cellSize, profile.height])).translate([-half, -half, 0]));
+        return own(block.subtract(pocket));
+      }
+      const [cx, cy] = cellCentre(i, j, frame);
+      const [x0, y0, x1, y1] = brickArea(frame, sx, sy);
+      // Only the margin's cut around the brick, a little beyond it, so that no edge of the
+      // cut lies on a face of the brick.
+      const o = TOOL_OVERSHOOT_MM;
+      const window = [cx + x0 - o, cy + y0 - o, cx + x1 + o, cy + y1 + o] as const;
+      let area = footprint(wasm, own, frame, sx, sy, cx, cy);
+      const holes = margin?.holes(window);
+      if (holes) area = own(area.subtract(own(holes.translate([-cx, -cy]))));
+      const tools = [pocket];
+      const cut = margin?.solid(window);
+      if (cut) tools.push(own(cut.translate([-cx, -cy, 0])));
+      const slab = own(wasm.Manifold.extrude(area, profile.height));
+      return own(slab.subtract(own(wasm.Manifold.compose(tools))));
+    };
     const solids = new Map<string, Manifold>();
     for (let i = 0; i < columns; i++)
       for (let j = 0; j < rows; j++) {
         const [sx, sy] = kindOf(i, j, frame);
-        const key = kindKey(sx, sy);
+        const corners = screwCorners(i, j, frame);
+        const key = kindKey(sx, sy, corners);
         if (solids.has(key)) continue;
-        if (sx === 0 && sy === 0) {
-          const block = own(own(wasm.Manifold.cube([cellSize, cellSize, profile.height])).translate([-half, -half, 0]));
-          solids.set(key, own(block.subtract(pocket)));
-          continue;
-        }
-        const [cx, cy] = cellCentre(i, j, frame);
-        const [x0, y0, x1, y1] = brickArea(frame, sx, sy);
-        // Only the margin's cut around the brick, a little beyond it, so that no edge of the
-        // cut lies on a face of the brick.
-        const o = TOOL_OVERSHOOT_MM;
-        const window = [cx + x0 - o, cy + y0 - o, cx + x1 + o, cy + y1 + o] as const;
-        let area = footprint(wasm, own, frame, sx, sy, cx, cy);
-        const holes = margin?.holes(window);
-        if (holes) area = own(area.subtract(own(holes.translate([-cx, -cy]))));
-        const tools = [pocket];
-        const cut = margin?.solid(window);
-        if (cut) tools.push(own(cut.translate([-cx, -cy, 0])));
-        const slab = own(wasm.Manifold.extrude(area, profile.height));
-        solids.set(key, own(slab.subtract(own(wasm.Manifold.compose(tools)))));
+        const kind = kindKey(sx, sy, 0);
+        const base = bases.get(kind) ?? baseOf(i, j, sx, sy);
+        bases.set(kind, base);
+        solids.set(key, withScrews(base, corners));
       }
     return new Map([...solids].map(([key, solid]) => [key, brickOf(meshOf(solid), half)]));
   });
@@ -165,7 +206,7 @@ function brickOf(mesh: TriangleMesh, half: number): Brick {
 /** Copies the bricks across the grid, drops the faces between neighbours and welds the seams. */
 function joinBricks(bricks: Map<string, Brick>, frame: GridFrame): TriangleMesh {
   const { columns, rows } = frame;
-  const brickAt = (i: number, j: number) => bricks.get(kindKey(...kindOf(i, j, frame))) as Brick;
+  const brickAt = (i: number, j: number) => bricks.get(brickKey(i, j, frame)) as Brick;
   let vertexCount = 0;
   let indexCount = 0;
   for (let i = 0; i < columns; i++)

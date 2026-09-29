@@ -2,21 +2,20 @@
 
 import { Collapsible } from "@base-ui/react/collapsible";
 import { BASEPLATE_SETTINGS, type BaseplateSettings, type SizeMode } from "@repo/geometry";
-import { ChoiceGroup, NumberStepper, Segmented, focusRing } from "@repo/ui";
+import { ChoiceGroup, NumberStepper, Segmented, SliderField, ToggleSwitch, focusRing } from "@repo/ui";
 import { ChevronDown, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import { fine, footprint as footprintOf, lengths } from "@/lib/format";
 import { strings as t } from "@/lib/strings";
 import { AlignmentPad } from "./alignment-pad";
-import { AdvancedIcon, AlignIcon, ProfileArt, ProfileIcon, SizeIcon } from "./illustrations";
+import { AdvancedIcon, AlignIcon, ProfileArt, ProfileIcon, ScrewArt, ScrewIcon, SizeIcon } from "./illustrations";
 
 /**
- * Families of settings in the panel. Screws join with their ticket, and the advanced family
- * gets its other settings with #13; the print settings (layer height, line width) live in
- * the gear menu.
+ * Families of settings in the panel. The advanced family gets its other settings with #13;
+ * the print settings (layer height, line width) live in the gear menu.
  */
-export type Family = "size" | "alignment" | "profile" | "advanced";
+export type Family = "size" | "alignment" | "profile" | "screws" | "advanced";
 
 /** Drops the floating-point noise of a stepped length (0.5 + 0.1 = 0.6000000000000001). */
 const toHundredths = (value: number) => Math.round(value * 100) / 100;
@@ -149,10 +148,30 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
         />
       </FamilyItem>
       <FamilyItem
+        {...bind("screws")}
+        icon={<ScrewIcon className="size-[18px]" />}
+        title={t.screws}
+        summary={settings.screws ? screwsSummary(settings, summary) : t.screwsOff}
+        on={settings.screws}
+        control={
+          <ToggleSwitch
+            label={t.screws}
+            checked={settings.screws}
+            onChange={(screws) => {
+              onSettingsChange({ screws });
+              // Turning the screws on opens their family: what they offer is in sight at once.
+              if (screws) onOpenChange("screws");
+            }}
+          />
+        }
+      >
+        <ScrewFields settings={settings} onSettingsChange={onSettingsChange} />
+      </FamilyItem>
+      <FamilyItem
         {...bind("advanced")}
         icon={<AdvancedIcon className="size-[18px]" />}
         title={t.advanced}
-        summary={t.gapSummary(fine.format(settings.drawerGap))}
+        summary={t.advancedSummary(fine.format(settings.drawerGap), fine.format(settings.holeGap))}
       >
         {/* Skeleton: the other advanced settings, and their warning, arrive with #13. */}
         <div className="grid grid-cols-2 gap-2.5">
@@ -168,14 +187,77 @@ export function Families({ settings, onSettingsChange, summary, open, onOpenChan
             locale={t.locale}
             onChange={(drawerGap) => onSettingsChange({ drawerGap: toHundredths(drawerGap) })}
           />
+          <NumberStepper
+            label={t.holeGap}
+            decrementLabel={t.lessHoleGap}
+            incrementLabel={t.moreHoleGap}
+            value={settings.holeGap}
+            min={BASEPLATE_SETTINGS.holeGap.min}
+            max={BASEPLATE_SETTINGS.holeGap.max}
+            step={0.1}
+            unit="mm"
+            locale={t.locale}
+            onChange={(holeGap) => onSettingsChange({ holeGap: toHundredths(holeGap) })}
+          />
         </div>
         <p className="mt-2 text-[12px] leading-snug text-muted">{t.drawerGapHint}</p>
+        <p className="mt-1 text-[12px] leading-snug text-muted">{t.holeGapHint}</p>
       </FamilyItem>
     </div>
   );
 }
 
-interface SizeFieldsProps {
+/** "40 vis, tige 3 mm, tête 6 mm": the count as laid out by the engine, "…" until it answers. */
+function screwsSummary(settings: BaseplateSettings, summary: BaseplateSummary | null): string {
+  const count = summary ? String(summary.stats.screws) : "…";
+  return t.screwsSummary(count, fine.format(settings.screwShank), fine.format(settings.screwHead));
+}
+
+/** The diameters of the screws, or what they are for while they are off. */
+function ScrewFields({ settings, onSettingsChange }: FieldsProps) {
+  if (!settings.screws) {
+    return (
+      <div className="flex items-center gap-3">
+        <span className="grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-surface text-faint">
+          <ScrewArt className="h-9 w-12" />
+        </span>
+        <p className="text-[12.5px] leading-snug text-muted">{t.screwsOffHint}</p>
+      </div>
+    );
+  }
+  const { screwShank, screwHead } = BASEPLATE_SETTINGS;
+  return (
+    <div className="flex flex-col gap-4">
+      <SliderField
+        label={t.screwShank}
+        value={settings.screwShank}
+        min={screwShank.min}
+        max={screwShank.max}
+        step={0.1}
+        unit="mm"
+        locale={t.locale}
+        // A head narrower than its shank would not hold: the head follows a wider shank.
+        onChange={(value) => {
+          const shank = toHundredths(value);
+          onSettingsChange({ screwShank: shank, screwHead: Math.max(settings.screwHead, shank) });
+        }}
+      />
+      <SliderField
+        label={t.screwHead}
+        value={settings.screwHead}
+        min={Math.max(screwHead.min, settings.screwShank)}
+        max={screwHead.max}
+        step={0.1}
+        unit="mm"
+        locale={t.locale}
+        onChange={(value) => onSettingsChange({ screwHead: toHundredths(value) })}
+      />
+      <p className="text-[12px] leading-snug text-muted">{t.screwsHint}</p>
+    </div>
+  );
+}
+
+interface FieldsProps {
   settings: BaseplateSettings;
   onSettingsChange: (patch: Partial<BaseplateSettings>) => void;
 }
@@ -183,7 +265,7 @@ interface SizeFieldsProps {
 type LengthSetting = "drawerWidth" | "drawerDepth" | "marginWidth" | "marginDepth";
 
 /** The size mode, then the drawer, or the cells and their margins. */
-function SizeFields({ settings, onSettingsChange }: SizeFieldsProps) {
+function SizeFields({ settings, onSettingsChange }: FieldsProps) {
   const length = (key: LengthSetting) => ({
     value: settings[key],
     min: BASEPLATE_SETTINGS[key].min,
@@ -251,33 +333,44 @@ interface FamilyItemProps {
   title: string;
   /** One-line summary, shown whether the family is open or closed. */
   summary: string;
+  /** Control beside the header, outside the trigger: the switch of an optional family. */
+  control?: ReactNode;
+  /** Whether the optional family is on: its icon takes the accent. */
+  on?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
 }
 
-function FamilyItem({ icon, title, summary, open, onOpenChange, children }: FamilyItemProps) {
+function FamilyItem({ icon, title, summary, control, on = false, open, onOpenChange, children }: FamilyItemProps) {
   return (
     <Collapsible.Root
       open={open}
       onOpenChange={onOpenChange}
       className={`rounded-2xl transition-colors duration-200 ${open ? "bg-sunken" : "hover:bg-sunken"}`}
     >
-      <Collapsible.Trigger
-        className={`group flex w-full min-w-0 items-center gap-3 rounded-2xl py-2.5 pr-3 pl-2.5 text-left ${focusRing} focus-visible:ring-offset-0`}
-      >
-        <span className="grid size-9 shrink-0 place-items-center rounded-[11px] bg-surface text-ink-soft shadow-[0_0_0_1px_var(--color-line)]">
-          {icon}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-semibold tracking-[-0.01em]">{title}</span>
-          <span className="block truncate text-[12px] text-muted tabular-nums">{summary}</span>
-        </span>
-        <ChevronDown
-          aria-hidden
-          className="size-4 shrink-0 text-muted transition-transform duration-200 group-data-panel-open:rotate-180"
-        />
-      </Collapsible.Trigger>
+      <div className={`flex items-center gap-2 ${control ? "pr-3" : ""}`}>
+        <Collapsible.Trigger
+          className={`group flex min-w-0 flex-1 items-center gap-3 rounded-2xl py-2.5 pl-2.5 text-left ${control ? "" : "pr-3"} ${focusRing} focus-visible:ring-offset-0`}
+        >
+          <span
+            className={`grid size-9 shrink-0 place-items-center rounded-[11px] transition-colors ${
+              on ? "bg-accent text-accent-ink" : "bg-surface text-ink-soft shadow-[0_0_0_1px_var(--color-line)]"
+            }`}
+          >
+            {icon}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-semibold tracking-[-0.01em]">{title}</span>
+            <span className="block truncate text-[12px] text-muted tabular-nums">{summary}</span>
+          </span>
+          <ChevronDown
+            aria-hidden
+            className="size-4 shrink-0 text-muted transition-transform duration-200 group-data-panel-open:rotate-180"
+          />
+        </Collapsible.Trigger>
+        {control}
+      </div>
       <Collapsible.Panel className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0">
         <div className="px-3 pt-1 pb-4">{children}</div>
       </Collapsible.Panel>

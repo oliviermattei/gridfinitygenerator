@@ -118,13 +118,15 @@ test.describe("desktop", () => {
       });
       reached.push(name);
     }
-    for (const name of ["Paramètres", "Tiroir", "Largeur", "Profondeur", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
+    for (const name of ["Paramètres", "Tiroir", "Largeur", "Profondeur", "Vis", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
       expect(reached, `${name} is reached with Tab`).toContain(name);
     }
     expect(reached.some((name) => name.startsWith("Taille"))).toBe(true);
     for (const family of ["Alignement", "Profil de poche", "Avancé"]) {
       expect(reached.some((name) => name.startsWith(family)), `${family} is reached with Tab`).toBe(true);
     }
+    // The screws family, then its switch beside it.
+    expect(reached.filter((name) => name.startsWith("Vis")), "the screws family and its switch are reached with Tab").toHaveLength(2);
 
     // Focus is visible: the accent ring around the focused control.
     const download = page.getByRole("button", { name: "Télécharger le 3MF" });

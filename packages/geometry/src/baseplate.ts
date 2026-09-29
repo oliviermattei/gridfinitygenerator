@@ -4,6 +4,7 @@ import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold } from "./manifold";
 import { HYBRID_PROFILE } from "./pocket-profile";
 import { layerCount } from "./print";
+import { screwHolesOf, screwPositions } from "./screws";
 import { clampSettings, type BaseplateSettings } from "./settings";
 import type { TriangleMesh } from "./mesh";
 import type { GridFrame } from "./shapes";
@@ -20,6 +21,8 @@ export type Quality = "preview" | "final";
 
 /** Segments per quarter circle for rounded corners (spec v1: 8 in preview, 32 in final). */
 const SEGMENTS_PER_QUARTER: Record<Quality, number> = { preview: 8, final: 32 };
+/** Segments per hole (spec v1: 16 in preview, 64 in final). */
+const SEGMENTS_PER_HOLE: Record<Quality, number> = { preview: 16, final: 64 };
 
 export interface BaseplateStats {
   /** Bounding box of the mesh, in millimetres (width along X, depth along Y). */
@@ -37,7 +40,7 @@ export interface BaseplateStats {
   layers: number;
   /** Number of pieces to print: always 1 in v1, which does not cut for the build plate. */
   pieces: number;
-  /** Number of screws that fix the baseplate: none until screw holes arrive (#11). */
+  /** Number of screws that fix the baseplate to the drawer: one per screw hole, none without screws. */
   screws: number;
 }
 
@@ -63,9 +66,10 @@ export interface Baseplate {
 /**
  * Generates a baseplate: a grid of open pockets with the hybrid profile (ADR 0002), sized
  * for a drawer or by its number of cells, and its margin (a frame of crossbars for now, see
- * margin.ts). The settings are first brought into their ranges, and a missing one takes its
- * default (`clampSettings`): without settings, the baseplate of the default drawer. The mesh
- * is always closed; the final mesh, the one that gets exported, is also checked by manifold
+ * margin.ts), with a countersunk screw hole on each inner intersection of the grid when the
+ * screws are on (screws.ts, ADR 0006). The settings are first brought into their ranges,
+ * and a missing one takes its default (`clampSettings`): without settings, the baseplate of
+ * the default drawer. The mesh is always closed; the final mesh, the one that gets exported, is also checked by manifold
  * (`NoError`) before it is returned.
  */
 export async function generateBaseplate(
@@ -75,24 +79,27 @@ export async function generateBaseplate(
 ): Promise<Baseplate> {
   const wasm = await loadManifold();
   const settings = clampSettings(input);
-  const layout = layoutOf(settings, STANDARD_CELL_SIZE_MM);
-  const { margins } = layout;
-  const width = layout.columns * layout.cellSize + margins.left + margins.right;
-  const depth = layout.rows * layout.cellSize + margins.back + margins.front;
+  const cells = layoutOf(settings, STANDARD_CELL_SIZE_MM);
+  const { margins } = cells;
+  const width = cells.columns * cells.cellSize + margins.left + margins.right;
+  const depth = cells.rows * cells.cellSize + margins.back + margins.front;
   const frame: GridFrame = {
-    columns: layout.columns,
-    rows: layout.rows,
-    cellSize: layout.cellSize,
+    columns: cells.columns,
+    rows: cells.rows,
+    cellSize: cells.cellSize,
     profile: HYBRID_PROFILE,
     margins,
     width,
     depth,
     outerRadius: Math.min(OUTER_RADIUS_MM, width / 2, depth / 2),
     segmentsPerQuarter: SEGMENTS_PER_QUARTER[quality],
+    segmentsPerHole: SEGMENTS_PER_HOLE[quality],
+    screws: screwHolesOf(settings, HYBRID_PROFILE),
     layerHeight: settings.layerHeight,
     lineWidth: settings.lineWidth,
   };
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
+  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame) };
   const mesh =
     strategy === "bricks" ? assembleWithBricks(wasm, frame, quality === "final") : assembleWithBooleans(wasm, frame);
   return {
@@ -103,7 +110,7 @@ export async function generateBaseplate(
       volume: quality === "final" ? volumeOf(mesh) : null,
       layers: layerCount(frame.profile.height, settings.layerHeight),
       pieces: 1,
-      screws: 0,
+      screws: layout.screws.length,
     },
   };
 }

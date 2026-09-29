@@ -16,6 +16,11 @@ export interface BaseplateLayout {
   cellSize: number;
   /** Width of the margin on each side of the grid, in millimetres. */
   margins: Margins;
+  /**
+   * Centre of each screw hole, in millimetres, in the coordinates of the mesh (the baseplate
+   * centred on the origin): the inner intersections of the grid, none without screws.
+   */
+  screws: [x: number, y: number][];
 }
 
 /**
@@ -51,7 +56,7 @@ const CELL_EPSILON = 1e-9;
  * - Cells mode: the margins in width and depth are added to the grid.
  * The margin of each axis is then spread by the alignment.
  */
-export function layoutOf(settings: BaseplateSettings, cellSize: number): BaseplateLayout {
+export function layoutOf(settings: BaseplateSettings, cellSize: number): Omit<BaseplateLayout, "screws"> {
   let columns: number;
   let rows: number;
   let restX: number;

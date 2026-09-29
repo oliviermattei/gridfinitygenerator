@@ -19,6 +19,15 @@ export function roundUpToLayer(thickness: number, layerHeight: number): number {
 }
 
 /**
+ * Rounds a height chosen by the generator down to a multiple of the layer height, for a
+ * level that must stay under a limit (the seat of a screw head under the pocket slopes).
+ */
+export function roundDownToLayer(height: number, layerHeight: number): number {
+  const rounded = Math.floor(height / layerHeight + EPSILON) * layerHeight;
+  return Math.round(rounded * 1e6) / 1e6;
+}
+
+/**
  * Rounds a width chosen by the generator (margin walls and crossbars) up to a whole number of
  * lines, and to `minLines` at least, so that the slicer fills it with whole extrusions.
  */

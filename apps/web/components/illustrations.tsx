@@ -53,6 +53,32 @@ export function AlignIcon({ className }: ArtProps) {
   );
 }
 
+/** Family icon "Vis": a countersunk screw, head up. */
+export function ScrewIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <path d="M5 4 H19 L15 8 H9 Z" />
+      <path d="M9.5 8 V18 L12 21 L14.5 18 V8 M9.5 11.5 L14.5 10.5 M9.5 15 L14.5 14" />
+    </svg>
+  );
+}
+
+/**
+ * Screw holes: the crossing of the murets in section, drilled through; the head of the
+ * screw bears on its countersink, under the slopes of the pockets.
+ */
+export function ScrewArt({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 64 44" className={className} aria-hidden fill="none">
+      <path d="M4 40 H60" {...stroke} strokeOpacity={0.35} />
+      <path d="M14 40 V26 L23 17 V24 L28 29 V40 Z" {...stroke} {...material} />
+      <path d="M50 40 V26 L41 17 V24 L36 29 V40 Z" {...stroke} {...material} />
+      <path d="M23.5 24 H40.5 L35.5 29 H28.5 Z" fill={ART} />
+      <path d="M29 29 H35 V40 L32 43 L29 40 Z" fill={ART} fillOpacity={0.75} />
+    </svg>
+  );
+}
+
 /** Family icon "Avancé": two sliders. */
 export function AdvancedIcon({ className }: ArtProps) {
   return (

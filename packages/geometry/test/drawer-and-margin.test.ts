@@ -63,6 +63,7 @@ describe("drawer mode", () => {
       rows: 6,
       cellSize: 42,
       margins: { left: 10.5, right: 10.5, back: 13.5, front: 13.5 },
+      screws: [],
     });
     expectWithin(stats.dimensions.width, 399);
     expectWithin(stats.dimensions.depth, 279);

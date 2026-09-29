@@ -21,6 +21,7 @@ export {
   type Alignment,
   type BaseplateSettings,
   type ChoiceSetting,
+  type FlagSetting,
   type NumericSetting,
   type SizeMode,
 } from "./settings";

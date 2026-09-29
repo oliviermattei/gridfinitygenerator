@@ -34,6 +34,14 @@ export interface BaseplateSettings {
   marginDepth: number;
   /** Where the grid sits when there is a margin; the margin takes the rest. */
   alignment: Alignment;
+  /** Countersunk screw holes that fix the baseplate to the bottom of the drawer, on the inner intersections of the grid. */
+  screws: boolean;
+  /** Diameter of the screw shank, in millimetres, before the hole gap. */
+  screwShank: number;
+  /** Diameter of the screw head, in millimetres, before the hole gap; never narrower than the shank. */
+  screwHead: number;
+  /** Gap added to the diameters of the holes so the screws go in without forcing, in millimetres. */
+  holeGap: number;
   /** Layer height of the print, in millimetres: thicknesses the generator chooses are multiples of it. */
   layerHeight: number;
   /** Line width of the print, in millimetres: widths the generator chooses are multiples of it. */
@@ -53,6 +61,11 @@ export interface ChoiceSetting<T extends string = string> {
   default: T;
 }
 
+/** A setting that is on or off. */
+export interface FlagSetting {
+  default: boolean;
+}
+
 /** The 9 alignments, row by row from the back left to the front right (the order of a keypad). */
 export const ALIGNMENTS: readonly Alignment[] = ["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"];
 
@@ -67,9 +80,15 @@ export const BASEPLATE_SETTINGS = {
   marginWidth: { min: 0, max: 500, default: 0, integer: false },
   marginDepth: { min: 0, max: 500, default: 0, integer: false },
   alignment: { options: ALIGNMENTS, default: "c" } as ChoiceSetting<Alignment>,
+  screws: { default: false } as FlagSetting,
+  screwShank: { min: 2, max: 6, default: 3, integer: false },
+  screwHead: { min: 2, max: 8, default: 6, integer: false },
+  holeGap: { min: 0, max: 1, default: 0.5, integer: false },
   layerHeight: { min: 0.12, max: 0.28, default: 0.2, integer: false },
   lineWidth: { min: 0.1, max: 1.2, default: 0.4, integer: false },
-} as const satisfies { [K in keyof BaseplateSettings]: BaseplateSettings[K] extends string ? ChoiceSetting : NumericSetting };
+} as const satisfies {
+  [K in keyof BaseplateSettings]: BaseplateSettings[K] extends string ? ChoiceSetting : BaseplateSettings[K] extends boolean ? FlagSetting : NumericSetting;
+};
 
 /** The default baseplate: the one for the default drawer, the cheapest to print for a newcomer. */
 export const DEFAULT_SETTINGS: BaseplateSettings = {
@@ -82,25 +101,34 @@ export const DEFAULT_SETTINGS: BaseplateSettings = {
   marginWidth: BASEPLATE_SETTINGS.marginWidth.default,
   marginDepth: BASEPLATE_SETTINGS.marginDepth.default,
   alignment: BASEPLATE_SETTINGS.alignment.default,
+  screws: BASEPLATE_SETTINGS.screws.default,
+  screwShank: BASEPLATE_SETTINGS.screwShank.default,
+  screwHead: BASEPLATE_SETTINGS.screwHead.default,
+  holeGap: BASEPLATE_SETTINGS.holeGap.default,
   layerHeight: BASEPLATE_SETTINGS.layerHeight.default,
   lineWidth: BASEPLATE_SETTINGS.lineWidth.default,
 };
 
 /**
  * Brings every setting into its range, rounding the whole ones; a missing setting, or one
- * that is not a number or not one of its choices, takes its default.
+ * that is not of its type or not one of its choices, takes its default. A screw head
+ * narrower than its shank would not hold: it is raised to the shank.
  */
 export function clampSettings(settings: Partial<BaseplateSettings>): BaseplateSettings {
   const clamped: Record<string, unknown> = { ...DEFAULT_SETTINGS };
-  for (const [key, setting] of Object.entries(BASEPLATE_SETTINGS) as [keyof BaseplateSettings, NumericSetting | ChoiceSetting][]) {
+  for (const [key, setting] of Object.entries(BASEPLATE_SETTINGS) as [keyof BaseplateSettings, NumericSetting | ChoiceSetting | FlagSetting][]) {
     const value = settings[key];
     if ("options" in setting) {
       if (typeof value === "string" && setting.options.includes(value)) clamped[key] = value;
+    } else if (!("min" in setting)) {
+      if (typeof value === "boolean") clamped[key] = value;
     } else if (typeof value === "number" && !Number.isNaN(value)) {
       clamped[key] = clampSetting(setting, value);
     }
   }
-  return clamped as unknown as BaseplateSettings;
+  const result = clamped as unknown as BaseplateSettings;
+  result.screwHead = Math.max(result.screwHead, result.screwShank);
+  return result;
 }
 
 function clampSetting({ min, max, integer }: NumericSetting, value: number): number {

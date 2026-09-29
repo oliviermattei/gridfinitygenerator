@@ -89,6 +89,10 @@ const LINK_KEYS = {
   marginWidth: "mx",
   marginDepth: "my",
   alignment: "al",
+  screws: "sc",
+  screwShank: "ss",
+  screwHead: "sh",
+  holeGap: "tol",
   layerHeight: "lh",
   lineWidth: "lw",
 } as const satisfies Record<keyof BaseplateSettings, LinkKey>;

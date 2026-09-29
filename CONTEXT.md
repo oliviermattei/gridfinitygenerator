@@ -54,6 +54,18 @@ _Avoid_: position, ancrage
 Le jeu retiré à la largeur et à la profondeur du tiroir pour que la baseplate y entre sans forcer (1 mm par défaut).
 _Avoid_: tolérance, clearance
 
+**Vis**:
+Une vis à tête fraisée qui fixe la baseplate au fond du tiroir, posée à une intersection intérieure de la grille (ni sur le bord de la grille, ni dans la marge) ; on règle le Ø de sa tige et le Ø de sa tête.
+_Avoid_: screw, boulon
+
+**Plot**:
+La matière qui porte la tête d'une vis. En v1, c'est le croisement des murets lui-même : la fraisure y est taillée sous les pentes des poches, sans matière ajoutée, car un bac assis descend jusqu'au fond de la baseplate (ADR 0006).
+_Avoid_: bossage, socle, boss
+
+**Jeu des trous**:
+Le jeu ajouté au Ø de la tige et au Ø de la tête d'une vis pour qu'elle entre sans forcer (0,5 mm par défaut) ; réglage avancé.
+_Avoid_: tolérance, clearance
+
 **Bac**:
 Le contenant Gridfinity posé sur la baseplate ; hors du périmètre généré, mais il fixe les contraintes de compatibilité.
 _Avoid_: bin, boîte
