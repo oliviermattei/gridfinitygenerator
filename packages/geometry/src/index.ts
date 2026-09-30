@@ -69,3 +69,29 @@ export {
   type StackWarning,
   type StackedPiece,
 } from "./stack";
+export {
+  FILLET_RADIUS_MM,
+  FOOT,
+  LABEL_TAB,
+  SCOOP_RADIUS_MM,
+  SOLID_FLOOR_MM,
+  UNIT_HEIGHT_MM,
+  binFitsOn,
+  binLayoutOf,
+  generateBin,
+  lipHeight,
+  maxBinCells,
+  type Bin,
+  type BinLayout,
+  type BinStats,
+  type GenerateBinOptions,
+} from "./bin";
+export {
+  BIN_SETTINGS,
+  DEFAULT_BIN_SETTINGS,
+  MAX_COMPARTMENTS_PER_CELL,
+  STACKING_LIPS,
+  clampBinSettings,
+  type BinSettings,
+  type StackingLip,
+} from "./bin-settings";

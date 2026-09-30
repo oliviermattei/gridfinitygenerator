@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Le pied standard exact, seul contrat entre un bin et une baseplate
@@ -24,3 +24,4 @@ On veut un écosystème homogène : nos bins doivent s'adapter parfaitement à n
 
 - Le pied creux (fond intérieur juste au-dessus des pentes) reste possible : il ne touche pas au profil du pied, seulement à ce qu'il y a dessus. Il est mesuré au banc avant de devenir, ou non, le défaut.
 - Tout changement du profil de poche doit être vérifié contre le pied standard, qui ne bouge pas.
+- Banc #34 (`prototypes/bin/`) : le pied standard du moteur s'assoit sans jeu dans une Normal hybride ou Skeleton (pentes et fond du tiroir), avec 0,25 mm de jeu dans une Normal ras, sur ses pentes seules à 0,2 mm du fond d'un Tray, et il est serré par les ergots d'un CLICKbase. Le pied creux ne gagne que 9 à 15 % de filament au trancheur : le socle reste plein tant que l'impression ne l'a pas validé.
