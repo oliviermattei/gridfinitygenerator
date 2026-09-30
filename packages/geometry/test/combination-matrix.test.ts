@@ -83,10 +83,9 @@ const NO_MARGIN: Case[] = BASEPLATE_TYPES.flatMap((baseplateType, t) => {
       buildPlate: { width: 100, depth: 100 },
     },
     {
-      // A skeleton with whole cells of the margin on a side without margin differs by the two
-      // ways, with or without edge slots (46.6 mm³, found here, pre-existing): 10 mm for it.
+      // Whole cells of the margin on the sides whose neighbours have none (#38).
       name: `4 × 3 cells, a margin on the left and the right only in ${marginShape}, cut on 150 mm: ${baseplateType}`,
-      settings: { ...cells, marginWidth: baseplateType === "skeleton" ? 20 : 100, marginShape },
+      settings: { ...cells, marginWidth: 100, marginShape },
       buildPlate: { width: 150, depth: 150 },
     },
   ];

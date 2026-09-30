@@ -185,6 +185,16 @@ describe("the same skeleton by the cell bricks and by the booleans (ADR 0004)", 
     ...MARGIN_SHAPES.map((marginShape): [string, Partial<BaseplateSettings>, BuildPlate | null] => [`default drawer cut, ${marginShape}`, { marginShape }, PLATE_256]),
     ["chamfered and screwed, cut", { bottomChamfer: 0.8, screws: true }, PLATE_256],
     ["whole cells of the margin, cut", cells(3, 3, { marginWidth: 100, marginDepth: 90, marginShape: "cells" }), { width: 150, depth: 150 }],
+    // Whole cells of the margin on a side whose neighbours have none (#38): the outer wall along
+    // those, which the margin keeps in their pockets, stays whole under their notches.
+    ...MARGIN_SHAPES.filter((shape) => shape !== "frame").flatMap((marginShape) =>
+      [false, true].map((minimalMargin): [string, Partial<BaseplateSettings>, BuildPlate | null] => [
+        `whole cells of the margin on the left and the right only, ${marginShape}${minimalMargin ? " minimal" : ""}`,
+        cells(4, 3, { marginWidth: 100, marginShape, minimalMargin }),
+        null,
+      ]),
+    ),
+    ["whole cells of the margin on the left and the right only, 0.5 mm front and back, chamfered, cut", cells(4, 3, { marginWidth: 100, marginDepth: 1, marginShape: "cells", bottomChamfer: 1 }), { width: 150, depth: 150 }],
     ["flush, truncated cells of 30 mm", { pocketProfile: "flush", cellSize: 30, marginShape: "cells" }, null],
     ["cells of 20 mm at 0.12 mm layers", cells(5, 4, { cellSize: 20, layerHeight: 0.12 }), null],
     ["cells of 80 mm, sharp corners, 3 mm chamfer, large screws, cut", cells(3, 3, { cellSize: 80, outerRadius: 0, bottomChamfer: 3, screws: true, screwHead: 8, holeGap: 1 }), { width: 200, depth: 200 }],

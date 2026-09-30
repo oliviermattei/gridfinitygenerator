@@ -7,7 +7,7 @@ import { marginOf, type CutWindow, type MarginCut } from "./margin";
 import { withArena, type Own } from "./manifold";
 import { hasMagnet, magnetTool } from "./magnets";
 import { hasScrew, screwTool } from "./screws";
-import { notchedPocketTool, notchedSides } from "./skeleton";
+import { notchReach, notchedPocketTool, notchedSides, type Skeleton } from "./skeleton";
 import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, sectionKey, slabOf, type GridFrame } from "./shapes";
 import { latticeOf, type Lattice, type PiecePlan } from "./split";
 
@@ -360,14 +360,27 @@ function cellBricks(
     // The pocket of a cell of the margin comes with the margin's cut, as the margin shapes it.
     // The notches of an edge brick are on its sides inside the lattice, away from the margin:
     // they compose with its cut. A whole cell of the margin on the edge of the lattice has its
-    // pocket in the cut: its notched pocket is removed apart.
+    // pocket in the cut, which keeps an outer wall in it along a side of the lattice without
+    // margin (#38): its notched pocket is removed apart, within the reach of its notches only.
     const grid = inGrid(i, j, frame);
     const tools = grid ? [cellPocket] : [];
     const cut = margin?.solid(window, !inSlab);
     if (cut) tools.push(own(cut.translate([-cx, -cy, 0])));
     const slab = slabOf(wasm, own, area, frame, [cx, cy]);
     const base = tools.length === 0 ? slab : own(slab.subtract(own(wasm.Manifold.compose(tools))));
-    return grid || cellPocket === pocket ? base : own(base.subtract(cellPocket));
+    const notches = grid || cellPocket === pocket ? null : marginNotchesOf(i, j);
+    return notches ? own(base.subtract(notches)) : base;
+  };
+  // The notches of a whole cell of the margin on the edge of the lattice, once per pattern of
+  // notched sides: its notched pocket within their reach; null when they leave no notch.
+  const marginNotches = new Map<number, Manifold | null>();
+  const marginNotchesOf = (i: number, j: number): Manifold | null => {
+    const notches = notchedSides(frame, lattice, labels, i, j);
+    if (!marginNotches.has(notches)) {
+      const reach = notchReach(wasm, own, { ...frame, skeleton: skeleton as Skeleton }, notches);
+      marginNotches.set(notches, reach && own(pocketOf(i, j).intersect(reach)));
+    }
+    return marginNotches.get(notches) ?? null;
   };
   // The slots are far from the corners and from each other: they compose with the holes of
   // the corners, in the same subtraction. The tool of a slot on a side, at a shift along it,
