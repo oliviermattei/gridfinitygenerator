@@ -1,0 +1,21 @@
+{
+  "name": "prototype-shadowbox-trace",
+  "private": true,
+  "type": "module",
+  "description": "PROTOTYPE JETABLE (#36) : photo d'outils sur une feuille -> contour en mm -> poche, 100 % navigateur",
+  "scripts": {
+    "assets": "node scripts/fetch-assets.mjs",
+    "dev": "vite",
+    "bench": "vitest run"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.3.0",
+    "manifold-3d": "3.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.3",
+    "typescript": "6.0.3",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

@@ -1,0 +1,5 @@
+# Téléchargés par `pnpm assets` : servis depuis notre origine, mais pas versionnés (11 à 60 Mo).
+public/vendor/
+public/models/
+# Régénérée par `pnpm bench` (14 Mo).
+files/*.png
