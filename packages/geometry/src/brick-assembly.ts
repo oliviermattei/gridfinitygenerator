@@ -1,5 +1,6 @@
 import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
+import { clickPocketTool, lamellaSides } from "./clickbase";
 import { brickSlotTool, slotsByCell, type BrickSide, type ClipLayout } from "./clips";
 import { labelTool, type Label } from "./label";
 import { marginOf, type CutWindow, type MarginCut } from "./margin";
@@ -108,11 +109,12 @@ type Side = -1 | 0 | 1;
  * whether it is a cell of the margin on the outline (its pocket comes from the margin's cut,
  * which may differ from the grid's pocket: along a side without margin, the outer wall cuts
  * it; an inner cell of the margin is an inner cell of the grid), the shape of the margin's
- * holes in it when they reach its seams (`HoleShape`), and the sides of a skeleton whose muret
- * is notched (skeleton.ts: not on the edge of the lattice, nor where a piece has its number).
+ * holes in it when they reach its seams (`HoleShape`), the sides of a skeleton whose muret
+ * is notched (skeleton.ts: not on the edge of the lattice, nor where a piece has its number),
+ * and the sides of a cell of a CLICKbase that have lamellas (clickbase.ts: only in the grid).
  */
-const kindKey = (sx: Side, sy: Side, corners: number, margin: boolean, holes = "", notches = 0) =>
-  `${sx},${sy},${corners}${margin && (sx !== 0 || sy !== 0) ? ",margin" : ""}${holes ? `,holes:${holes}` : ""}${notches ? `,notches:${notches}` : ""}`;
+const kindKey = (sx: Side, sy: Side, corners: number, margin: boolean, holes = "", notches = 0, lamellas = 0) =>
+  `${sx},${sy},${corners}${margin && (sx !== 0 || sy !== 0) ? ",margin" : ""}${holes ? `,holes:${holes}` : ""}${notches ? `,notches:${notches}` : ""}${lamellas ? `,lamellas:${lamellas}` : ""}`;
 
 /** Corners of a cell, as offsets of the intersection of grid lines from the cell index. */
 const CORNERS: readonly (readonly [da: 0 | 1, db: 0 | 1])[] = [
@@ -160,6 +162,7 @@ function brickKeys(frame: GridFrame, lattice: Lattice, holes: ReadonlyMap<string
       !inGrid(i, j, frame),
       shape?.seams ? shape.key : "",
       notchedSides(frame, lattice, labels, i, j),
+      lamellaSides(frame, labels, i, j),
     );
   };
   return {
@@ -263,7 +266,8 @@ function shapeKey(section: CrossSection, cx: number, cy: number): string {
  * (cell plus margin, cut by the outline at the corners, with the bottom chamfer of the
  * outline) minus the pocket tool and the margin's solid cut (which holds the pocket of a cell
  * of the margin, cut by the outline). The notches of a skeleton go with the pocket, on the
- * sides of the brick whose muret is notched. Then the quarter of a screw or magnet hole is
+ * sides of the brick whose muret is notched, and so do the lamellas of a CLICKbase, on the
+ * sides of a cell of the grid that have them. Then the quarter of a screw or magnet hole is
  * removed at each corner of the brick that holds one, its half of a slot on each side that
  * holds a clip, and the margin's holes in it: the bricks along a side whose holes differ (a
  * crossbar doubled on a cut, brackets) share the rest.
@@ -283,13 +287,25 @@ function cellBricks(
   // The pocket of a cell of a skeleton with the notches of its sides, up to its seams: the two
   // bricks of a muret notch it the same way, on the same vertices of their faces on the seam.
   // Built once per pattern of notched sides, without a boolean.
-  const skeleton = frame.skeleton;
+  // Likewise, the pocket of a cell of a CLICKbase with the lamellas of its sides, which stay
+  // inside the cell: built once per pattern of sides with lamellas.
+  const { skeleton, clickbase } = frame;
   const notchedPockets = new Map<number, Manifold>();
-  const pocketWith = (sides: number): Manifold => {
-    if (!skeleton || sides === 0) return pocket;
-    const tool = notchedPockets.get(sides) ?? notchedPocketTool(wasm, own, { ...frame, skeleton }, sides);
-    notchedPockets.set(sides, tool);
-    return tool;
+  const clickPockets = new Map<number, Manifold>();
+  const pocketOf = (i: number, j: number): Manifold => {
+    const notches = notchedSides(frame, lattice, labels, i, j);
+    if (skeleton && notches !== 0) {
+      const tool = notchedPockets.get(notches) ?? notchedPocketTool(wasm, own, { ...frame, skeleton }, notches);
+      notchedPockets.set(notches, tool);
+      return tool;
+    }
+    const lamellas = lamellaSides(frame, labels, i, j);
+    if (clickbase && lamellas !== 0) {
+      const tool = clickPockets.get(lamellas) ?? clickPocketTool(wasm, own, { ...frame, clickbase }, lamellas);
+      clickPockets.set(lamellas, tool);
+      return tool;
+    }
+    return pocket;
   };
   const screw = frame.screws && screwTool(wasm, own, { ...frame, screws: frame.screws });
   const magnet = frame.magnets && magnetTool(wasm, own, { ...frame, magnets: frame.magnets });
@@ -312,14 +328,14 @@ function cellBricks(
   // vertices. Without a cut, the ring on the seams is dropped with them.
   const ringed = frame.bottomChamfer > 0 && (frame.cuts.columns.length > 0 || frame.cuts.rows.length > 0);
   const baseOf = (i: number, j: number, sx: Side, sy: Side): Manifold => {
-    const sides = notchedSides(frame, lattice, labels, i, j);
+    const cellPocket = pocketOf(i, j);
     if (sx === 0 && sy === 0) {
       const square = rect(-half, -half, half, half);
       const block =
         ringed
           ? slabOf(wasm, own, own(new wasm.CrossSection([square])), frame, cellCentre(i, j, frame))
           : own(own(wasm.Manifold.cube([cellSize, cellSize, profile.height])).translate([-half, -half, 0]));
-      return own(block.subtract(pocketWith(sides)));
+      return own(block.subtract(cellPocket));
     }
     const [cx, cy] = cellCentre(i, j, frame);
     const [x0, y0, x1, y1] = brickArea(frame, lattice, sx, sy);
@@ -336,12 +352,12 @@ function cellBricks(
     // they compose with its cut. A whole cell of the margin on the edge of the lattice has its
     // pocket in the cut: its notched pocket is removed apart.
     const grid = inGrid(i, j, frame);
-    const tools = grid ? [pocketWith(sides)] : [];
+    const tools = grid ? [cellPocket] : [];
     const cut = margin?.solid(window, !inSlab);
     if (cut) tools.push(own(cut.translate([-cx, -cy, 0])));
     const slab = slabOf(wasm, own, area, frame, [cx, cy]);
     const base = tools.length === 0 ? slab : own(slab.subtract(own(wasm.Manifold.compose(tools))));
-    return grid || sides === 0 ? base : own(base.subtract(pocketWith(sides)));
+    return grid || cellPocket === pocket ? base : own(base.subtract(cellPocket));
   };
   // The slots are far from the corners and from each other: they compose with the holes of
   // the corners, in the same subtraction. The tool of a slot on a side, at a shift along it,

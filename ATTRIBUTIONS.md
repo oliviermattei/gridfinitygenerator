@@ -1,6 +1,6 @@
 # Attributions
 
-Ce projet est un code original, publié sous licence MIT (voir `LICENSE`). Il reprend les cotes du système Gridfinity et s'appuie sur les travaux suivants, eux aussi sous licence MIT. Leurs notices sont reproduites ci-dessous.
+Ce projet est un code original, publié sous licence MIT (voir `LICENSE`). Il reprend les cotes du système Gridfinity et s'appuie sur les travaux suivants, sous licence MIT, dont les notices sont reproduites ci-dessous, à une exception près : la géométrie du type CLICKbase, sous licence CC BY-NC-SA (voir plus bas).
 
 « Gridfinity » est employé ici comme nom descriptif de compatibilité.
 
@@ -26,6 +26,12 @@ MIT License
 
 Copyright (c) 2023 Kenneth Hodson
 ```
+
+## CLICKbase Refined, de ZeroCtrl, et CLICKbase, de John Hall (CC BY-NC-SA 4.0)
+
+- CLICKbase Refined : https://www.printables.com/model/1487592 (ZeroCtrl), dérivé de CLICKbase : https://www.printables.com/model/982173 (John Hall), lui-même inspiré de Clickfinity (NoWarrenty) et des ClickPlates (jerrymk).
+- Repris : la géométrie des lamelles du type de baseplate CLICKbase (lamelle de 0,8 mm, saignée de 0,5 mm, deux par côté, ergot cintré de 0,5 mm, toile imprimée en place), relevée sur les STL publics de Refined (`packages/geometry/src/clickbase.ts`, `prototypes/clickbase/`). Aucun fichier de ces modèles n'est dans le dépôt.
+- Licence : Creative Commons Attribution – Pas d'utilisation commerciale – Partage dans les mêmes conditions 4.0 (https://creativecommons.org/licenses/by-nc-sa/4.0/). Elle n'est pas compatible avec la licence MIT de ce projet : les baseplates CLICKbase générées sont à considérer comme dérivées d'une œuvre CC BY-NC-SA, **pas d'usage commercial**. La question est ouverte (autorisation des auteurs, ou retenue maison) : voir `docs/adr/0015-clickbase-d-apres-refined-licences.md`.
 
 ## Notice de la licence MIT (commune aux deux projets)
 

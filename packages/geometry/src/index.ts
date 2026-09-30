@@ -19,6 +19,8 @@ export {
 } from "./baseplate";
 export { BASEPLATE_TYPES, takesClips, trayFloorOf, type BaseplateType, type TrayFloor } from "./baseplate-type";
 export { skeletonOf, type Skeleton } from "./skeleton";
+export { clickbaseOf, type Clickbase } from "./clickbase";
+export { POCKET_PROFILES, type PocketProfile } from "./pocket-profile";
 export {
   ADVANCED_SETTINGS,
   ALIGNMENTS,

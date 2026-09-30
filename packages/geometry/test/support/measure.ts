@@ -28,6 +28,22 @@ export const HYBRID_OPENINGS: readonly { z: number; inset: number }[] = [
   { z: 4.5, inset: 0.5 },
 ];
 
+/**
+ * Edges of a mesh used by other than exactly two triangles: none for a closed surface without
+ * pinches. manifold's `NoError` does not see an edge pinched between four faces (ADR 0014).
+ */
+export function badEdges({ indices }: TriangleMesh): number {
+  const uses = new Map<number, number>();
+  const count = indices.length;
+  for (let t = 0; t < count; t += 3)
+    for (let k = 0; k < 3; k++) {
+      const [a, b] = [indices[t + k] as number, indices[t + ((k + 1) % 3)] as number];
+      const key = Math.min(a, b) * count + Math.max(a, b);
+      uses.set(key, (uses.get(key) ?? 0) + 1);
+    }
+  return [...uses.values()].filter((n) => n !== 2).length;
+}
+
 export interface MeshCheck {
   /** Manifold status of the mesh: "NoError" for a closed, valid solid. */
   status: string;

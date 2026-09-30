@@ -1,19 +1,19 @@
 // Types of baseplate (#25, ADR 0013): what each one changes in the baseplate of the settings.
+import { clickbaseOf, type Clickbase } from "./clickbase";
 import type { PocketProfile } from "./pocket-profile";
 import { roundUpToLayer } from "./print";
 import { skeletonOf, type Skeleton } from "./skeleton";
 
 /**
  * Type of baseplate: the open grid (`normal`, by default), the grid on a solid floor
- * (`tray`), which nothing falls through, or the open grid with its murets notched between
- * the crossings (`skeleton`, the least material, ADR 0014). CLICKbase (#27) is planned: the
- * share link already reads its name (`ty`), and the settings bring it back to the default
- * until the engine builds it.
+ * (`tray`), which nothing falls through, the open grid with its murets notched between the
+ * crossings (`skeleton`, the least material, ADR 0014), or the open grid whose pocket walls
+ * hold the bins with lamellas (`clickbase`, after CLICKbase Refined, ADR 0015).
  */
-export type BaseplateType = "normal" | "tray" | "skeleton";
+export type BaseplateType = "normal" | "tray" | "skeleton" | "clickbase";
 
 /** The types of baseplate the engine builds, the default first. */
-export const BASEPLATE_TYPES: readonly BaseplateType[] = ["normal", "tray", "skeleton"];
+export const BASEPLATE_TYPES: readonly BaseplateType[] = ["normal", "tray", "skeleton", "clickbase"];
 
 /**
  * What a type changes in a baseplate. Each type is one entry of `BASEPLATE_TYPE_VARIANTS`:
@@ -26,6 +26,8 @@ export interface BaseplateTypeVariant {
   clips: boolean;
   /** The notches of the murets at a layer height (skeleton.ts), null for a type without. */
   skeleton(layerHeight: number): Skeleton | null;
+  /** The lamellas of the pocket walls (clickbase.ts), null for a type without. */
+  clickbase(cellSize: number, profile: PocketProfile, layerHeight: number): Clickbase | null;
 }
 
 /** Thickness of the floor of a tray before rounding up to the layer: 3 layers of 0.2 mm (spec v1.1). */
@@ -76,8 +78,15 @@ export function takesClips(type: BaseplateType): boolean {
 
 /** The variant of each type of baseplate (`BaseplateSettings.baseplateType`). */
 export const BASEPLATE_TYPE_VARIANTS: Record<BaseplateType, BaseplateTypeVariant> = {
-  normal: { profile: (profile) => profile, clips: true, skeleton: () => null },
-  tray: { profile: (profile, layerHeight) => trayProfile(profile, trayFloorOf(layerHeight)), clips: true, skeleton: () => null },
+  normal: { profile: (profile) => profile, clips: true, skeleton: () => null, clickbase: () => null },
+  tray: {
+    profile: (profile, layerHeight) => trayProfile(profile, trayFloorOf(layerHeight)),
+    clips: true,
+    skeleton: () => null,
+    clickbase: () => null,
+  },
   // The middle of the murets, where the slots of the clips go, is notched away: no clips.
-  skeleton: { profile: (profile) => profile, clips: false, skeleton: skeletonOf },
+  skeleton: { profile: (profile) => profile, clips: false, skeleton: skeletonOf, clickbase: () => null },
+  // The lamellas keep the middle of each side whole: the clips go there, between them.
+  clickbase: { profile: (profile) => profile, clips: true, skeleton: () => null, clickbase: clickbaseOf },
 };

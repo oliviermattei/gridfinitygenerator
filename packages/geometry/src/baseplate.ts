@@ -1,6 +1,7 @@
 import { BASEPLATE_TYPE_VARIANTS } from "./baseplate-type";
 import { assembleWithBooleans } from "./boolean-assembly";
 import { assembleWithBricks, canAssembleWithBricks } from "./brick-assembly";
+import type { Clickbase } from "./clickbase";
 import { clipLayoutOf, clipSolid, type ClipLayout } from "./clips";
 import { labelsOf } from "./label";
 import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
@@ -112,7 +113,9 @@ export interface Baseplate {
  * margin in the shape of the settings (a frame of crossbars by default, truncated cells or
  * corner brackets, see margin.ts and ADR 0011), with a countersunk screw hole on each inner intersection of the grid when the
  * screws are on (screws.ts, ADR 0006), and a magnet hole under each other crossing of the
- * murets the material holds, always (magnets.ts, ADR 0012). With a build plate it does not fit on
+ * murets the material holds, always (magnets.ts, ADR 0012). The type of baseplate may also notch
+ * the murets (a skeleton, skeleton.ts) or cut lamellas that hold the bins in the pocket walls
+ * (CLICKbase, clickbase.ts). With a build plate it does not fit on
  * (`options.buildPlate`), it is cut on grid lines into pieces that do, each with its number
  * engraved underneath (split.ts, label.ts, ADR 0009), and, with the clips on, a slot astride
  * the cut in the middle of each side of a cell along it, for a clip printed apart (clips.ts,
@@ -190,6 +193,7 @@ async function buildBaseplate(
     cuts: { columns: [], rows: [] },
     clips: null,
     skeleton: type.skeleton(settings.layerHeight),
+    clickbase: clickbaseFor(type.clickbase(cells.cellSize, profile, settings.layerHeight), quality),
     layerHeight: settings.layerHeight,
     lineWidth: settings.lineWidth,
   };
@@ -219,6 +223,11 @@ async function buildBaseplate(
     pieces,
     clip: clips ? withArena((own) => meshOf(clipSolid(wasm, own, clips.slot))) : null,
   };
+}
+
+/** The lamellas of a CLICKbase for a quality: only their slits in the preview (clickbase.ts). */
+function clickbaseFor(clickbase: Clickbase | null, quality: Quality): Clickbase | null {
+  return clickbase && quality === "preview" ? { ...clickbase, slitsOnly: true } : clickbase;
 }
 
 /**

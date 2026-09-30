@@ -53,6 +53,11 @@ const DRAWERS: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["1 × 24 skeleton (boolean path)", { sizeMode: "cells", columns: 1, rows: 24, baseplateType: "skeleton" }],
   ["drawer 1000 × 1000, skeleton", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "skeleton" }],
   ["drawer 1000 × 1000, skeleton, margin of truncated cells", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "skeleton", marginShape: "cells" }],
+  // A CLICKbase (#27) adds its lamellas to the pocket once per pattern of sides; the preview has its slits only.
+  ["default drawer, CLICKbase", { baseplateType: "clickbase" }],
+  ["1 × 24 CLICKbase (boolean path)", { sizeMode: "cells", columns: 1, rows: 24, baseplateType: "clickbase" }],
+  ["drawer 1000 × 1000, CLICKbase", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "clickbase" }],
+  ["drawer 1000 × 1000, CLICKbase, margin of truncated cells", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "clickbase", marginShape: "cells" }],
 ];
 
 /** Baseplates cut for a build plate of 256 × 256 mm (#21): held to the same targets. */
@@ -68,6 +73,8 @@ const CUT: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["drawer 1000 × 1000 cut in 16 pieces, tray with screws", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray", screws: true }],
   ["drawer 1000 × 1000 cut in 16 pieces, skeleton", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "skeleton" }],
   ["drawer 1000 × 1000 cut in 16 pieces, skeleton with screws", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "skeleton", screws: true }],
+  ["drawer 1000 × 1000 cut in 16 pieces, CLICKbase", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "clickbase" }],
+  ["drawer 1000 × 1000 cut in 16 pieces, CLICKbase with screws", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "clickbase", screws: true }],
 ];
 
 /**

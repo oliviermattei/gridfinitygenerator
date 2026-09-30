@@ -39,7 +39,7 @@ Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arr
 _Avoid_: échantillon, sample, test print
 
 **Type de baseplate**:
-Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bac guidé par ses 4 coins, pas de clips ; #26, ADR 0014). CLICKbase viendra (#27).
+Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bac guidé par ses 4 coins, pas de clips ; #26, ADR 0014) ou **CLICKbase** (la grille ajourée, des lamelles dans la paroi des poches qui serrent le pied des bacs, qui s'enclenchent et tiennent sans aimant ; d'après CLICKbase Refined, sous licence CC BY-NC-SA ; #27, ADR 0015).
 _Avoid_: style, variante, plateau (réservé au plateau d'impression)
 
 **Fond**:
@@ -53,6 +53,22 @@ _Avoid_: pilier, plot (réservé à la vis), post (sauf dans le code)
 **Bande**:
 Dans un Skeleton, ce qui reste d'un muret entre deux poteaux : son pied, de 0,35 mm arrondis à la couche (0,4 mm à 0,2). Le tour de la grille et le bord de cellule qui porte le numéro d'une pièce ne sont pas entaillés (ADR 0014).
 _Avoid_: bande basse (sauf pour la décrire), semelle, band (sauf dans le code)
+
+**Lamelle**:
+Dans un CLICKbase, un morceau de 0,8 mm de la paroi verticale d'une poche, long de 12 mm au plus, libéré du muret par une saignée et tenu à ses deux bouts ; deux par côté de cellule (une seule, au milieu, sous 34 mm), aucune dans la marge. Elle fléchit quand le bac entre, et le serre (ADR 0015).
+_Avoid_: lame, languette (réservé à la dent du clip), ressort, clip (réservé aux pièces)
+
+**Saignée**:
+La fente de 0,5 mm derrière une lamelle, du dessus de la base jusqu'à travers la pente haute de la poche, qui la sépare du muret (ADR 0015).
+_Avoid_: fente (réservé au logement d'un clip), rainure, slit (sauf dans le code)
+
+**Ergot**:
+Le milieu d'une lamelle, cintré de 0,5 mm vers la poche : il serre de 0,25 mm la bande verticale du pied d'un bac standard, entre z = 1,2 et 2,0 mm, et se raccorde à la paroi à 45° au-dessus (ADR 0015).
+_Avoid_: bossage, cran, bosse
+
+**Toile**:
+Sous une lamelle d'un CLICKbase, la paroi mince qui la porte à l'impression, sur une base d'une couche pleine : évidée côté poche, amincie jusqu'à une arête de 0,1 mm sous la lamelle, que le premier bac casse (ADR 0015).
+_Avoid_: support, pont, web (sauf dans le code)
 
 **Assise**:
 Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le bac ; un bac bien assis n'a aucun jeu latéral.

@@ -1,6 +1,7 @@
 // Shapes shared by the assembly strategies: outlines, the pocket tool and mesh helpers.
 import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
+import type { Clickbase } from "./clickbase";
 import type { ClipLayout } from "./clips";
 import type { Margins } from "./layout";
 import type { MarginShape } from "./settings";
@@ -61,6 +62,11 @@ export interface GridFrame {
    * the type of baseplate), null for every other type.
    */
   skeleton: Skeleton | null;
+  /**
+   * The lamellas of a CLICKbase baseplate in the pocket walls of the cells of the grid
+   * (clickbase.ts, the type of baseplate), null for every other type.
+   */
+  clickbase: Clickbase | null;
   /** Print settings the thicknesses and widths chosen by the generator follow. */
   layerHeight: number;
   lineWidth: number;
@@ -86,6 +92,12 @@ export function cellCentre(i: number, j: number, frame: GridFrame): [x: number, 
   const { cellSize } = frame;
   const [x0, y0] = gridRect(frame);
   return [x0 + (i + 0.5) * cellSize, y0 + (j + 0.5) * cellSize];
+}
+
+/** Distance from (x, y), in the coordinates of the outline, to the rounded outline, positive inside it. */
+export function insideOutline({ width, depth, outerRadius: radius }: Pick<GridFrame, "width" | "depth" | "outerRadius">, x: number, y: number): number {
+  const [qx, qy] = [Math.abs(x) - (width / 2 - radius), Math.abs(y) - (depth / 2 - radius)];
+  return radius - Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - Math.min(Math.max(qx, qy), 0);
 }
 
 /** Counter-clockwise rectangle from its corners. */

@@ -1,5 +1,6 @@
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
+import { clickPocketTool, lamellaSides } from "./clickbase";
 import { slotTools } from "./clips";
 import { labelTool, type Label } from "./label";
 import { marginOf } from "./margin";
@@ -14,7 +15,7 @@ import { latticeOf, type PiecePlan } from "./split";
 /**
  * Grouped boolean assembly (ADR 0004 fallback): the slab of the outline (with its bottom
  * chamfer, less the margin's holes) minus every pocket
- * tool and the margin's cut at once, then minus the tops of the lower cells, then minus the
+ * tool (with the lamellas of a CLICKbase, clickbase.ts) and the margin's cut at once, then minus the tops of the lower cells, then minus the
  * notches of the murets of a skeleton (skeleton.ts), then minus
  * every screw hole, every magnet hole and every slot of a clip astride a cut (clips.ts). Works for any grid, including single rows and columns and grids of
  * mixed pocket profiles (the test kit).
@@ -42,11 +43,22 @@ export function assembleWithBooleans(
       pockets.set(cellProfile, tool);
       return tool;
     };
-    // The pockets and the margin's cut do not overlap: composing them is enough.
+    // The pockets of a CLICKbase, with the lamellas of their sides, once per pattern of sides.
+    const { clickbase } = frame;
+    const clickPockets = new Map<number, Manifold>();
+    const clickPocketOf = (sides: number) => {
+      if (!clickbase) throw new Error("No lamellas without CLICKbase");
+      const tool = clickPockets.get(sides) ?? clickPocketTool(wasm, own, { ...frame, clickbase }, sides);
+      clickPockets.set(sides, tool);
+      return tool;
+    };
+    // The pockets and the margin's cut do not overlap, nor do the lamellas, well inside their
+    // cells: composing them is enough.
     const tools: Manifold[] = [];
     for (let i = 0; i < columns; i++)
       for (let j = 0; j < rows; j++) {
-        const tool = pocketOf(lower.get(`${i},${j}`) ?? profile);
+        const lamellas = lamellaSides(frame, labels, i, j);
+        const tool = lamellas !== 0 ? clickPocketOf(lamellas) : pocketOf(lower.get(`${i},${j}`) ?? profile);
         tools.push(own(tool.translate([...cellCentre(i, j, frame), 0])));
       }
     const cut = margin?.solid();

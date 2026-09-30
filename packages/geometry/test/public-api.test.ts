@@ -414,7 +414,7 @@ describe("settings", () => {
     // The frame of crossbars is the default margin, the cheapest (#23, ADR 0011).
     expect(BASEPLATE_SETTINGS.marginShape).toMatchObject({ options: ["frame", "cells", "brackets"], default: "frame" });
     // The open grid is the default type (#25); the tray adds a floor, the skeleton (#26) notches the murets.
-    expect(BASEPLATE_SETTINGS.baseplateType).toMatchObject({ options: ["normal", "tray", "skeleton"], default: "normal" });
+    expect(BASEPLATE_SETTINGS.baseplateType).toMatchObject({ options: ["normal", "tray", "skeleton", "clickbase"], default: "normal" });
     expect(BASEPLATE_SETTINGS.layerHeight).toMatchObject({ min: 0.12, max: 0.28, default: 0.2 });
     expect(BASEPLATE_SETTINGS.lineWidth).toMatchObject({ min: 0.1, max: 1.2, default: 0.4 });
     expect(BASEPLATE_SETTINGS.columns).toMatchObject({ min: 1, max: 24, default: 4 });
@@ -485,7 +485,7 @@ describe("settings", () => {
     expect(clampSettings({ layerHeight: 0.5, lineWidth: 0 })).toEqual({ ...DEFAULT_SETTINGS, layerHeight: 0.28, lineWidth: 0.1 });
     expect(clampSettings({ layerHeight: Number.NaN, lineWidth: 0.45 })).toMatchObject({ layerHeight: 0.2, lineWidth: 0.45 });
     // A choice that is not one of its options takes its default.
-    const unknown = { sizeMode: "shelf", alignment: "middle", marginShape: "solid", baseplateType: "clickbase", pocketProfile: "rebuilt", screws: "yes" } as unknown as Partial<BaseplateSettings>;
+    const unknown = { sizeMode: "shelf", alignment: "middle", marginShape: "solid", baseplateType: "hollow", pocketProfile: "rebuilt", screws: "yes" } as unknown as Partial<BaseplateSettings>;
     expect(clampSettings(unknown)).toMatchObject({ sizeMode: "drawer", alignment: "c", marginShape: "frame", baseplateType: "normal", pocketProfile: "hybrid", screws: false });
     expect(clampSettings({ screwShank: 4, screwHead: 3.5 })).toMatchObject({ screwShank: 4, screwHead: 4 });
   });

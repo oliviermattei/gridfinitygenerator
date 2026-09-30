@@ -213,6 +213,7 @@ export function BaseplateGenerator() {
       buildPlate={buildPlate}
       fits={fits}
       advancedChanged={changedAdvancedSettings(settings).length > 0}
+      clickbase={settings.baseplateType === "clickbase"}
       unit={preferences.unit}
       className={className}
     />

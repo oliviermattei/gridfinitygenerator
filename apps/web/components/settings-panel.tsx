@@ -5,7 +5,9 @@ import {
   BASEPLATE_SETTINGS,
   BASEPLATE_TYPES,
   MARGIN_SHAPES,
+  POCKET_PROFILES,
   changedAdvancedSettings,
+  clickbaseOf,
   skeletonOf,
   takesClips,
   trayFloorOf,
@@ -373,10 +375,12 @@ function TypeFields({ settings, onSettingsChange, volumes }: FieldsProps & { vol
     return measured === undefined ? "…" : `${f.volumes.format(measured / 1000)} cm³`;
   };
   const floor = trayFloorOf(settings.layerHeight);
+  const { grip } = clickbaseOf(settings.cellSize, POCKET_PROFILES[settings.pocketProfile], settings.layerHeight);
   const hints: Record<BaseplateType, string> = {
     normal: t.normalHint,
     tray: t.trayHint(f.fine.format(floor.thickness), f.fine.format(floor.gap)),
     skeleton: t.skeletonHint(f.fine.format(skeletonOf(settings.layerHeight).band)),
+    clickbase: t.clickbaseHint(f.fine.format(grip)),
   };
   return (
     <>
@@ -384,7 +388,7 @@ function TypeFields({ settings, onSettingsChange, volumes }: FieldsProps & { vol
         label={t.baseplateType}
         value={settings.baseplateType}
         onChange={(baseplateType) => onSettingsChange({ baseplateType })}
-        columns={3}
+        columns={2}
         options={BASEPLATE_TYPES.map((type) => ({
           value: type,
           label: t.baseplateTypes[type],
@@ -395,6 +399,12 @@ function TypeFields({ settings, onSettingsChange, volumes }: FieldsProps & { vol
       <p className="mt-3 text-[12.5px] leading-snug text-muted">
         {hints[settings.baseplateType]}
       </p>
+      {settings.baseplateType === "clickbase" && (
+        <p className="mt-2 flex gap-2 rounded-ctl bg-accent-tint px-3 py-2.5 text-[12.5px] leading-snug text-ink-soft" data-testid="clickbase-warning">
+          <TriangleAlert className="mt-px size-4 shrink-0 text-accent-strong" aria-hidden />
+          {t.clickbaseWarning}
+        </p>
+      )}
       <p className="mt-1 text-[12px] leading-snug text-muted">{t.typeVolumesHint}</p>
     </>
   );

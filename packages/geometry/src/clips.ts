@@ -1,5 +1,6 @@
 // Clips that hold the pieces of a cut baseplate together (#22, ADR 0010).
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
+import { lamellaSides, lamellaStretches } from "./clickbase";
 import { DIGIT_HEIGHT_MM, DIGIT_GAP_MM, type Label } from "./label";
 import type { Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
@@ -102,7 +103,8 @@ export type KeepOut = readonly [from: number, to: number];
 /**
  * The clips of a baseplate cut along `plan`: one in the middle of each side of a cell of the
  * lattice along each cut, moved along the side when a label is engraved there (only a piece
- * of a single cell has its number on a cut), and left out when the side has no room for it.
+ * of a single cell has its number on a cut) or a lamella of a CLICKbase lies there (a cell
+ * with a single lamella, in its middle), and left out when the side has no room for it.
  * Each clip keeps clear of the crossings: within the side, less the widest half muret at
  * each end.
  */
@@ -111,13 +113,17 @@ export function clipLayoutOf(frame: GridFrame, lattice: Lattice, plan: Pick<Spli
   const { cellSize } = frame;
   const [x0, y0] = gridRect(frame);
   const reach = cellSize / 2 - (frame.profile.points[0]?.[1] ?? 0);
-  const keepOuts = (cells: readonly (readonly [i: number, j: number, side: Label["side"]])[]): KeepOut[] =>
-    labels
+  // The lamellas of a CLICKbase on either side of the cut, and their clearance (clickbase.ts).
+  const lamellas = frame.clickbase ? lamellaStretches(frame.clickbase) : [];
+  const keepOuts = (cells: readonly (readonly [i: number, j: number, side: Label["side"]])[]): KeepOut[] => [
+    ...labels
       .filter(({ cell: [i, j], side }) => cells.some(([a, b, s]) => a === i && b === j && s === side))
       .map(({ text }) => {
         const half = (text.length * DIGIT_HEIGHT_MM + (text.length - 1) * DIGIT_GAP_MM) / 2 + LABEL_CLEARANCE_MM;
         return [-half, half] as const;
-      });
+      }),
+    ...(cells.some(([i, j, side]) => lamellaSides(frame, labels, i, j) & (1 << side)) ? lamellas : []),
+  ];
   const placements: ClipPlacement[] = [];
   for (const line of plan.columnCuts)
     for (let j = lattice.rows[0]; j < lattice.rows[1]; j++) {

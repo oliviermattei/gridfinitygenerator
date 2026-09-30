@@ -32,6 +32,8 @@ export interface StatsCardProps {
   fits: boolean | null;
   /** Whether an advanced setting differs from its default: standard bins may no longer fit. */
   advancedChanged: boolean;
+  /** Whether the baseplate is a CLICKbase, whose lamellas need PETG, Arachne and a 0.4 mm nozzle. */
+  clickbase: boolean;
   /** Unit of the margins, like the drawer they come from. */
   unit: Unit;
   className?: string;
@@ -42,7 +44,7 @@ export interface StatsCardProps {
  * exactly, never estimated. The volume of material is measured on the final mesh, "…"
  * until it answers for the current settings.
  */
-export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, advancedChanged, unit, className = "" }: StatsCardProps) {
+export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, advancedChanged, clickbase, unit, className = "" }: StatsCardProps) {
   const t = useStrings();
   const f = useFormats();
   const stats = summary?.stats;
@@ -92,6 +94,7 @@ export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, 
       {fits === false && <Warning>{t.plateTooSmall(f.footprint(buildPlate))}</Warning>}
       {narrowest !== null && <Warning>{t.narrowMargin(f.fine.format(narrowest), f.fine.format(2 * lineWidth))}</Warning>}
       {advancedChanged && <Warning>{t.advancedWarning}</Warning>}
+      {clickbase && <Warning>{t.clickbaseWarning}</Warning>}
     </section>
   );
 }

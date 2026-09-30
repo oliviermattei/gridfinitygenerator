@@ -5,7 +5,7 @@ import { marginOf, wallWidth } from "./margin";
 import { roundUpToLayer } from "./print";
 import { hasScrew } from "./screws";
 import type { BaseplateSettings } from "./settings";
-import { TOOL_OVERSHOOT_MM, cellCentre, circle, loft, type GridFrame } from "./shapes";
+import { TOOL_OVERSHOOT_MM, cellCentre, circle, insideOutline, loft, type GridFrame } from "./shapes";
 import type { Lattice } from "./split";
 
 /** Diameter of the magnet the holes take: the common 6 × 2 mm disc (spec v1.1). */
@@ -72,12 +72,6 @@ const EPSILON_MM = 1e-9;
 function crossing(frame: GridFrame, a: number, b: number): [x: number, y: number] {
   const [cx, cy] = cellCentre(a, b, frame);
   return [cx - frame.cellSize / 2, cy - frame.cellSize / 2];
-}
-
-/** Distance from (x, y) to the rounded outline, positive inside it. */
-function insideOutline({ width, depth, outerRadius: radius }: GridFrame, x: number, y: number): number {
-  const [qx, qy] = [Math.abs(x) - (width / 2 - radius), Math.abs(y) - (depth / 2 - radius)];
-  return radius - Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - Math.min(Math.max(qx, qy), 0);
 }
 
 /** Centre of every magnet, in the coordinates of the outline, left to right then front to back. */

@@ -8,9 +8,8 @@ import {
   skeletonOf,
   type BaseplateSettings,
   type BuildPlate,
-  type TriangleMesh,
 } from "../src/index";
-import { checkMesh, inSection } from "./support/measure";
+import { badEdges, checkMesh, inSection } from "./support/measure";
 
 // The skeleton type of baseplate (#26, ADR 0014), observed through the public interface only:
 // each muret between two crossings of the lattice is notched down to a low band, and a post
@@ -37,19 +36,6 @@ const cells = (columns: number, rows: number, settings: Partial<BaseplateSetting
   rows,
   ...settings,
 });
-
-/** Edges of a mesh used by other than exactly two triangles: none for a closed surface without pinches. */
-function badEdges({ indices }: TriangleMesh): number {
-  const uses = new Map<number, number>();
-  const count = indices.length;
-  for (let t = 0; t < count; t += 3)
-    for (let k = 0; k < 3; k++) {
-      const [a, b] = [indices[t + k] as number, indices[t + ((k + 1) % 3)] as number];
-      const key = Math.min(a, b) * count + Math.max(a, b);
-      uses.set(key, (uses.get(key) ?? 0) + 1);
-    }
-  return [...uses.values()].filter((n) => n !== 2).length;
-}
 
 /**
  * How far the material of a section reaches from `from` along a direction: the first point,

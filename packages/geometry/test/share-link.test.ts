@@ -60,6 +60,7 @@ describe("share link content", () => {
     expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "normal" })).toBe("v=1");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "tray", pocketProfile: "flush" })).toBe("v=1&ty=tray&pr=flush");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "skeleton" })).toBe("v=1&ty=skeleton");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "clickbase" })).toBe("v=1&ty=clickbase");
   });
 
   it("writes the settings brought into their ranges", () => {
@@ -208,9 +209,10 @@ describe("reading any link", () => {
     expect(readShareLink("v=1&mg=solid")).toMatchObject({ mg: "frame" });
     expect(decodeSettings("v=1&mg=cells")).toEqual({ ...DEFAULT_SETTINGS, marginShape: "cells" });
     expect(decodeSettings("v=1&pr=rebuilt")).toEqual(DEFAULT_SETTINGS);
-    // The type planned (#27) is read from a link, and gives the open grid until the engine builds it.
+    // Every type of the table v1 is built (#27 the last): an unknown one gives the open grid.
     expect(readShareLink("v=1&ty=clickbase")).toMatchObject({ ty: "clickbase" });
-    expect(decodeSettings("v=1&ty=clickbase")).toEqual(DEFAULT_SETTINGS);
+    expect(decodeSettings("v=1&ty=clickbase")).toEqual({ ...DEFAULT_SETTINGS, baseplateType: "clickbase" });
+    expect(readShareLink("v=1&ty=hollow")).toMatchObject({ ty: "normal" });
     expect(decodeSettings("v=1&ty=skeleton")).toEqual({ ...DEFAULT_SETTINGS, baseplateType: "skeleton" });
     expect(decodeSettings("v=1&ty=solid")).toEqual(DEFAULT_SETTINGS);
     expect(decodeSettings("v=1&ty=tray")).toEqual({ ...DEFAULT_SETTINGS, baseplateType: "tray" });
