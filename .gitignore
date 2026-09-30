@@ -25,4 +25,4 @@ playwright/.cache/
 *.log
 
 # Local agent settings
-.claude/
+.claude/settings.local.json
