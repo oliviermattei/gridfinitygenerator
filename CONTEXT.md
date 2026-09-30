@@ -43,7 +43,7 @@ Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, 
 _Avoid_: style, variante, plateau (réservé au plateau d'impression)
 
 **Fond**:
-La dalle pleine d'un Tray sous chaque poche (0,6 mm, arrondis à la couche), cellules tronquées comprises ; les trous d'une marge en cadre ou en équerres n'en ont pas. La poche monte de son épaisseur plus une couche de jeu, pour que le bac reste assis sur ses pentes, 0,2 mm au-dessus du fond (ADR 0013). À ne pas confondre avec le fond du tiroir, ni avec le fond plat d'une cellule tronquée étroite.
+La dalle pleine d'un Tray sous chaque poche (0,6 mm, arrondis à la couche), cellules tronquées comprises ; les trous d'une marge en cadre, ou d'une marge minimale, n'en ont pas. La poche monte de son épaisseur plus une couche de jeu, pour que le bac reste assis sur ses pentes, 0,2 mm au-dessus du fond (ADR 0013). À ne pas confondre avec le fond du tiroir, ni avec le fond plat d'une cellule tronquée étroite.
 _Avoid_: plancher, socle, floor (sauf dans le code)
 
 **Poteau**:
@@ -75,15 +75,31 @@ Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le ba
 _Avoid_: appui, contact
 
 **Marge**:
-La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme se choisit parmi trois (#23, ADR 0011) : le **cadre à traverses** (par défaut, le plus économe), les **cellules tronquées** (la grille prolongée, ADR 0008) ou les **équerres** de coin seules.
+La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme se choisit parmi trois : le **cadre à traverses** (par défaut, le plus économe), les **cellules** (la grille prolongée et fermée par un mur extérieur, ADR 0008) ou la **grille prolongée** (ouverte, sans mur extérieur). Chaque forme peut être réduite à ses appuis (**marge minimale**).
 _Avoid_: padding, bordure, remplissage
 
+**Marge minimale**:
+Réglage de la marge, décoché par défaut, applicable à chaque forme : la marge n'est gardée que là où elle est nécessaire pour que la baseplate soit bien placée dans le tiroir, et assez solide pour y rester sans casser. Le reste de la marge est vide. Chaque côté qui a une marge garde deux **appuis**, sur la première et la dernière ligne de la grille de ce côté ; les cellules y gardent aussi la première et la dernière cellule tronquée, fermées. Les coins où deux marges se croisent sont vides.
+_Avoid_: marge réduite, équerres, marge partielle
+
+**Grille prolongée**:
+La forme de marge ouverte : les murets de la grille continuent dans la marge, avec leur profil et leur hauteur, jusqu'au contour, où ils s'arrêtent net sur un **talon**. Il n'y a pas de mur extérieur : les cellules tronquées restent ouvertes côté tiroir.
+_Avoid_: grille tronquée, cellules ouvertes
+
+**Appui**:
+Un élément de la marge qui relie une ligne de la grille au tiroir et y transmet la poussée : une traverse et son mur (cadre à traverses), ou un muret prolongé et son talon (grille prolongée, cellules).
+_Avoid_: support, pied, équerre
+
+**Talon**:
+Le bloc plein, à pleine hauteur, qui termine un muret prolongé contre la paroi du tiroir, pour qu'il y appuie à plat plutôt que par l'arête étroite du haut de son profil.
+_Avoid_: plot (réservé à la vis), butée, embout
+
 **Cellule tronquée**:
-Une cellule de la grille prolongée dans la marge et coupée par le mur extérieur : une poche vide, au même profil et sans fond. Une cellule tronquée trop étroite pour laisser un trou d'au moins un mur de large reçoit un fond plat, sur un nombre entier de couches, ou est remplie (ADR 0008). Une cellule de la marge que le mur extérieur ne coupe pas est entière : c'est une poche comme celles de la grille, sans vis.
+Une cellule de la grille prolongée dans la marge et coupée au contour : une poche vide, au même profil et sans fond, fermée par le mur extérieur (forme « cellules ») ou ouverte côté tiroir (grille prolongée). Une cellule tronquée trop étroite pour laisser un trou d'au moins un mur de large reçoit un fond plat, sur un nombre entier de couches, ou est remplie (ADR 0008). Une cellule de la marge que le mur extérieur ne coupe pas est entière : c'est une poche comme celles de la grille, sans vis.
 _Avoid_: demi-cellule, cellule partielle, fausse poche
 
 **Mur extérieur**:
-Le mur de la marge qui suit le contour de la baseplate et s'appuie sur les parois du tiroir (1,2 mm, arrondi au nombre de lignes, deux au moins) : sur tout le contour pour le cadre à traverses et les cellules tronquées, aux équerres seulement pour les équerres de coin.
+Le mur de la marge qui suit le contour de la baseplate et s'appuie sur les parois du tiroir (1,2 mm, arrondi au nombre de lignes, deux au moins) : sur tout le contour pour le cadre à traverses et les cellules ; en marge minimale, seulement aux appuis (le cadre) ou le long de la première et de la dernière cellule tronquée de chaque côté (les cellules). La grille prolongée n'en a pas.
 _Avoid_: paroi, bordure, ceinture
 
 **Cadre à traverses**:
@@ -91,12 +107,8 @@ La forme de marge par défaut : un mur extérieur de 2 mm de haut sur tout le co
 _Avoid_: cadre à nervures (nom du prototype #3), frame
 
 **Traverse**:
-Une barre de 2 mm de haut qui prolonge une ligne de la grille, dans l'alignement d'un muret, du bord de la grille jusqu'au mur extérieur (cadre à traverses, équerres). Sur une coupe, elle est doublée : chaque pièce en garde une entière.
+Une barre de 2 mm de haut qui prolonge une ligne de la grille, dans l'alignement d'un muret, du bord de la grille jusqu'au mur extérieur (cadre à traverses). Sur une coupe, elle est doublée : chaque pièce en garde une entière.
 _Avoid_: nervure (réservé au rejet de « muret »), rib, entretoise
-
-**Équerre**:
-Un morceau de mur extérieur de la forme de marge « équerres de coin » : un L à chaque coin, dont les jambes dépassent de 10 mm les lignes de la grille, relié à la grille par les traverses des premières et dernières lignes ; un T sur les côtés de plus de 4 cellules. Le reste de cette marge est vide (ADR 0011).
-_Avoid_: bracket (sauf dans le code), coin, cornière
 
 **Alignement**:
 La position de la grille dans la baseplate, parmi 9 (arrière gauche … avant droite), quand il reste une marge ; la marge prend le reste. L'arrière est le fond du tiroir.
