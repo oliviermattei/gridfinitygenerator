@@ -5,7 +5,7 @@ import { numberField, openSettings, readout } from "./support";
 
 /** The warning that bins may no longer fit, on screen (with the statistics). */
 function advancedWarning(page: Page) {
-  return page.getByRole("alert").filter({ hasText: "les bacs standard risquent de ne plus s'emboîter", visible: true });
+  return page.getByRole("alert").filter({ hasText: "les bins standard risquent de ne plus s'emboîter", visible: true });
 }
 
 /** Types a value in a field of the settings and leaves it, as a user would. */

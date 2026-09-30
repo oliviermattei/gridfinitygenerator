@@ -12,6 +12,34 @@ const fr = {
   generator: "Générateur de baseplates",
   description:
     "Générateur gratuit et open source de baseplates Gridfinity à la mesure de votre tiroir, calculées dans le navigateur.",
+  // Index of the generators (ADR 0017)
+  home: {
+    /** Name of the site, title of the index. */
+    title: "Gridfinity Generator",
+    heading: "Des rangements qui tombent juste.",
+    tagline:
+      "Générateurs gratuits et open source de pièces Gridfinity à imprimer en 3D, calculées dans votre navigateur, aux cotes réelles.",
+    description:
+      "Générateurs gratuits et open source de baseplates et de bins Gridfinity, calculés dans le navigateur.",
+    generatorsTitle: "Générateurs",
+    badge: "Gridfinity",
+    soon: "Bientôt",
+    open: "Ouvrir",
+    generators: {
+      baseplate: {
+        title: "Baseplates",
+        description: "Une baseplate à la mesure de votre tiroir, découpée pour votre plateau.",
+      },
+      bin: {
+        title: "Bins",
+        description: "Des bins à compartiments, qui s'assoient sans jeu dans vos baseplates.",
+      },
+    },
+    free: "Gratuit, sans publicité ni compte. Si le site vous sert :",
+    license: "Logiciel libre sous licence MIT",
+    source: "Code source",
+    backToIndex: "Tous les générateurs",
+  },
   // Top bar and menu
   share: "Partager",
   reset: "Réinitialiser",
@@ -127,15 +155,15 @@ const fr = {
   },
   baseplateType: "Type",
   baseplateTypes: { normal: "Normal", tray: "Tray", skeleton: "Skeleton", clickbase: "CLICKbase" },
-  baseplateTypeNames: { normal: "Normal, sans fond", tray: "Tray, fond plein", skeleton: "Skeleton, allégée", clickbase: "CLICKbase, bacs clipsés" },
-  normalHint: "La grille ajourée, sans fond, posée au fond du tiroir : chaque bac est tenu sur tout son tour.",
+  baseplateTypeNames: { normal: "Normal, sans fond", tray: "Tray, fond plein", skeleton: "Skeleton, allégée", clickbase: "CLICKbase, bins clipsés" },
+  normalHint: "La grille ajourée, sans fond, posée au fond du tiroir : chaque bin est tenu sur tout son tour.",
   trayHint: (floor: string, gap: string) =>
-    `La grille sur un fond plein de ${floor} mm : rien ne passe dessous, pour un bureau, une étagère ou de petites pièces. Les poches montent de ${floor} mm, plus ${gap} mm de jeu : le bac reste assis sur ses pentes, sans toucher le fond.`,
+    `La grille sur un fond plein de ${floor} mm : rien ne passe dessous, pour un bureau, une étagère ou de petites pièces. Les poches montent de ${floor} mm, plus ${gap} mm de jeu : le bin reste assis sur ses pentes, sans toucher le fond.`,
   skeletonHint: (band: string) =>
-    `Les murets sont entaillés entre les croisements, jusqu'à une bande de ${band} mm : seuls des poteaux au profil complet restent aux coins des cellules, et le bac n'est guidé que par ses 4 coins. Environ deux fois moins de matière. Le tour de la grille reste entier. Pas de clips.`,
+    `Les murets sont entaillés entre les croisements, jusqu'à une bande de ${band} mm : seuls des poteaux au profil complet restent aux coins des cellules, et le bin n'est guidé que par ses 4 coins. Environ deux fois moins de matière. Le tour de la grille reste entier. Pas de clips.`,
   clickbaseHint: (interference: string) =>
-    `Deux lamelles dans la paroi de chaque côté de poche serrent le pied du bac de ${interference} mm : il s'enclenche et tient sans aimant. Le premier bac casse les fines toiles qui portent les lamelles à l'impression. Le milieu des côtés reste plein pour les clips. D'après CLICKbase Refined (ZeroCtrl) et CLICKbase (John Hall), sous licence CC BY-NC-SA : pas d'usage commercial.`,
-  clickbaseWarning: "CLICKbase : imprimez en PETG, pas en PLA, qui flue et ne serre plus les bacs. Générateur de parois Arachne, buse de 0,4 mm.",
+    `Deux lamelles dans la paroi de chaque côté de poche serrent le pied du bin de ${interference} mm : il s'enclenche et tient sans aimant. Le premier bin casse les fines toiles qui portent les lamelles à l'impression. Le milieu des côtés reste plein pour les clips. D'après CLICKbase Refined (ZeroCtrl) et CLICKbase (John Hall), sous licence CC BY-NC-SA : pas d'usage commercial.`,
+  clickbaseWarning: "CLICKbase : imprimez en PETG, pas en PLA, qui flue et ne serre plus les bins. Générateur de parois Arachne, buse de 0,4 mm.",
   typeVolumesHint: "Matière de la baseplate avec chaque type, mesurée sur le maillage.",
   margin: "Marge",
   marginShapes: { frame: "Cadre", cells: "Cellules", brackets: "Équerres" },
@@ -179,7 +207,7 @@ const fr = {
     "single-piece": "La baseplate tient sur votre plateau : une seule pièce, rien à empiler.",
     "low-margin":
       "La marge en cadre ou en équerres fait 2 mm de haut : sous une pièce retournée, elle commencerait en l'air, loin au-dessus de la pièce du dessous. Pour empiler, prenez la marge en cellules tronquées, pleine hauteur.",
-    tray: "Retourné, le fond d'un Tray ponterait toute la poche, et en s'affaissant il remonterait vers le pied du bac, posé 0,2 mm au-dessus.",
+    tray: "Retourné, le fond d'un Tray ponterait toute la poche, et en s'affaissant il remonterait vers le pied du bin, posé 0,2 mm au-dessus.",
     clickbase: "Les toiles d'un CLICKbase portent ses lamelles quand il est imprimé à l'endroit ; retourné, elles s'imprimeraient sur les lamelles et y souderaient.",
   },
   stackUseCells: "Passer aux cellules tronquées",
@@ -217,7 +245,7 @@ const fr = {
     holeGap: (value: string) => `jeu des trous ${value} mm`,
   },
   advancedWarning:
-    "Réglages avancés modifiés : hors des valeurs par défaut, les bacs standard risquent de ne plus s'emboîter.",
+    "Réglages avancés modifiés : hors des valeurs par défaut, les bins standard risquent de ne plus s'emboîter.",
   cellSize: "Taille de cellule",
   cellSizeHint: "42 mm dans le standard Gridfinity. La poche garde le profil du standard : seule sa largeur suit la cellule.",
   outerRadius: "Rayon des coins",
@@ -232,13 +260,13 @@ const fr = {
   moreRows: "Une rangée de plus",
   pocketProfile: "Profil de poche",
   hybrid: "Hybride",
-  hybridDescription: "4,6 mm. Marche de 0,35 mm sous les pentes : le bac est bien assis, sans jeu.",
+  hybridDescription: "4,6 mm. Marche de 0,35 mm sous les pentes : le bin est bien assis, sans jeu.",
   flush: "Ras",
-  flushDescription: "4,25 mm, sans marche : le bac repose sur le fond du tiroir, avec un léger jeu.",
+  flushDescription: "4,25 mm, sans marche : le bin repose sur le fond du tiroir, avec un léger jeu.",
   recommended: "Recommandé",
   testKit: "Kit de test",
   testKitHint: (size: string) =>
-    `Une baseplate 1 × 2 de ${size} : une cellule hybride à l'avant, une cellule ras à l'arrière, 0,35 mm plus basse. Essayez-y vos bacs avant d'imprimer une grande baseplate.`,
+    `Une baseplate 1 × 2 de ${size} : une cellule hybride à l'avant, une cellule ras à l'arrière, 0,35 mm plus basse. Essayez-y vos bins avant d'imprimer une grande baseplate.`,
   downloadTestKit: "Télécharger le kit de test",
   preparingTestKit: "Préparation du kit…",
   // Download
@@ -266,6 +294,31 @@ const en: Strings = {
   generator: "Baseplate generator",
   description:
     "Free and open-source generator of Gridfinity baseplates sized for your drawer, computed in your browser.",
+  // Index of the generators (ADR 0017)
+  home: {
+    title: "Gridfinity Generator",
+    heading: "Storage that fits just right.",
+    tagline: "Free and open-source generators of 3D-printable Gridfinity parts, computed in your browser, to the real dimensions.",
+    description: "Free and open-source generators of Gridfinity baseplates and bins, computed in your browser.",
+    generatorsTitle: "Generators",
+    badge: "Gridfinity",
+    soon: "Coming soon",
+    open: "Open",
+    generators: {
+      baseplate: {
+        title: "Baseplates",
+        description: "A baseplate sized for your drawer, cut for your build plate.",
+      },
+      bin: {
+        title: "Bins",
+        description: "Bins with compartments that sit without play in your baseplates.",
+      },
+    },
+    free: "Free, with no ads and no account. If the site helps you:",
+    license: "Free software under the MIT licence",
+    source: "Source code",
+    backToIndex: "All generators",
+  },
   // Top bar and menu
   share: "Share",
   reset: "Reset",

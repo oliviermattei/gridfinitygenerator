@@ -3,7 +3,7 @@ import { chooseCells, chooseLanguage, closeMenu, closeSettings, numberField, ope
 
 // French and English, millimetres and inches (#14).
 
-/** The browser languages of a first visit, and the generator the site root leads to. */
+/** The browser languages of a first visit, and the index the site root leads to (ADR 0017). */
 const FIRST_VISITS = [
   { browser: "fr-FR", lang: "fr" },
   { browser: "en-US", lang: "en" },
@@ -15,9 +15,9 @@ for (const { browser, lang } of FIRST_VISITS) {
   test.describe(`a ${browser} browser`, () => {
     test.use({ locale: browser });
 
-    test(`on a first visit, the site root leads to /${lang}/baseplate`, async ({ page }) => {
+    test(`on a first visit, the site root leads to /${lang}`, async ({ page }) => {
       await page.goto("/");
-      await expect(page).toHaveURL(new RegExp(`/${lang}/baseplate$`));
+      await expect(page).toHaveURL(new RegExp(`/${lang}$`));
       await expect(page.locator("html")).toHaveAttribute("lang", lang);
     });
   });
@@ -27,8 +27,7 @@ test.describe("a French browser", () => {
   test.use({ locale: "fr-FR", permissions: ["clipboard-read", "clipboard-write"] });
 
   test("choosing English in the menu shows /en/baseplate without a reload, and the choice is kept", async ({ page }, testInfo) => {
-    await page.goto("/");
-    await expect(page).toHaveURL(/\/fr\/baseplate$/);
+    await page.goto("/fr/baseplate");
     await openSettings(page, testInfo);
     await chooseCells(page);
     await numberField(page, "Colonnes").fill("7");
@@ -51,7 +50,7 @@ test.describe("a French browser", () => {
     await expect(page).toHaveURL(/\/en\/baseplate$/);
     await expect(readout(page, "cells")).toHaveText("7 × 5 cells");
     await page.goto("/");
-    await expect(page).toHaveURL(/\/en\/baseplate$/);
+    await expect(page).toHaveURL(/\/en$/);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
   });
 

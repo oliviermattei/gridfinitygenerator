@@ -27,7 +27,7 @@ import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
 import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { DownloadButton } from "./download-button";
-import { PocketMark } from "./illustrations";
+import { GeneratorHeader } from "./generator-header";
 import { DOCK_OFFSET, MobileDock } from "./mobile-dock";
 import { Notifications, notify } from "./notifications";
 import { ResetDialog } from "./reset-dialog";
@@ -328,10 +328,7 @@ export function BaseplateGenerator() {
         }
       />
 
-      <header className={`absolute top-3 left-3 flex h-11 items-center gap-2.5 rounded-full pr-4 pl-2 md:top-4 md:left-4 ${glass}`}>
-        <PocketMark className="size-7 text-ink" />
-        <h1 className="text-[15px] font-semibold tracking-[-0.02em]">{t.generator}</h1>
-      </header>
+      <GeneratorHeader title={t.generator} />
 
       <div className="absolute top-3 right-3 flex items-center gap-2 md:top-4 md:right-4">
         <TopActions {...actions} />

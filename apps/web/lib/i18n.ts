@@ -17,6 +17,16 @@ export function isLocale(value: unknown): value is Locale {
   return LOCALES.includes(value as Locale);
 }
 
+/** The index of the generators in a language (ADR 0017). */
+export function indexPath(locale: Locale): `/${Locale}` {
+  return `/${locale}`;
+}
+
+/** The page of the bin generator in a language. */
+export function binPath(locale: Locale): `/${Locale}/bin` {
+  return `/${locale}/bin`;
+}
+
 /** The page of the baseplate generator in a language. */
 export function baseplatePath(locale: Locale): `/${Locale}/baseplate` {
   return `/${locale}/baseplate`;

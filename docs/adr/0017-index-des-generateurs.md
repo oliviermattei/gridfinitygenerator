@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Un index des générateurs à `/{lang}`, qui remplace le « `/` sans contenu »
@@ -10,7 +10,7 @@ Le site n'avait qu'un générateur, et l'ADR 0007 faisait de `/` une page vide q
 
 - **`/{lang}` est l'index** (`/fr`, `/en`), généré au build comme les générateurs. Les générateurs restent à `/{lang}/baseplate` et vont à `/{lang}/bin` : un slug unique dans les deux langues, comme `baseplate`.
 - **`/` choisit toujours la langue** comme le dit l'ADR 0007 (choix mémorisé, sinon langue du navigateur, sinon anglais), mais mène à `/{lang}`. **Exception** : si l'adresse porte une query string ou une ancre, c'est un ancien lien de partage de baseplate ; `/` mène alors à `/{lang}/baseplate` en les gardant. Aucun lien déjà partagé ne casse.
-- **Contenu**, inspiré de la page d'accueil d'extrabold.tools, dans la direction « Studio » (`packages/ui`) plutôt qu'avec leur style : un titre et une phrase d'accroche, une grille de cartes (image, pastille « Gridfinity », titre, une ligne ; toute la carte est le lien), un rappel discret du don, un pied de page (licence MIT, GitHub, version). Pas de recherche, de vidéos, de MCP ni de comptes.
+- **Contenu**, inspiré de la page d'accueil d'extrabold.tools, dans la direction « Studio » (`packages/ui`) plutôt qu'avec leur style : un titre et une phrase d'accroche, une grille de cartes (image, pastille « Gridfinity », titre, une ligne ; toute la carte est le lien), un rappel discret du don, un pied de page (licence MIT, code source). Pas de recherche, de vidéos, de MCP ni de comptes.
 - **Image des cartes** : une image fixe rendue par notre propre moteur, pas un aperçu 3D vivant : légère sur mobile, et c'est le vrai rendu de l'outil.
 - **Générateur à venir** : une carte grisée « bientôt », non cliquable. Seul le générateur de bins est annoncé ainsi ; on n'annonce rien qui ne soit pas spécifié.
 

@@ -81,7 +81,7 @@ test("a shared link carries the type, a link without it gives the open grid", as
 
   await page.goto("/fr/baseplate?v=1&mode=cells&ty=clickbase");
   await openSettings(page, testInfo);
-  await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type CLICKbase, bacs clipsés");
+  await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type CLICKbase, bins clipsés");
   await expect(stat(page, "volume")).toHaveText("13,9 cm³");
 
   // A type the engine does not know gives the open grid.
@@ -164,12 +164,12 @@ test("choosing CLICKbase cuts the lamellas, keeps the clips and warns to print i
   await page.getByRole("button", { name: /^Type/ }).click();
   await type(page, "CLICKbase").click();
   await expect(type(page, "CLICKbase")).toBeChecked();
-  await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type CLICKbase, bacs clipsés");
+  await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type CLICKbase, bins clipsés");
   // As high as the open grid, less material (the slits), measured on the new mesh.
   await expect(readout(page, "height")).toHaveText("4,6 mm");
   await expect(stat(page, "volume")).toHaveText("66,7 cm³");
   await expect(preview).not.toHaveAttribute("data-triangles", normalTriangles ?? "");
-  await expect(page.getByText(/serrent le pied du bac de 0,25 mm/).filter({ visible: true })).toBeVisible();
+  await expect(page.getByText(/serrent le pied du bin de 0,25 mm/).filter({ visible: true })).toBeVisible();
   // PETG, Arachne and a 0.4 mm nozzle: said in the family, and with the statistics.
   await expect(page.getByTestId("clickbase-warning").filter({ visible: true })).toContainText("imprimez en PETG, pas en PLA");
   await expect(page.getByTestId("clickbase-warning").filter({ visible: true })).toContainText("Arachne, buse de 0,4 mm");
