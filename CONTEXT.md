@@ -181,12 +181,24 @@ L'arrondi qui raccorde le fond intérieur aux parois et aux séparateurs, et les
 _Avoid_: fond arrondi, fillet, arrondi (seul)
 
 **Pelle**:
-Une rampe arrondie contre la paroi avant de chaque ligne de compartiments, pour faire glisser le contenu hors du bin ; elle prolonge le congé à l'avant.
+Une rampe arrondie au fond de chaque compartiment, contre un côté au choix, le même pour tout le bin (avant par défaut), qui fait glisser le contenu vers la main ; elle prolonge le congé de ce côté et tourne dans ses deux coins.
 _Avoid_: scoop, rampe (seule)
 
 **Onglet d'étiquette**:
-Une étagère en surplomb à 45°, imprimable sans support, contre la paroi arrière de chaque ligne de compartiments, sur toute leur largeur, qui reçoit une étiquette.
-_Avoid_: label tab, languette (réservé à la dent du clip), rebord (réservé à l'empilage)
+Une tablette horizontale en haut de chaque compartiment, sur toute sa largeur, contre le côté opposé à la pelle (l'arrière sans pelle), qui reçoit une étiquette ; elle est tenue par des consoles et bordée d'un liseré, et l'espace dessous reste au compartiment.
+_Avoid_: label tab, languette (réservé à la dent du clip), rebord (réservé à l'empilage), étagère
+
+**Profondeur de l'onglet**:
+Ce que l'onglet d'étiquette avance depuis sa paroi : la hauteur de l'étiquette qu'on y colle (12 mm par défaut, pour un ruban de 12 mm).
+_Avoid_: hauteur de l'onglet, largeur de l'étiquette
+
+**Console**:
+Un support triangulaire à 45° sous l'onglet d'étiquette, qui le relie à sa paroi, au milieu de chaque cellule, comme l'équerre d'une étagère ; aucune là où un séparateur le porte déjà.
+_Avoid_: équerre (ancien nom d'une forme de marge), gousset, nervure (réservé au rejet de « muret »)
+
+**Liseré**:
+Le petit relief qui borde l'avant de l'onglet d'étiquette : il arrête le bord de l'étiquette et raidit la tablette.
+_Avoid_: lèvre (réservé au rejet de « rebord d'empilage »), rebord, butée
 
 **Rebord d'empilage**:
 Le profil en haut des parois d'un bin, qui reçoit le pied du bin posé dessus : **normal** (par défaut), **réduit** ou **aucun**.
