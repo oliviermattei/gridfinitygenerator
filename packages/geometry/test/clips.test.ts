@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BASEPLATE_TYPES,
   generateBaseplate,
+  generateClip,
   pieceMesh,
   printClips,
   printPieces,
@@ -9,12 +10,14 @@ import {
   type Baseplate,
   type BaseplateSettings,
   type BuildPlate,
+  type EdgeSlot,
 } from "../src/index";
 import { areaOutside, badEdges, checkMesh, inSection, readThreeMf } from "./support/measure";
 
 // Clips between the pieces of a cut baseplate (#22, ADR 0010), at the ends of each junction,
-// against the corners (#30, ADR 0018), observed through the public interface: where they go,
-// the slots they leave in the pieces, and the clip to print.
+// against the corners (#30, ADR 0018), and the edge slots of the sides without margin (#37,
+// ADR 0022), observed through the public interface: where they go, the slots they leave in the
+// pieces, and the clip to print.
 
 const PLATE_256: BuildPlate = { width: 256, depth: 256 };
 /** Start of a slot from the axis of a crossing of two cuts, and from the edge of the lattice. */
@@ -130,21 +133,23 @@ describe("where the clips go", () => {
     const largest = await generateBaseplate({ drawerWidth: 1000, drawerDepth: 1000 }, "preview", { buildPlate: PLATE_256 });
     expect(largest.stats.pieces).toBe(25);
     expect(largest.stats.clips).toBe(2 * (4 * 5 + 4 * 5));
+    // The default drawer has a margin on every side: no edge slot either (ADR 0022).
     for (const baseplate of [
       await generateBaseplate({}, "preview"),
       await generateBaseplate({}, "preview", { buildPlate: { width: 400, depth: 400 } }),
-      await generateBaseplate({ clips: false }, "preview", { buildPlate: PLATE_256 }),
+      await generateBaseplate({}, "preview", { buildPlate: PLATE_256, clips: false }),
     ]) {
       expect(baseplate.layout.clips).toBeNull();
       expect(baseplate.stats.clips).toBe(0);
-      expect(baseplate.clip).toBeNull();
+      // The clip is there all the same, to download alone.
+      expect((await checkMesh(baseplate.clip)).status).toBe("NoError");
     }
   });
 
   it("leaves the slots out of the preview, which never shows them from above, and counts the clips all the same", async () => {
     const [preview, bare, final] = await Promise.all([
       generateBaseplate({ baseplateType: "clickbase" }, "preview", { buildPlate: PLATE_256 }),
-      generateBaseplate({ baseplateType: "clickbase", clips: false }, "preview", { buildPlate: PLATE_256 }),
+      generateBaseplate({ baseplateType: "clickbase" }, "preview", { buildPlate: PLATE_256, clips: false }),
       generateBaseplate({ baseplateType: "clickbase" }, "final", { buildPlate: PLATE_256 }),
     ]);
     expect(preview.mesh.indices.length).toBe(bare.mesh.indices.length);
@@ -165,7 +170,7 @@ describe("where the clips go", () => {
     // Without margin, the edge of the lattice is the outline: 0.8 mm plus the chamfer of 1.5 mm.
     const cut = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 3, bottomChamfer: 1.5 }, "final", { buildPlate: { width: 50, depth: 300 } });
     expect(cut.layout.clips?.placements.map(({ start }) => start)).toEqual([2.3, 2.3]);
-    const plain = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 3, bottomChamfer: 1.5, clips: false }, "final", { buildPlate: { width: 50, depth: 300 } });
+    const plain = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 3, bottomChamfer: 1.5 }, "final", { buildPlate: { width: 50, depth: 300 }, clips: false });
     expect((plain.stats.volume as number) - (cut.stats.volume as number)).toBeCloseTo(2 * slotVolume(2.8), 3);
   });
 
@@ -181,16 +186,18 @@ describe("where the clips go", () => {
     expect(cut.stats.clips).toBeGreaterThan(20);
     expect(cut.stats.clips).toBeLessThan(24);
     expect(cut.layout.clips?.placements.some(({ start }) => start === EDGE_START)).toBe(true);
-    const plain = await generateBaseplate({ ...settings, clips: false }, "final", plate);
-    // Nothing of the numbers is lost: the pieces lose exactly their slots.
-    expect((plain.stats.volume as number) - (cut.stats.volume as number)).toBeCloseTo(cut.stats.clips * slotVolume(2.8), 2);
+    const plain = await generateBaseplate(settings, "final", { ...plate, clips: false });
+    // Nothing of the numbers is lost: the pieces lose exactly their slots, and half a slot per
+    // edge slot, two on each side of 4 cells without margin (ADR 0022).
+    expect(cut.layout.clips?.edges).toHaveLength(8);
+    expect((plain.stats.volume as number) - (cut.stats.volume as number)).toBeCloseTo((cut.stats.clips + 8 / 2) * slotVolume(2.8), 2);
   });
 });
 
 describe("slots in the pieces", () => {
   it("cuts a slot on both sides of each cut, in the foot of the muret only, and nothing above 2.8 mm", async () => {
     const cut = await generateBaseplate({}, "final", { buildPlate: PLATE_256 });
-    const plain = await generateBaseplate({ clips: false }, "final", { buildPlate: PLATE_256 });
+    const plain = await generateBaseplate({}, "final", { buildPlate: PLATE_256, clips: false });
     const count = cut.stats.clips;
     // The material lost is exactly the slots: none of them reaches a pocket, a margin or a number.
     expect((plain.stats.volume as number) - (cut.stats.volume as number)).toBeCloseTo(count * slotVolume(2.8), 2);
@@ -309,6 +316,177 @@ describe("every type takes its clips (ADR 0018)", () => {
   );
 });
 
+describe("edge slots on the sides without margin (#37, ADR 0022)", () => {
+  /** 2 × 2 cells without margin, from −42 to 42 on both axes. */
+  const SQUARE = { sizeMode: "cells", columns: 2, rows: 2 } as const;
+  const sidesOf = (edges: readonly EdgeSlot[]) => edges.map(({ side }) => side);
+  /** A point `depth` inside the outline from the middle of an edge slot, across it. */
+  const inward = ({ side, centre: [x, y] }: EdgeSlot, depth: number): [number, number] =>
+    [
+      [x - depth, y],
+      [x, y - depth],
+      [x + depth, y],
+      [x, y + depth],
+    ][side] as [number, number];
+
+  it("cuts them on the sides without margin only: the 4 sides of cells without margin, none on the default drawer", async () => {
+    const square = await generateBaseplate(SQUARE, "preview");
+    // Right, back, left, front: a side of 2 cells takes a single one, at its first end.
+    expect(sidesOf(square.layout.clips?.edges ?? [])).toEqual([0, 1, 2, 3]);
+    expect(square.layout.clips?.placements).toEqual([]);
+    expect((await generateBaseplate({}, "preview")).layout.clips).toBeNull();
+    // A grid pushed to the back left of the drawer: no margin on the left nor at the back.
+    const corner = await generateBaseplate({ alignment: "tl" }, "preview");
+    expect(corner.layout.margins).toMatchObject({ left: 0, back: 0 });
+    expect(sidesOf(corner.layout.clips?.edges ?? [])).toEqual([1, 1, 2, 2]);
+    // A margin on the left and on the right only: the front and the back, 4 cells long, two each.
+    const sides = await generateBaseplate({ sizeMode: "cells", columns: 4, rows: 3, marginWidth: 20 }, "preview");
+    expect(sidesOf(sides.layout.clips?.edges ?? [])).toEqual([1, 1, 3, 3]);
+  });
+
+  it.each([
+    [1, 1],
+    [2, 1],
+    [3, 2],
+    [5, 2],
+  ])("gives a side of %i cells %i slot(s), against its corners, at its first end for a single one", async (columns, count) => {
+    const { layout } = await generateBaseplate({ sizeMode: "cells", columns, rows: 1 }, "preview");
+    // The front side, along X from x = −21 · columns: the slot starts 4 mm from the corner (its radius).
+    const front = (layout.clips?.edges ?? []).filter(({ side }) => side === 3);
+    const corner = 21 * columns;
+    const ends = count === 1 ? [-1] : [-1, 1];
+    expect(front.map(({ cut, line, cell, start, centre }) => [cut, line, cell, start, centre.map(um)])).toEqual(
+      ends.map((towards) => ["row", 0, towards < 0 ? 0 : columns - 1, 4, [um(towards * (corner - 4 - 2.5)), -21]]),
+    );
+    // The sides of a single cell: one slot each, at the front.
+    expect((layout.clips?.edges ?? []).filter(({ side }) => side === 0 || side === 2).map(({ centre }) => um(centre[1]))).toEqual([um(-21 + 6.5), um(-21 + 6.5)]);
+  });
+
+  it.each([
+    ["the rounded corner of 4 mm", {}, 4],
+    ["the edge slot of the other side, without rounded corner", { outerRadius: 0 }, 1.92],
+    ["the skin over a chamfer of 1.3 mm on the other side", { outerRadius: 0, bottomChamfer: 1.3 }, 2.1],
+    ["the rounded corner of 10 mm", { outerRadius: 10 }, 10],
+    ["the skin inside the lattice, a margin on the other side", { rows: 3, marginDepth: 20 }, 0.8],
+  ])("starts a slot past %s", async (_, settings, start) => {
+    const { layout } = await generateBaseplate({ ...SQUARE, ...settings }, "preview");
+    const edges = layout.clips?.edges ?? [];
+    expect(edges.length).toBeGreaterThan(0);
+    for (const edge of edges) expect(edge.start).toBe(start);
+  });
+
+  it("takes none under a bottom chamfer deeper than the channel and the tooth, nor where the slot passes the middle of the side", async () => {
+    // Deeper than 0.8 + 0.5 mm, the chamfer takes the tooth where the leg grips it (prototypes/edge-slots).
+    expect((await generateBaseplate({ ...SQUARE, bottomChamfer: 1.35 }, "preview")).layout.clips).toBeNull();
+    expect((await generateBaseplate({ ...SQUARE, bottomChamfer: 1.3 }, "preview")).layout.clips?.edges).toHaveLength(4);
+    // 20 mm cells: 4 mm of radius and 5 mm of slot fit in the half side, 6 mm of radius do not.
+    expect((await generateBaseplate({ ...SQUARE, cellSize: 20 }, "preview")).layout.clips?.edges).toHaveLength(4);
+    expect((await generateBaseplate({ ...SQUARE, cellSize: 20, outerRadius: 6 }, "preview")).layout.clips).toBeNull();
+  });
+
+  it("counts no clip for them, in the statistics as in the mass, and leaves them out of the preview", async () => {
+    const [preview, bare, final] = await Promise.all([
+      generateBaseplate(SQUARE, "preview"),
+      generateBaseplate(SQUARE, "preview", { clips: false }),
+      generateBaseplate(SQUARE, "final"),
+    ]);
+    expect(final.stats.clips).toBe(0);
+    expect(final.stats.clipsVolume).toBe(0);
+    expect(printClips(final)).toBeNull();
+    expect(preview.layout.clips).toEqual(final.layout.clips);
+    expect(preview.mesh.indices.length).toBe(bare.mesh.indices.length);
+    // The same clip as the one of the export, to download alone.
+    const alone = await generateClip(SQUARE);
+    expect(alone.positions).toEqual(final.clip.positions);
+    expect(alone.indices).toEqual(final.clip.indices);
+    const skeleton = await generateClip({ baseplateType: "skeleton" });
+    expect((await checkMesh(skeleton)).bounds.max[2]).toBeCloseTo(4.0 - 0.5, 5);
+  });
+
+  it("gives the same edge slots to the same settings, whatever the cuts: the build plate is not in the share link", async () => {
+    const settings = { sizeMode: "cells", columns: 4, rows: 3 } as const;
+    const [whole, cut] = await Promise.all([generateBaseplate(settings, "preview"), generateBaseplate(settings, "preview", { buildPlate: { width: 100, depth: 100 } })]);
+    expect(cut.stats.pieces).toBeGreaterThan(1);
+    expect(cut.layout.clips?.edges).toEqual(whole.layout.clips?.edges);
+    expect(cut.layout.clips?.edges).toHaveLength(8);
+  });
+
+  it.each(BASEPLATE_TYPES.flatMap((baseplateType) => (["hybrid", "flush"] as const).map((pocketProfile) => [baseplateType, pocketProfile] as const)))(
+    "%s, %s: half a slot on each side, 0.8 mm of skin towards the pocket, invisible from above, NoError, the same by bricks and booleans",
+    async (baseplateType, pocketProfile) => {
+      const settings = { ...SQUARE, baseplateType, pocketProfile };
+      const [bricks, booleans, plain] = await Promise.all([
+        generateBaseplate(settings, "final", { strategy: "bricks" }),
+        generateBaseplate(settings, "final", { strategy: "boolean" }),
+        generateBaseplate(settings, "final", { clips: false }),
+      ]);
+      const { slot, edges } = bricks.layout.clips as NonNullable<Baseplate["layout"]["clips"]>;
+      expect(edges).toHaveLength(4);
+      expect(booleans.layout).toEqual(bricks.layout);
+      for (const { mesh } of [bricks, booleans]) {
+        expect((await checkMesh(mesh)).status).toBe("NoError");
+        expect(badEdges(mesh)).toBe(0);
+      }
+      expect(Math.abs((bricks.stats.volume as number) - (booleans.stats.volume as number))).toBeLessThan(0.1);
+      // Half a slot each; in a CLICKbase, the lamellas next to them are shorter, and give some back.
+      const lost = (plain.stats.volume as number) - (bricks.stats.volume as number);
+      if (baseplateType === "clickbase") expect(lost).toBeLessThan((4 * slotVolume(slot.top, slot.bridge, slot.length)) / 2);
+      else expect(lost).toBeCloseTo((4 * slotVolume(slot.top, slot.bridge, slot.length)) / 2, 2);
+      for (const z of [0.1, 0.5, 1.5, slot.top - 0.1]) {
+        const section = await sectionOf(bricks, z);
+        for (const edge of edges) {
+          const low = z < slot.bridge;
+          expect(inSection(section, inward(edge, 0.25)), `tooth at ${z} mm`).toBe(!low);
+          expect(inSection(section, inward(edge, 0.9)), `leg at ${z} mm`).toBe(false);
+          // The skin towards the pocket, 0.8 mm at least.
+          expect(inSection(section, inward(edge, slot.halfWidth + 0.01)), `skin at ${z} mm`).toBe(true);
+          expect(inSection(section, inward(edge, slot.halfWidth + 0.79)), `skin at ${z} mm`).toBe(true);
+        }
+      }
+      // Nothing is removed over a slot: seen from above, the muret is whole, and so is the
+      // baseplate, but in a CLICKbase, whose lamellas next to the slots are shorter (ADR 0018).
+      for (const z of [slot.top + 0.05, slot.top + 0.5]) {
+        const [slotted, whole] = [await sectionOf(bricks, z), await sectionOf(plain, z)];
+        for (const edge of edges)
+          for (const depth of [0.05, 0.25, 0.9, 1.3]) {
+            const [x, y] = inward(edge, depth);
+            for (const along of [-slot.length / 2 + 0.05, 0, slot.length / 2 - 0.05])
+              expect(inSection(slotted, edge.cut === "column" ? [x, y + along] : [x + along, y])).toBe(true);
+          }
+        if (baseplateType === "clickbase") continue;
+        expect(await areaOutside(whole, slotted)).toBeLessThan(1e-3);
+        expect(await areaOutside(slotted, whole)).toBeLessThan(1e-3);
+      }
+    },
+  );
+
+  it("puts the edge slots of two identical baseplates side by side face to face: together, a whole slot for a clip", async () => {
+    const plate = await generateBaseplate(SQUARE, "final");
+    const edges = plate.layout.clips?.edges ?? [];
+    // Along X, the right side of one against the left side of the other; along Y, back against front.
+    for (const [a, b, axis] of [
+      [0, 2, 1],
+      [1, 3, 0],
+    ] as const) {
+      const [one, other] = [edges.filter(({ side }) => side === a), edges.filter(({ side }) => side === b)];
+      expect(one.map(({ centre, start }) => [um(centre[axis]), start])).toEqual(other.map(({ centre, start }) => [um(centre[axis]), start]));
+    }
+    // The second baseplate 84 mm to the right: across the joint (x = 42), the two teeth between the legs.
+    const right = edges.find(({ side }) => side === 0) as EdgeSlot;
+    const y = right.centre[1];
+    const shifted = { ...plate.mesh, positions: plate.mesh.positions.map((value, k) => (k % 3 === 0 ? value + 84 : value)) };
+    const [low, mid] = [0.4, 1.5];
+    const both = async (z: number) => [...((await checkMesh(plate.mesh, [z])).sections.get(z) ?? []), ...((await checkMesh(shifted, [z])).sections.get(z) ?? [])];
+    const [lower, middle] = [await both(low), await both(mid)];
+    for (const u of [-1, 1]) {
+      expect(inSection(lower, [42 + u * 0.25, y])).toBe(false); // the channel of the bridge
+      expect(inSection(middle, [42 + u * 0.25, y])).toBe(true); // the teeth
+      expect(inSection(middle, [42 + u * 0.9, y])).toBe(false); // the legs
+      expect(inSection(middle, [42 + u * 1.75, y])).toBe(true); // the skins
+    }
+  });
+});
+
 describe("pieces with clips", () => {
   const CASES: [name: string, settings: Partial<BaseplateSettings>, plate: BuildPlate][] = [
     ["default drawer", {}, { width: 180, depth: 180 }],
@@ -332,7 +510,7 @@ describe("pieces with clips", () => {
 describe("the clip to print", () => {
   it("is a closed U lying on its side, smaller than its slot by the gaps", async () => {
     const cut = await generateBaseplate({}, "final", { buildPlate: PLATE_256 });
-    const check = await checkMesh(cut.clip as NonNullable<Baseplate["clip"]>, [2]);
+    const check = await checkMesh(cut.clip, [2]);
     expect(check.status).toBe("NoError");
     // Across the cut 2.7 − 2 × 0.1, up 2.8 − 0.2, along the cut 5 − 2 × 0.25.
     expect(check.bounds.min).toEqual([-1.25, 0, 0]);
@@ -357,7 +535,7 @@ describe("the clip to print", () => {
     const check = await checkMesh(clips as NonNullable<typeof clips>);
     expect(check.status).toBe("NoError");
     expect(check.genus).toBe(1 - cut.stats.clips); // 8 shells of genus 0
-    const single = await checkMesh(cut.clip as NonNullable<Baseplate["clip"]>);
+    const single = await checkMesh(cut.clip);
     expect(check.volume).toBeCloseTo(8 * single.volume, 2); // float32 coordinates, 230 mm off the origin
     const right = Math.max(...(await Promise.all(pieces.map(async (mesh) => (await checkMesh(mesh)).bounds.max[0]))));
     expect(check.bounds.min[0]).toBeCloseTo(right + 10, 4);
@@ -371,7 +549,7 @@ describe("the clip to print", () => {
 
   it("gives the volume of all the clips, measured on the clip, apart from the volume of the pieces (#31)", async () => {
     const cut = await generateBaseplate({}, "final", { buildPlate: PLATE_256 });
-    const single = await checkMesh(cut.clip as NonNullable<Baseplate["clip"]>);
+    const single = await checkMesh(cut.clip);
     expect(cut.stats.clips).toBe(8);
     expect(cut.stats.clipsVolume).toBeCloseTo(8 * single.volume, 6);
     expect(cut.stats.clipsVolume).toBeCloseTo(8 * 18.2475, 3); // 8 clips of 4.055 mm² × 4.5 mm
@@ -381,6 +559,6 @@ describe("the clip to print", () => {
     // Null for the preview, like the volume; 0 without clips.
     expect((await generateBaseplate({}, "preview", { buildPlate: PLATE_256 })).stats.clipsVolume).toBeNull();
     expect((await generateBaseplate({}, "final")).stats.clipsVolume).toBe(0);
-    expect((await generateBaseplate({ clips: false }, "final", { buildPlate: PLATE_256 })).stats.clipsVolume).toBe(0);
+    expect((await generateBaseplate({}, "final", { buildPlate: PLATE_256, clips: false })).stats.clipsVolume).toBe(0);
   });
 });

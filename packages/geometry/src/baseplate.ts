@@ -2,7 +2,7 @@ import { BASEPLATE_TYPE_VARIANTS } from "./baseplate-type";
 import { assembleWithBooleans } from "./boolean-assembly";
 import { assembleWithBricks, canAssembleWithBricks } from "./brick-assembly";
 import type { Clickbase } from "./clickbase";
-import { clipLayoutOf, clipSolid, type ClipLayout } from "./clips";
+import { clipLayoutOf, clipSlotOf, clipSolid, type ClipLayout } from "./clips";
 import { labelsOf } from "./label";
 import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold, withArena } from "./manifold";
@@ -46,11 +46,15 @@ export interface BaseplateStats {
   screws: number;
   /** Number of magnets that hold the baseplate in a sheet-metal drawer: one per magnet hole. */
   magnets: number;
-  /** Number of clips to print, which hold the pieces together: none for a single piece or without clips. */
+  /**
+   * Number of clips to print, which hold the pieces together: one per slot along the cuts,
+   * none for a single piece. The edge slots take none: the clips that join two baseplates are
+   * downloaded apart (`Baseplate.clip`).
+   */
   clips: number;
   /**
    * Volume of material of all the clips to print, in mm³: the volume of one clip measured on
-   * its mesh (`Baseplate.clip`) times their number; 0 without clips. Null for the preview,
+   * its mesh (`Baseplate.clip`) times their number; 0 for a single piece. Null for the preview,
    * like `volume`.
    */
   clipsVolume: number | null;
@@ -87,6 +91,12 @@ export interface GenerateOptions {
    * that of its grid alone (#29).
    */
   margin?: boolean;
+  /**
+   * Whether to cut the slots of the clips, along the cuts and on the outline, true by default.
+   * They are not a setting (ADR 0022): false is for the benches and tests that measure what
+   * the slots take away.
+   */
+  clips?: boolean;
 }
 
 /** One piece of the baseplate, a closed shell of its mesh, in the order of `layout.split.pieces`. */
@@ -114,10 +124,11 @@ export interface Baseplate {
   /** Its pieces, a single one when it is not cut. */
   pieces: BaseplatePiece[];
   /**
-   * One clip, as it prints (lying on its side, from the origin up), to print
-   * `stats.clips` times (`printClips`); null without clips. Always checked (`NoError`).
+   * One clip, as it prints (lying on its side, from the origin up), to print `stats.clips`
+   * times (`printClips`), or alone, to join the baseplate to another one by their edge slots
+   * (`generateClip`, the same). Always there, even without a slot; always checked (`NoError`).
    */
-  clip: TriangleMesh | null;
+  clip: TriangleMesh;
 }
 
 /**
@@ -132,9 +143,10 @@ export interface Baseplate {
  * the murets (a skeleton, skeleton.ts) or cut lamellas that hold the bins in the pocket walls
  * (CLICKbase, clickbase.ts). With a build plate it does not fit on
  * (`options.buildPlate`), it is cut on grid lines into pieces that do, each with its number
- * engraved underneath (split.ts, label.ts, ADR 0009), and, with the clips on, a slot astride
- * the cut at each end of each junction of two pieces, against the corner, for a clip printed
- * apart (clips.ts, ADR 0010 and ADR 0018). The settings are
+ * engraved underneath (split.ts, label.ts, ADR 0009), and a slot astride the cut at each end
+ * of each junction of two pieces, against the corner, for a clip printed apart (clips.ts, ADR
+ * 0010 and ADR 0018). Each side of the outline without margin takes edge slots, half of a slot
+ * at each end, to clip the baseplate to another one (ADR 0022). The settings are
  * first brought into their ranges, and a missing one takes its default (`clampSettings`):
  * without settings, the baseplate of the default drawer. The mesh of each piece is always
  * closed; the final mesh, the one that gets exported, is also checked by manifold
@@ -215,7 +227,8 @@ async function buildBaseplate(
   };
   const split = splitPlanOf(uncut, options.buildPlate ?? null);
   const labels = labelsOf(split);
-  const clips = clipsOf(settings.clips, uncut, split, labels);
+  // The test kit tries the seating of the bins: no slot.
+  const clips = clipsOf(options.clips !== false && lowerCells.length === 0, uncut, split, labels);
   // The slots of the clips, under the murets, never show from above: the preview leaves them
   // out, and the lamellas of a CLICKbase whole, for its 100 ms; the final mesh has them (ADR 0018).
   const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips: quality === "final" ? clips : null };
@@ -233,7 +246,7 @@ async function buildBaseplate(
       ? assembleWithBricks(wasm, frame, quality === "final", split.pieces, labels)
       : assembleWithBooleans(wasm, frame, split.pieces, labels);
   const { mesh, pieces } = joinPieces(meshes, split.pieces, quality);
-  const clip = clips ? withArena((own) => meshOf(clipSolid(wasm, own, clips.slot))) : null;
+  const clip = withArena((own) => meshOf(clipSolid(wasm, own, clipSlotOf(frame))));
   return {
     mesh,
     layout,
@@ -245,7 +258,7 @@ async function buildBaseplate(
       screws: layout.screws.length,
       magnets: layout.magnets.length,
       clips: clips?.placements.length ?? 0,
-      clipsVolume: quality === "final" ? (clip && clips ? volumeOf(clip) * clips.placements.length : 0) : null,
+      clipsVolume: quality === "final" ? (clips ? volumeOf(clip) * clips.placements.length : 0) : null,
     },
     pieces,
     clip,
@@ -258,13 +271,28 @@ function clickbaseFor(clickbase: Clickbase | null, quality: Quality): Clickbase 
 }
 
 /**
- * The clips of a baseplate cut along `split`, null when it is not cut, when the clips are off
- * (`on`), or when no side along a cut has room for one.
+ * The clips of a baseplate cut along `split` and its edge slots, null without slots (`on`, the
+ * test kit and the benches), or when neither a junction nor a side of the outline has one.
  */
 function clipsOf(on: boolean, frame: GridFrame, split: SplitPlan, labels: ReturnType<typeof labelsOf>): ClipLayout | null {
-  if (!on || split.pieces.length <= 1) return null;
+  if (!on) return null;
   const layout = clipLayoutOf(frame, latticeOf(frame), split, labels);
-  return layout.placements.length > 0 ? layout : null;
+  return layout.placements.length > 0 || layout.edges.length > 0 ? layout : null;
+}
+
+/**
+ * One clip for the settings, as it prints (lying on its side, from the origin up), checked
+ * (`NoError`): the one of `Baseplate.clip`, to print alone, for instance to join two
+ * baseplates by their edge slots (ADR 0022). It only depends on the pocket profile, the type
+ * of baseplate and the layer height.
+ */
+export async function generateClip(input: Partial<BaseplateSettings>): Promise<TriangleMesh> {
+  const settings = clampSettings(input);
+  const wasm = await loadManifold();
+  const type = BASEPLATE_TYPE_VARIANTS[settings.baseplateType];
+  const profile = type.profile(POCKET_PROFILES[settings.pocketProfile], settings.layerHeight);
+  const slot = clipSlotOf({ profile, layerHeight: settings.layerHeight, cellSize: settings.cellSize, skeleton: type.skeleton(settings.layerHeight) });
+  return withArena((own) => meshOf(clipSolid(wasm, own, slot)));
 }
 
 /** The meshes of the pieces as one mesh, each a range of its vertices and triangles, measured. */

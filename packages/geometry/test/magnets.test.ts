@@ -140,7 +140,8 @@ describe("layout of the magnets: under the crossings of the murets the material 
 
 describe.each<Quality>(["preview", "final"])("magnet holes, %s quality", (quality) => {
   it("drills a hole of the magnet plus the hole gap, from underneath up to 2.20 mm, at each magnet and nowhere else", async () => {
-    const { layout, mesh } = await generateBaseplate(cells(4, 3), quality);
+    // Without the edge slots of its sides without margin, whose legs are holes too (clips.test.ts).
+    const { layout, mesh } = await generateBaseplate(cells(4, 3), quality, { clips: false });
     const { sections } = await checkMesh(mesh, [0.1, 1.5, DEPTH_MM - 0.01, DEPTH_MM + 0.01]);
     for (const z of [0.1, 1.5, DEPTH_MM - 0.01]) {
       // The outline, one pocket per cell and one hole per magnet.
@@ -165,7 +166,7 @@ describe.each<Quality>(["preview", "final"])("magnet holes, %s quality", (qualit
     [0.28, 2.24],
     [0.12, 2.28],
   ])("is 2.2 mm deep rounded up to the %s mm layer: %s mm", async (layerHeight, depth) => {
-    const { layout, mesh } = await generateBaseplate(cells(2, 2, { layerHeight }), quality);
+    const { layout, mesh } = await generateBaseplate(cells(2, 2, { layerHeight }), quality, { clips: false });
     const { sections } = await checkMesh(mesh, [depth - 0.01, depth + 0.01]);
     const centre = [...(layout.magnets[0] as [number, number])] as [number, number];
     expectWithin(pocketOpening(sections.get(depth - 0.01) ?? [], centre)?.width, HOLE_MM);

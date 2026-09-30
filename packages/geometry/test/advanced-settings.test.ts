@@ -102,7 +102,8 @@ describe("cell size", () => {
 
 describe("outer corner radius", () => {
   it.each([0, 4, 10])("rounds the outer corners with a radius of %i mm", async (outerRadius) => {
-    const { mesh } = await generateBaseplate(cells(2, 2, { outerRadius }), "final");
+    // Without the edge slots of its sides without margin, which notch the outline (clips.test.ts).
+    const { mesh } = await generateBaseplate(cells(2, 2, { outerRadius }), "final", { clips: false });
     // Near the bottom, where the corner pockets are narrowest: higher, a radius over about 5 mm
     // opens the corner pockets onto the outside (no margin), and the section merges them.
     const { sections, status } = await checkMesh(mesh, [0.05]);

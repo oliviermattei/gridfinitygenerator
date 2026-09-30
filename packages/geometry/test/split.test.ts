@@ -145,7 +145,7 @@ describe("pieces of a cut baseplate", () => {
     const whole = await generateBaseplate({ marginShape: "cells" }, "final", BARE);
     // Without the slots of the clips (clips.test.ts), which take their own material, nor the
     // magnet holes, which the crossings on a cut lose (magnets.test.ts).
-    const cut = await generateBaseplate({ clips: false, marginShape: "cells" }, "final", { ...BARE, buildPlate: PLATE_256 });
+    const cut = await generateBaseplate({ marginShape: "cells" }, "final", { ...BARE, buildPlate: PLATE_256, clips: false });
     const engraved = (whole.stats.volume as number) - (cut.stats.volume as number);
     expect(engraved).toBeGreaterThan(0);
     expect(engraved).toBeLessThan(cut.stats.pieces * LABEL_VOLUME_MAX_MM3);
@@ -159,7 +159,7 @@ describe("pieces of a cut baseplate", () => {
     // front and back margins (13.5 mm less the 1.2 mm outer wall), on row line 3 across the
     // left and right ones (10.5 mm less the wall): 1.2 mm more of crossbar, 2 mm high.
     const frame = await generateBaseplate({}, "final", BARE);
-    const frameCut = await generateBaseplate({ clips: false }, "final", { ...BARE, buildPlate: PLATE_256 });
+    const frameCut = await generateBaseplate({}, "final", { ...BARE, buildPlate: PLATE_256, clips: false });
     const doubled = 1.2 * 2 * (2 * (13.5 - 1.2) + 2 * (10.5 - 1.2));
     expect((frameCut.stats.volume as number) - ((frame.stats.volume as number) - engraved)).toBeCloseTo(doubled, 2);
   });

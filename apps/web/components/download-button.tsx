@@ -5,9 +5,12 @@ import { focusRing } from "@repo/ui";
 import { ChevronDown, Download } from "lucide-react";
 import type { ExportFormat } from "@/lib/engine/protocol";
 import { useStrings } from "@/lib/locale";
+import { ClipIcon } from "./illustrations";
 
 export interface DownloadButtonProps {
   onDownload: (format: ExportFormat) => void;
+  /** Downloads a single clip of a baseplate, as an STL (#37): offered with or without a cut; none for a bin. */
+  onDownloadClip?: () => void;
   /** Format of the baseplate being prepared, if any. */
   exporting: ExportFormat | null;
   /** Whether a download is being prepared (the baseplate or the test kit): every download waits for it. */
@@ -25,9 +28,10 @@ const FORMATS: readonly { format: ExportFormat; description: "threeMfDescription
 
 /**
  * Download of the baseplate: the main button downloads a 3MF, the cheapest path to the
- * slicer (named object, share link inside); its menu also offers the STL.
+ * slicer (named object, share link inside); its menu also offers the STL, and a single clip,
+ * to print clips one by one.
  */
-export function DownloadButton({ onDownload, exporting, disabled, compact = false, stlDescription }: DownloadButtonProps) {
+export function DownloadButton({ onDownload, onDownloadClip, exporting, disabled, compact = false, stlDescription }: DownloadButtonProps) {
   const t = useStrings();
   const label = exporting ? t.preparing[exporting] : t.download["3mf"];
   const accent = `h-12 bg-accent text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-70 ${focusRing}`;
@@ -68,6 +72,15 @@ export function DownloadButton({ onDownload, exporting, disabled, compact = fals
                   </span>
                 </Menu.Item>
               ))}
+              {onDownloadClip && (
+                <Menu.Item onClick={onDownloadClip} className="flex cursor-default items-start gap-3 rounded-[10px] px-2.5 py-2 outline-none data-highlighted:bg-sunken">
+                  <ClipIcon className="mt-0.5 size-4 shrink-0 text-muted" />
+                  <span className="min-w-0">
+                    <span className="block text-[13.5px] font-semibold">{t.downloadClip}</span>
+                    <span className="block text-[12px] leading-snug text-muted">{t.clipDescription}</span>
+                  </span>
+                </Menu.Item>
+              )}
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>

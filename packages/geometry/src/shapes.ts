@@ -61,7 +61,10 @@ export interface GridFrame {
    * across Y: no screw nor magnet sits on an intersection they cut. Empty without a cut.
    */
   cuts: { columns: readonly number[]; rows: readonly number[] };
-  /** Clips astride the cuts, whose slots the pieces carry (clips.ts); null without them. */
+  /**
+   * Clips astride the cuts and edge slots on the outline, whose slots the pieces carry
+   * (clips.ts); null without them, and in the preview.
+   */
   clips: ClipLayout | null;
   /**
    * The notches of a skeleton baseplate between the crossings of the murets (skeleton.ts,

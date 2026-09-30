@@ -1,4 +1,5 @@
-// Clips that hold the pieces of a cut baseplate together (#22, ADR 0010), at the corners (#30, ADR 0018).
+// Clips that hold the pieces of a cut baseplate together (#22, ADR 0010), at the corners (#30,
+// ADR 0018), and the edge slots that clip a baseplate to another one (#37, ADR 0022).
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import { DIGIT_HEIGHT_MM, DIGIT_GAP_MM, type Label } from "./label";
 import type { Own } from "./manifold";
@@ -23,6 +24,13 @@ import type { Lattice, SplitPlan } from "./split";
  * cuts, it starts past the slots along the other cut, which share the corner of each piece;
  * from the edge of the lattice, it starts inwards, past a skin towards the margin, which may
  * be empty there (the holes of a frame of crossbars 2 mm high).
+ *
+ * A side of the outline without margin, where the grid reaches the edge, takes edge slots
+ * (ADR 0022): the baseplate carries its half of a slot there, its tooth and its channel, as a
+ * piece does on a cut, so that a clip holds it to another baseplate generated apart, with its
+ * own side without margin. Two per side, one at each end, against the corner, or a single one
+ * at the first end (front or left) when the side is one or two cells long: the same on the
+ * four sides, whatever the cuts, so that two baseplates side by side have theirs face to face.
  *
  * The slot is fixed; the gaps are the clip's own: another gap only takes other clips, never
  * another baseplate.
@@ -105,11 +113,31 @@ export interface ClipPlacement {
   centre: [x: number, y: number];
 }
 
-/** The clips of a cut baseplate: the slot, and where each clip goes. */
+/**
+ * Half a slot on the outline, on a side without margin (ADR 0022): the tooth and the channel
+ * the baseplate keeps against its edge, for a clip that holds it to another baseplate. `cut` and
+ * `line` are those of the edge of the grid, as if it were a cut: a column line (0 or the number
+ * of columns) for the left and right sides, a row line for the front and back ones.
+ */
+export interface EdgeSlot extends ClipPlacement {
+  /** Side of its cell on the outline, as `BrickSide`: 0 right, 1 back, 2 left, 3 front. */
+  side: BrickSide;
+}
+
+/** The clips of a baseplate: the slot, where each clip goes, and the edge slots. */
 export interface ClipLayout {
   slot: ClipSlot;
-  /** One per clip to print, column cuts first, then row cuts, each along its cut. */
+  /**
+   * One per clip to print, column cuts first, then row cuts, each along its cut: none for a
+   * baseplate in a single piece.
+   */
   placements: ClipPlacement[];
+  /**
+   * The edge slots, right, back, left then front, each from its first end: none on a side
+   * with a margin. They take no clip of their own: those that join two baseplates are
+   * downloaded apart.
+   */
+  edges: EdgeSlot[];
 }
 
 /**
@@ -148,13 +176,25 @@ interface JunctionEnd {
 }
 
 /**
- * The clips of a baseplate cut along `plan` (ADR 0018). Each junction, a run of cells of the
- * lattice along a cut between two crossings of cuts or the edges of the lattice, takes a clip at
- * each end, against the corner; a junction of one or two cells takes a single one, at its end
- * on a crossing of two cuts if it has one (where four pieces meet, the joint gives the most),
- * otherwise at its first end, and at its other end when the first has no room. A clip keeps
- * clear of the number engraved under a piece of a single cell, in the middle of a side on the
- * cut, and a slot never reaches past the middle of the side; an end without room takes no clip.
+ * Whether a bottom chamfer leaves an edge slot whole where the leg of a clip grips it: it cuts
+ * the tooth under the channel's height, and the tooth's face against the leg under the channel
+ * and the tooth together (ADR 0022, `prototypes/edge-slots/`); 1.30 mm with layers of 0.2 mm.
+ * A deeper chamfer takes no edge slot.
+ */
+export function takesEdgeSlots(frame: Pick<GridFrame, "bottomChamfer">, slot: ClipSlot): boolean {
+  return frame.bottomChamfer <= slot.bridge + slot.tooth + 1e-9;
+}
+
+/**
+ * The clips of a baseplate cut along `plan` (ADR 0018), and its edge slots (ADR 0022). Each
+ * junction, a run of cells of the lattice along a cut between two crossings of cuts or the
+ * edges of the lattice, takes a clip at each end, against the corner; a junction of one or two
+ * cells takes a single one, at its end on a crossing of two cuts if it has one (where four
+ * pieces meet, the joint gives the most), otherwise at its first end, and at its other end when
+ * the first has no room. A clip keeps clear of the number engraved under a piece of a single
+ * cell, in the middle of a side on the cut, and a slot never reaches past the middle of the
+ * side; an end without room takes no clip. Each side of the outline without margin takes its
+ * edge slots by the same rule, over its whole length (`edgeSlotsOf`).
  */
 export function clipLayoutOf(frame: GridFrame, lattice: Lattice, plan: Pick<SplitPlan, "columnCuts" | "rowCuts">, labels: readonly Label[]): ClipLayout {
   const slot = clipSlotOf(frame);
@@ -164,13 +204,7 @@ export function clipLayoutOf(frame: GridFrame, lattice: Lattice, plan: Pick<Spli
   // The top of a skeleton's post over the slot, less the skin: where a slot must end.
   const post = frame.skeleton ? postReach({ ...frame, skeleton: frame.skeleton }, slot.top) : null;
   const limit = Math.min(half, post === null ? Infinity : post - SKIN_MM);
-  const labelled = (cells: readonly (readonly [i: number, j: number, side: Label["side"]])[]): KeepOut[] =>
-    labels
-      .filter(({ cell: [i, j], side }) => cells.some(([a, b, s]) => a === i && b === j && s === side))
-      .map(({ text }) => {
-        const extent = (text.length * DIGIT_HEIGHT_MM + (text.length - 1) * DIGIT_GAP_MM) / 2 + LABEL_CLEARANCE_MM;
-        return [-extent, extent] as const;
-      });
+  const labelled = labelKeepOuts(labels);
   // The start of the slot at an end: past the slots along the other cut at a crossing of two
   // cuts; at the edge of the lattice, past the skin, and far enough inside the outline for the
   // skin to stand over a bottom chamfer (`corners`, the corners of the slot on the edge).
@@ -190,7 +224,7 @@ export function clipLayoutOf(frame: GridFrame, lattice: Lattice, plan: Pick<Spli
     const bounds = [first, ...crossings.filter((c) => c > first && c < end), end];
     for (let k = 0; k + 1 < bounds.length; k++) {
       const [a, b] = [bounds[k] as number, bounds[k + 1] as number];
-      const ends: JunctionEnd[] = [
+      const ends: [JunctionEnd, JunctionEnd] = [
         { cell: a, towards: -1, crossed: crossings.includes(a) },
         { cell: b - 1, towards: 1, crossed: crossings.includes(b) },
       ];
@@ -200,23 +234,10 @@ export function clipLayoutOf(frame: GridFrame, lattice: Lattice, plan: Pick<Spli
         const [cx, cy] = centre(junctionEnd.cell, axis);
         const across = (u: number) => (cut === "column" ? [cx + u, cy] : [cx, cy + u]) as [number, number];
         const start = startAt(junctionEnd, [across(-slot.halfWidth), across(slot.halfWidth)]);
-        if (start + slot.length > limit + 1e-9) return null;
-        const offset = junctionEnd.towards * (half - start - slot.length / 2);
-        const [from, to] = [offset - slot.length / 2, offset + slot.length / 2];
-        if (labelled(sides(junctionEnd.cell)).some(([p, q]) => to > p && from < q)) return null;
-        return { cut, line, cell: junctionEnd.cell, offset, start, centre: centre(junctionEnd.cell, offset) };
+        const offset = shiftOf(junctionEnd, start, slot, half, limit, labelled(sides(junctionEnd.cell)));
+        return offset === null ? null : { cut, line, cell: junctionEnd.cell, offset, start, centre: centre(junctionEnd.cell, offset) };
       };
-      if (b - a >= 3) {
-        for (const junctionEnd of ends) {
-          const placement = place(junctionEnd);
-          if (placement) placements.push(placement);
-        }
-        continue;
-      }
-      // A single clip: on a crossing of two cuts first, then the first end.
-      const [preferred, other] = !ends[0]?.crossed && ends[1]?.crossed ? [ends[1], ends[0]] : [ends[0], ends[1]];
-      const placement = place(preferred as JunctionEnd) ?? place(other as JunctionEnd);
-      if (placement) placements.push(placement);
+      placements.push(...atEnds(ends, b - a >= 3, place));
     }
   };
   for (const line of plan.columnCuts)
@@ -246,7 +267,87 @@ export function clipLayoutOf(frame: GridFrame, lattice: Lattice, plan: Pick<Spli
   // In the order of the cuts, each along its cut.
   const order = (p: ClipPlacement) => (p.cut === "column" ? 0 : 1);
   placements.sort((p, q) => order(p) - order(q) || p.line - q.line || p.cell - q.cell || p.offset - q.offset);
-  return { slot, placements };
+  return { slot, placements, edges: edgeSlotsOf(frame, lattice, slot, labelled) };
+}
+
+/** The stretches of the side of a cell that the digits of a number engraved under it take, by side of the cells given. */
+function labelKeepOuts(labels: readonly Label[]) {
+  return (cells: readonly (readonly [i: number, j: number, side: Label["side"]])[]): KeepOut[] =>
+    labels
+      .filter(({ cell: [i, j], side }) => cells.some(([a, b, s]) => a === i && b === j && s === side))
+      .map(({ text }) => {
+        const extent = (text.length * DIGIT_HEIGHT_MM + (text.length - 1) * DIGIT_GAP_MM) / 2 + LABEL_CLEARANCE_MM;
+        return [-extent, extent] as const;
+      });
+}
+
+/**
+ * Shift from the middle of the side of its cell of a slot at an end of a run, `start` from the
+ * crossing there: null when it would pass `limit` from the middle, or meet a number.
+ */
+function shiftOf(end: JunctionEnd, start: number, slot: ClipSlot, half: number, limit: number, keepOuts: readonly KeepOut[]): number | null {
+  if (start + slot.length > limit + 1e-9) return null;
+  const offset = end.towards * (half - start - slot.length / 2);
+  const [from, to] = [offset - slot.length / 2, offset + slot.length / 2];
+  return keepOuts.some(([p, q]) => to > p && from < q) ? null : offset;
+}
+
+/**
+ * The ends of a run of cells that take a slot: both when it is three cells long or more;
+ * otherwise a single one, on a crossing of two cuts if it has one, else the first end, and the
+ * other one when that has no room.
+ */
+function atEnds<T>(ends: readonly [JunctionEnd, JunctionEnd], both: boolean, place: (end: JunctionEnd) => T | null): T[] {
+  if (both) return ends.flatMap((end) => place(end) ?? []);
+  const [preferred, other] = !ends[0].crossed && ends[1].crossed ? [ends[1], ends[0]] : ends;
+  const placed = place(preferred) ?? place(other);
+  return placed ? [placed] : [];
+}
+
+/**
+ * The edge slots of a baseplate (ADR 0022): on each side of the outline without margin, where
+ * the grid reaches the edge, along the whole side of the lattice, whatever the cuts (the build
+ * plate is not in the share link: the same settings give the same edge slots). Each end is a
+ * corner of the lattice; the slot starts past the rounded corner of the outline, past the skin
+ * over the bottom chamfer of the other side, and past the edge slot of the other side in the
+ * same corner (`CROSSING_START_MM`, as at a crossing of two cuts), or, when the other side has
+ * a margin, 0.8 mm inside the lattice, as a clip at the edge of the lattice. The muret on the
+ * outline is never notched (a skeleton) and holds no magnet: only the middle of the side of
+ * the cell limits the slot. None with a deep bottom chamfer (`takesEdgeSlots`).
+ */
+function edgeSlotsOf(frame: GridFrame, lattice: Lattice, slot: ClipSlot, labelled: ReturnType<typeof labelKeepOuts>): EdgeSlot[] {
+  if (!takesEdgeSlots(frame, slot)) return [];
+  const { cellSize, margins, outerRadius: radius, bottomChamfer: chamfer } = frame;
+  const half = cellSize / 2;
+  const [x0, y0] = gridRect(frame);
+  const { columns: [i0, i1], rows: [j0, j1], rests } = lattice;
+  // Start from a corner of the lattice with `rest` of margin beyond it, on the other side.
+  const startAt = (rest: number) =>
+    Math.ceil(Math.max(SKIN_MM, rest > 0 ? 0 : CROSSING_START_MM, radius - rest, SKIN_MM + chamfer - rest) * 100 - 1e-6) / 100;
+  const sides: [side: BrickSide, margin: number, cut: ClipPlacement["cut"], line: number, run: readonly [number, number], rests: [number, number]][] = [
+    [0, margins.right, "column", i1, [j0, j1], [rests.front, rests.back]],
+    [1, margins.back, "row", j1, [i0, i1], [rests.left, rests.right]],
+    [2, margins.left, "column", i0, [j0, j1], [rests.front, rests.back]],
+    [3, margins.front, "row", j0, [i0, i1], [rests.left, rests.right]],
+  ];
+  return sides.flatMap(([side, margin, cut, line, [first, end], [before, after]]) => {
+    if (margin > 0) return [];
+    // The cell of the lattice along the side, and its centre shifted along the side.
+    const cellOf = (k: number): [number, number, Label["side"]] =>
+      cut === "column" ? [side === 0 ? line - 1 : line, k, side] : [k, side === 1 ? line - 1 : line, side];
+    const centre = (k: number, offset: number): [number, number] =>
+      cut === "column" ? [x0 + line * cellSize, y0 + (k + 0.5) * cellSize + offset] : [x0 + (k + 0.5) * cellSize + offset, y0 + line * cellSize];
+    const ends: [JunctionEnd, JunctionEnd] = [
+      { cell: first, towards: -1, crossed: false },
+      { cell: end - 1, towards: 1, crossed: false },
+    ];
+    const place = (at: JunctionEnd): EdgeSlot | null => {
+      const start = startAt(at.towards < 0 ? before : after);
+      const offset = shiftOf(at, start, slot, half, half, labelled([cellOf(at.cell)]));
+      return offset === null ? null : { cut, line, cell: at.cell, offset, start, centre: centre(at.cell, offset), side };
+    };
+    return atEnds(ends, end - first >= 3, place);
+  });
 }
 
 /** Side of a cell brick, in quarter turns from +X: 0 +X, 1 +Y, 2 −X, 3 −Y (as `LabelSide`). */
@@ -256,9 +357,10 @@ export type BrickSide = 0 | 1 | 2 | 3;
 const slotsOfLayouts = new WeakMap<ClipLayout, Map<string, (number | undefined)[]>>();
 
 /**
- * The slots of each cell of the lattice with a clip on a side, by `"i,j"`: the shift of the
- * clip along each side (undefined for a side without one), in the order of `BrickSide`. A side
- * holds one clip at most: a junction of one or two cells takes a single one.
+ * The slots of each cell of the lattice with a clip or an edge slot on a side, by `"i,j"`: the
+ * shift of the slot along each side (undefined for a side without one), in the order of
+ * `BrickSide`. A side holds one slot at most: a junction or a side of the outline of one or
+ * two cells takes a single one, and a slot never reaches past the middle of its side.
  */
 export function slotsByCell(layout: ClipLayout | null): ReadonlyMap<string, readonly (number | undefined)[]> {
   if (!layout) return new Map();
@@ -279,6 +381,11 @@ export function slotsByCell(layout: ClipLayout | null): ReadonlyMap<string, read
       add(cell, line - 1, 1, offset);
       add(cell, line, 3, offset);
     }
+  }
+  // An edge slot is only in the cell inside the outline.
+  for (const { cut, line, cell, offset, side } of layout.edges) {
+    if (cut === "column") add(side === 0 ? line - 1 : line, cell, side, offset);
+    else add(cell, side === 1 ? line - 1 : line, side, offset);
   }
   slotsOfLayouts.set(layout, cells);
   return cells;
@@ -335,11 +442,14 @@ function turn([x, y]: readonly [number, number], quarters: BrickSide): [number, 
   }
 }
 
-/** Solid removed from the whole baseplate for its clips, astride each cut (the boolean assembly). */
+/**
+ * Solid removed from the whole baseplate for its clips, astride each cut, and for its edge
+ * slots, astride the outline, whose outer half removes nothing (the boolean assembly).
+ */
 export function slotTools(wasm: ManifoldToplevel, own: Own, layout: ClipLayout): Manifold {
   const { slot } = layout;
   const o = TOOL_OVERSHOOT_MM;
-  const tools = layout.placements.map(({ cut, centre: [cx, cy] }) => {
+  const tools = [...layout.placements, ...layout.edges].map(({ cut, centre: [cx, cy] }) => {
     const box = (a0: number, a1: number, z0: number, z1: number) => {
       const [b0, b1] = [-slot.length / 2, slot.length / 2];
       const [x0, x1, y0, y1] = cut === "column" ? [cx + a0, cx + a1, cy + b0, cy + b1] : [cx + b0, cx + b1, cy + a0, cy + a1];

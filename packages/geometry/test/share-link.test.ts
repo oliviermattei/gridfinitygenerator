@@ -30,8 +30,6 @@ describe("share link round trip", () => {
     expect(decodeSettings(encodeSettings(tray))).toEqual(tray);
     const skeleton: BaseplateSettings = { ...DEFAULT_SETTINGS, baseplateType: "skeleton" };
     expect(decodeSettings(encodeSettings(skeleton))).toEqual(skeleton);
-    const unclipped: BaseplateSettings = { ...DEFAULT_SETTINGS, clips: false };
-    expect(decodeSettings(encodeSettings(unclipped))).toEqual(unclipped);
     expect(decodeSettings(encodeSettings(DEFAULT_SETTINGS))).toEqual(DEFAULT_SETTINGS);
   });
 });
@@ -50,8 +48,6 @@ describe("share link content", () => {
     expect(encodeSettings({ ...DEFAULT_SETTINGS, cellSize: 30, outerRadius: 0, bottomChamfer: 1.5 })).toBe("v=1&cs=30&or=0&ch=1.5");
     // The diameters and the hole gap are kept when the screws are off: turning them back on finds them again.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, screwShank: 4 })).toBe("v=1&ss=4");
-    // The clips are on by default (#22): only turning them off is written.
-    expect(encodeSettings({ ...DEFAULT_SETTINGS, clips: false })).toBe("v=1&cl=0");
     // The frame of crossbars is the default margin (#23): only the other shapes are written.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "frame" })).toBe("v=1");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "cells" })).toBe("v=1&mg=cells");
@@ -89,7 +85,6 @@ describe("frozen v1 links", () => {
       sc: false,
       ss: 3,
       sh: 6,
-      cl: true,
       cs: 42,
       tol: 0.5,
       or: 4,
@@ -122,8 +117,6 @@ describe("frozen v1 links", () => {
       sc: true,
       ss: 4,
       sh: 8,
-      // `cl` came into the v1 table with the clips (#22), before v1 was published: on by default.
-      cl: true,
       cs: 40,
       tol: 0.3,
       or: 2,
@@ -152,7 +145,6 @@ describe("frozen v1 links", () => {
       screwShank: 4,
       screwHead: 8,
       holeGap: 0.3,
-      clips: true,
       // `cs`, `or` and `ch` were in the v1 table from the start; the engine reads them since the advanced settings (#13).
       cellSize: 40,
       outerRadius: 2,
@@ -199,10 +191,13 @@ describe("reading any link", () => {
     expect(link).toMatchObject({ w: 1000, d: 42, mx: 0, gap: 5, tol: 1 });
   });
 
-  it("reads the clips off from `cl=0`, on otherwise", () => {
-    expect(decodeSettings("v=1&cl=0")).toEqual({ ...DEFAULT_SETTINGS, clips: false });
-    expect(decodeSettings("v=1&cl=1")).toEqual(DEFAULT_SETTINGS);
-    expect(decodeSettings("v=1&cl=maybe")).toEqual(DEFAULT_SETTINGS);
+  it("ignores `cl`, the clips of #22, no longer a setting since #37: they are always there", () => {
+    for (const value of ["0", "1", "maybe"]) {
+      expect(decodeSettings(`v=1&cl=${value}`)).toEqual(DEFAULT_SETTINGS);
+      expect(readShareLink(`v=1&cl=${value}`)).not.toHaveProperty("cl");
+    }
+    expect(decodeSettings("v=1&cl=0&pr=flush")).toEqual({ ...DEFAULT_SETTINGS, pocketProfile: "flush" });
+    expect(encodeSettings(decodeSettings("v=1&cl=0") as BaseplateSettings)).toBe("v=1");
   });
 
   it("keeps the screw head at least as wide as the shank", () => {
