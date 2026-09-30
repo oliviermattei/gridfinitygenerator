@@ -48,6 +48,10 @@ describe("share link content", () => {
     expect(encodeSettings({ ...DEFAULT_SETTINGS, screwShank: 4 })).toBe("v=1&ss=4");
     // The clips are on by default (#22): only turning them off is written.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, clips: false })).toBe("v=1&cl=0");
+    // The frame of crossbars is the default margin (#23): only the other shapes are written.
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "frame" })).toBe("v=1");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "cells" })).toBe("v=1&mg=cells");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "brackets", alignment: "t" })).toBe("v=1&al=t&mg=brackets");
   });
 
   it("writes the settings brought into their ranges", () => {
@@ -66,6 +70,7 @@ describe("frozen v1 links", () => {
       mx: 0,
       my: 0,
       al: "c",
+      mg: "frame",
       pr: "hybrid",
       sc: false,
       ss: 3,
@@ -83,7 +88,7 @@ describe("frozen v1 links", () => {
 
   it("a given v1 link always gives the same settings", () => {
     const link =
-      "v=1&mode=cells&w=512.5&d=300&cx=7&cy=5&mx=12.5&my=30&al=tr&pr=flush&sc=1&ss=4&sh=8&cs=40&tol=0.3&or=2&ch=0.6&gap=2&lh=0.28&lw=0.6";
+      "v=1&mode=cells&w=512.5&d=300&cx=7&cy=5&mx=12.5&my=30&al=tr&mg=brackets&pr=flush&sc=1&ss=4&sh=8&cs=40&tol=0.3&or=2&ch=0.6&gap=2&lh=0.28&lw=0.6";
     expect(readShareLink(link)).toEqual({
       mode: "cells",
       w: 512.5,
@@ -93,6 +98,8 @@ describe("frozen v1 links", () => {
       mx: 12.5,
       my: 30,
       al: "tr",
+      // `mg` came into the v1 table with the choice of the margin (#23), before v1 was published: the frame by default.
+      mg: "brackets",
       pr: "flush",
       sc: true,
       ss: 4,
@@ -117,6 +124,7 @@ describe("frozen v1 links", () => {
       marginWidth: 12.5,
       marginDepth: 30,
       alignment: "tr",
+      marginShape: "brackets",
       // `pr` was in the v1 table from the start; the engine reads it since the flush profile (#12).
       pocketProfile: "flush",
       screws: true,
@@ -184,6 +192,9 @@ describe("reading any link", () => {
   it("takes the default for a value it cannot read, and accepts a decimal comma", () => {
     expect(decodeSettings("v=1&cx=abc&cy=&lh=0,28")).toEqual({ ...DEFAULT_SETTINGS, layerHeight: 0.28 });
     expect(readShareLink("v=1&mode=shelf&al=middle&sc=maybe")).toMatchObject({ mode: "drawer", al: "c", sc: false });
+    // An unknown shape of the margin gives the default one, the frame of crossbars.
+    expect(readShareLink("v=1&mg=solid")).toMatchObject({ mg: "frame" });
+    expect(decodeSettings("v=1&mg=cells")).toEqual({ ...DEFAULT_SETTINGS, marginShape: "cells" });
     expect(decodeSettings("v=1&pr=rebuilt")).toEqual(DEFAULT_SETTINGS);
     // Plain decimals only: no hexadecimal, exponent or Infinity.
     expect(decodeSettings("v=1&cx=0x10&cy=1e1&lw=Infinity")).toEqual(DEFAULT_SETTINGS);

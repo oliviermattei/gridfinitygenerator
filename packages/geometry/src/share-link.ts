@@ -51,6 +51,8 @@ const V1 = {
   my: number(0, 500, 0),
   /** Alignment of the grid: one of 9 positions, back (t) to front (b), left to right. */
   al: choice(["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"], "c"),
+  /** Shape of the margin (#23): frame of crossbars, truncated cells, or corner brackets. */
+  mg: choice(["frame", "cells", "brackets"], "frame"),
   /** Pocket profile. */
   pr: choice(["hybrid", "flush"], "hybrid"),
   /** Screw holes, and their shank and head diameters in millimetres (head ≥ shank). */
@@ -91,6 +93,7 @@ const LINK_KEYS = {
   marginWidth: "mx",
   marginDepth: "my",
   alignment: "al",
+  marginShape: "mg",
   pocketProfile: "pr",
   screws: "sc",
   screwShank: "ss",

@@ -11,6 +11,11 @@ export interface EngineClientEvents {
   onBaseplate(baseplate: Baseplate, quality: Quality, settings: BaseplateSettings, buildPlate: BuildPlate): void;
   /** Computing the latest settings shown failed. */
   onError(error: Error): void;
+  /**
+   * The volume of baseplates to compare with the one shown (`compare`), measured on their
+   * final mesh, each with the settings and the build plate it was computed for.
+   */
+  onVolumes?(volumes: { settings: BaseplateSettings; volume: number }[], buildPlate: BuildPlate): void;
 }
 
 export interface EngineClient {
@@ -21,6 +26,13 @@ export interface EngineClient {
    * yet), so only the latest settings are rendered.
    */
   show(settings: BaseplateSettings, buildPlate: BuildPlate): void;
+  /**
+   * Baseplates to compare with the settings shown (the same one with another shape of
+   * margin): once the final quality of the settings shown is done, and when it has a margin,
+   * their volumes are measured, all in one request, and reported through `onVolumes`. Newer
+   * settings shown drop the list (they call for their own), and cancel its request.
+   */
+  compare(settings: readonly BaseplateSettings[]): void;
   /**
    * The file of `piece` for `settings` in `format`, computed in final quality and cut for
    * `buildPlate`, its name without extension, and its extension (a zip for the STL files of
@@ -57,7 +69,7 @@ const FINAL_AFTER_STILL_MS = 200;
 export const ENGINE_TIMING_PREFIX = "engine:";
 
 /** What a request computes, as named in its User Timing measure. */
-type RequestLabel = Quality | `export-${ExportFormat}` | `export-test-kit-${ExportFormat}`;
+type RequestLabel = Quality | "volumes" | `export-${ExportFormat}` | `export-test-kit-${ExportFormat}`;
 
 interface Pending {
   resolve: (response: EngineResponse) => void;
@@ -67,11 +79,18 @@ interface Pending {
   startedAt: number;
 }
 
-/** Latest settings and build plate to show, and the quality still to compute for them (null when done). */
+/**
+ * Latest settings and build plate to show, and what is still to compute for them: a quality,
+ * or the volumes to compare with; null when done.
+ */
 interface Shown {
   settings: BaseplateSettings;
   buildPlate: BuildPlate;
-  next: Quality | null;
+  next: Quality | "volumes" | null;
+  /** Baseplates to compare with it (`compare`). */
+  compare: readonly BaseplateSettings[];
+  /** Whether its final quality is shown, and has a margin: the shape of the margin then changes its volume. */
+  comparable: boolean;
 }
 
 /**
@@ -94,7 +113,7 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
   let recycleTimer: ReturnType<typeof setTimeout> | undefined;
   let shown: Shown | null = null;
   let rendering = false;
-  /** Id of the display request of final quality in flight, if any. */
+  /** Id of the display request of final quality (or of the volumes to compare) in flight, if any. */
   let finalInFlight: number | null = null;
 
   function rejectAll(error: Error) {
@@ -179,8 +198,10 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
     clearTimeout(recycleTimer); // busy again: the replacement waits for the next idle time
     worker ??= start();
     const target = worker;
+    // The volumes to compare are recorded with the first of their settings.
+    const settings = Array.isArray(request.settings) ? (request.settings[0] as BaseplateSettings) : request.settings;
     const response = new Promise<EngineResponse>((resolve, reject) => {
-      pending.set(id, { resolve, reject, label, settings: request.settings, startedAt: performance.now() });
+      pending.set(id, { resolve, reject, label, settings, startedAt: performance.now() });
       target.postMessage({ ...request, id });
     });
     return { id, response };
@@ -194,14 +215,38 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
     return response.baseplate;
   }
 
+  /** Measures the volumes of `settings` in final quality, cut for `buildPlate`: optional, never an error on screen. */
+  async function measureVolumes(target: Shown) {
+    const list = target.compare;
+    const { id, response: reply } = send({ type: "volumes", settings: [...list], buildPlate: target.buildPlate }, "volumes");
+    finalInFlight = id;
+    try {
+      const response = await reply;
+      if (response.type === "volumes") {
+        // True whatever the settings shown since: the page keeps them by their settings.
+        events.onVolumes?.(list.map((settings, k) => ({ settings, volume: response.volumes[k] as number })), target.buildPlate);
+      }
+    } catch {
+      // Cancelled, or failed: the comparison is left out.
+    }
+    if (shown !== target) return;
+    // Another list asked for meanwhile is measured next.
+    target.next = target.compare !== list && target.compare.length > 0 ? "volumes" : null;
+  }
+
   /** Computes what `shown` still needs, one request at a time, until it is up to date. */
   async function render() {
     if (rendering) return;
     rendering = true;
     try {
       while (shown?.next) {
-        const target = shown;
-        const quality = shown.next;
+        const target: Shown = shown;
+        const quality = target.next;
+        if (quality === null) break;
+        if (quality === "volumes") {
+          await measureVolumes(target);
+          continue;
+        }
         if (quality === "final") {
           await new Promise((resolve) => setTimeout(resolve, FINAL_AFTER_STILL_MS));
           if (shown !== target) continue;
@@ -209,7 +254,8 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
         try {
           const baseplate = await generate(target.settings, target.buildPlate, quality);
           if (shown !== target) continue; // stale: dropped, the latest settings come next
-          target.next = quality === "preview" ? "final" : null;
+          if (quality === "final") target.comparable = hasMargin(baseplate);
+          target.next = quality === "preview" ? "final" : target.comparable && target.compare.length > 0 ? "volumes" : null;
           events.onBaseplate(baseplate, quality, target.settings, target.buildPlate);
         } catch (error) {
           if (shown !== target) continue;
@@ -224,9 +270,18 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
 
   return {
     show(settings, buildPlate) {
-      shown = { settings, buildPlate, next: "preview" };
+      shown = { settings, buildPlate, next: "preview", compare: [], comparable: false };
       cancelStaleFinal();
       void render();
+    },
+    compare(settings) {
+      if (!shown) return;
+      shown.compare = settings;
+      // Done with the settings shown: the volumes are measured now; otherwise after their final.
+      if (shown.next === null && shown.comparable && settings.length > 0) {
+        shown.next = "volumes";
+        void render();
+      }
     },
     async exportFile(piece, settings, format, { link, buildPlate, pieceName, clipName }) {
       const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : (`export-${format}` as const);
@@ -244,6 +299,11 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
 
 function triangleCount(response: EngineResponse): number {
   if (response.type === "baseplate") return response.baseplate.mesh.indices.length / 3;
-  if (response.type === "export") return response.triangles;
+  if (response.type === "export" || response.type === "volumes") return response.triangles;
   return 0;
+}
+
+/** Whether a baseplate has a margin, whose shape changes its volume. */
+function hasMargin({ layout: { margins } }: Baseplate): boolean {
+  return margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0;
 }

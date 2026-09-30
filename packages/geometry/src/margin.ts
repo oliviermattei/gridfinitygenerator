@@ -4,6 +4,7 @@ import type { Margins } from "./layout";
 import type { Own } from "./manifold";
 import { insetAt } from "./pocket-profile";
 import { roundUpToLayer, roundUpToLine } from "./print";
+import type { MarginShape } from "./settings";
 import { TOOL_OVERSHOOT_MM, gridRect, pocketTool, rect, roundedRect, type GridFrame } from "./shapes";
 
 /** Part of the baseplate, seen from above, that a cut is limited to: [x0, y0, x1, y1]. */
@@ -49,84 +50,180 @@ const FRAME_MIN_LINES = 2;
 /** A hole exactly one wall wide is still a hole: slack for the rounding of the offset. */
 const SLIT_TOLERANCE_MM = 1e-3;
 
+/** Length of a leg of a bracket along the outline, past the grid line of its crossbar (#3, variant 2). */
+const BRACKET_LEG_MM = 10;
+/** A side of the grid longer than this many cells gets intermediate T brackets (#3, variant 2). */
+const BRACKET_SPAN_CELLS = 4;
+
 /**
- * Frame of crossbars (traverses), the provisional variant of #3, whose prototype calls it
- * "cadre à nervures": an outer wall that follows the outline, tied to the grid by a crossbar
- * on every grid line, in line with the murets. The wall on the grid side is the grid's own
- * edge muret. The frame is 2.00 mm high, rounded up to the layer; the wall and crossbars
- * are 1.2 mm wide, rounded up to a whole number of lines, never fewer than two. Crossbars on
- * the first and last grid lines lie within the grid's extent, so that each corner of the
- * margin is a closed box. A hole narrower than a wall is left full: a margin narrower than
- * two walls (the outer wall and a hole) has no hole. With a bottom chamfer, the outer wall
- * is thicker by the chamfer on its inside, so that its foot stays one wall wide.
+ * What a margin of walls 2.00 mm high holds besides the grid: crossbars on some grid lines,
+ * and the outer wall along the whole outline, or only within some zones.
  */
-export const CROSSBAR_FRAME: MarginVariant = {
-  prepare(wasm, own, frame) {
-    const { margins, columns, rows, cellSize, width, depth, outerRadius, segmentsPerQuarter, profile } = frame;
-    if (margins.left <= 0 && margins.right <= 0 && margins.back <= 0 && margins.front <= 0) return null;
-    const height = roundUpToLayer(FRAME_HEIGHT_MM, frame.layerHeight);
-    const wall = roundUpToLine(FRAME_WALL_MM, frame.lineWidth, FRAME_MIN_LINES);
-    const [x0, y0, x1, y1] = gridRect(frame);
-    const top = profile.height + TOOL_OVERSHOOT_MM;
-    // Farther than any part of the baseplate; `keep` reaches beyond `bound` on its open sides.
-    const far = width + depth;
-    const section = (points: [number, number][]) => own(new wasm.CrossSection([points]));
+interface WallLayout {
+  /** Grid lines across X (0 to `columns`) and across Y (0 to `rows`) that carry a crossbar. */
+  columns: readonly number[];
+  rows: readonly number[];
+  /**
+   * Where the outer wall stands, as rectangles of the baseplate seen from above ([x0, y0, x1,
+   * y1], reaching past the outline): the wall is what of the outline's band lies in them.
+   * Null for a wall along the whole outline.
+   */
+  zones: readonly CutWindow[] | null;
+}
 
-    // Holes of the frame: inside the outer wall, outside the grid and the crossbars.
-    const solid: CrossSection[] = [section(rect(x0, y0, x1, y1))];
-    for (let i = 0; i <= columns; i++) {
-      const [a, b] = band(x0 + i * cellSize, i, columns, wall);
-      solid.push(section(rect(a, -far, b, far)));
-    }
-    for (let j = 0; j <= rows; j++) {
-      const [a, b] = band(y0 + j * cellSize, j, rows, wall);
-      solid.push(section(rect(-far, a, far, b)));
-    }
-    // The bottom chamfer cuts the outer wall at 45°: its inside moves in by the chamfer, so
-    // that its foot stays one wall wide instead of hanging over a hole.
-    const outerWall = wall + frame.bottomChamfer;
-    const inside = section(roundedRect(width - 2 * outerWall, depth - 2 * outerWall, outerRadius - outerWall, segmentsPerQuarter));
-    // A hole narrower than a wall (a margin narrower than two walls) would print as a slit:
-    // it is left full. A hole is kept when something is left of it once shrunk by half a wall.
-    const pieces = own(inside.subtract(own(wasm.CrossSection.union(solid))))
-      .decompose()
-      .map(own)
-      .filter((piece) => !own(piece.offset(-(wall / 2 - SLIT_TOLERANCE_MM), "Miter")).isEmpty());
-    const holes = own(wasm.CrossSection.compose(pieces));
+/**
+ * A margin of walls, the variants 2 and 3 of the margin prototype (#3): an outer wall and
+ * crossbars, 2.00 mm high, rounded up to the layer; the wall and crossbars are 1.2 mm wide,
+ * rounded up to a whole number of lines, never fewer than two. A crossbar goes along a grid
+ * line, in line with the murets, from the grid to the outer wall; the wall on the grid side
+ * is the grid's own edge muret. Crossbars on the first and last grid lines lie within the
+ * grid's extent, so that each corner of the margin is a closed box; a crossbar on a line the
+ * baseplate is cut on (split.ts) is doubled, one on each side of the cut, so that each piece
+ * keeps a whole one. A hole narrower than a wall is left full: a margin narrower than two
+ * walls (the outer wall and a hole) has no hole. With a bottom chamfer, the outer wall is
+ * thicker by the chamfer on its inside, so that its foot stays one wall wide.
+ */
+function wallMargin(layoutOf: (frame: GridFrame) => WallLayout): MarginVariant {
+  return {
+    prepare(wasm, own, frame) {
+      const { margins, cellSize, width, depth, outerRadius, segmentsPerQuarter, profile } = frame;
+      if (margins.left <= 0 && margins.right <= 0 && margins.back <= 0 && margins.front <= 0) return null;
+      const height = roundUpToLayer(FRAME_HEIGHT_MM, frame.layerHeight);
+      const wall = roundUpToLine(FRAME_WALL_MM, frame.lineWidth, FRAME_MIN_LINES);
+      const [x0, y0, x1, y1] = gridRect(frame);
+      const top = profile.height + TOOL_OVERSHOOT_MM;
+      // Farther than any part of the baseplate; `keep` reaches beyond `bound` on its open sides.
+      const far = width + depth;
+      const section = (points: [number, number][]) => own(new wasm.CrossSection([points]));
+      const layout = layoutOf(frame);
 
-    // Above the frame, everything outside the grid on the sides that have a margin.
-    const keep = section(
-      rect(
-        margins.left > 0 ? x0 : -2 * far,
-        margins.front > 0 ? y0 : -2 * far,
-        margins.right > 0 ? x1 : 2 * far,
-        margins.back > 0 ? y1 : 2 * far,
-      ),
-    );
-    const above = height < profile.height ? own(section(rect(-far, -far, far, far)).subtract(keep)) : null;
+      // Holes of the margin: inside the outer wall, outside the grid and the crossbars.
+      const solid: CrossSection[] = [section(rect(x0, y0, x1, y1))];
+      const cut = { columns: new Set(frame.cuts.columns), rows: new Set(frame.cuts.rows) };
+      for (const i of layout.columns) {
+        const [a, b] = band(x0 + i * cellSize, i, frame.columns, wall, cut.columns.has(i));
+        solid.push(section(rect(a, -far, b, far)));
+      }
+      for (const j of layout.rows) {
+        const [a, b] = band(y0 + j * cellSize, j, frame.rows, wall, cut.rows.has(j));
+        solid.push(section(rect(-far, a, far, b)));
+      }
+      // The bottom chamfer cuts the outer wall at 45°: its inside moves in by the chamfer, so
+      // that its foot stays one wall wide instead of hanging over a hole.
+      const outerWall = wall + frame.bottomChamfer;
+      const inside = section(roundedRect(width - 2 * outerWall, depth - 2 * outerWall, outerRadius - outerWall, segmentsPerQuarter));
+      // Without a wall along the whole outline, the holes open onto the outline between the
+      // zones of the wall: they reach past it, so that the outline never lies on their edge.
+      let open = inside;
+      let outline: CrossSection | null = null;
+      if (layout.zones) {
+        const o = TOOL_OVERSHOOT_MM;
+        open = section(rect(-width / 2 - o, -depth / 2 - o, width / 2 + o, depth / 2 + o));
+        const zones = own(wasm.CrossSection.union(layout.zones.map((zone) => section(rect(...zone)))));
+        solid.push(own(own(open.subtract(inside)).intersect(zones)));
+        outline = section(roundedRect(width, depth, outerRadius, segmentsPerQuarter));
+      }
+      // A hole narrower than a wall (a margin narrower than two walls) would print as a slit:
+      // it is left full. A hole is kept when something is left of it, within the outline, once
+      // shrunk by half a wall.
+      const pieces = own(open.subtract(own(wasm.CrossSection.union(solid))))
+        .decompose()
+        .map(own)
+        .filter((piece) => {
+          const within = outline ? own(piece.intersect(outline)) : piece;
+          return !own(within.offset(-(wall / 2 - SLIT_TOLERANCE_MM), "Miter")).isEmpty();
+        });
+      const holes = own(wasm.CrossSection.compose(pieces));
 
-    const clip = (area: CrossSection, window?: CutWindow) => {
-      const clipped = window ? own(area.intersect(section(rect(...window)))) : area;
-      return clipped.isEmpty() ? null : clipped;
-    };
-    return {
-      holes: (window) => clip(holes, window),
-      solid(window) {
-        const area = above && clip(above, window);
-        return area && own(own(wasm.Manifold.extrude(area, top - height)).translate([0, 0, height]));
-      },
-    };
-  },
-};
+      // Above the walls, everything outside the grid on the sides that have a margin, but for
+      // the holes, where nothing is left to cut: the cut never has a face on the side of a hole
+      // (the grid's edge along a hole between brackets), whose vertices would then differ
+      // between two neighbouring bricks.
+      const keep = section(
+        rect(
+          margins.left > 0 ? x0 : -2 * far,
+          margins.front > 0 ? y0 : -2 * far,
+          margins.right > 0 ? x1 : 2 * far,
+          margins.back > 0 ? y1 : 2 * far,
+        ),
+      );
+      const above = height < profile.height ? own(own(section(rect(-far, -far, far, far)).subtract(keep)).subtract(holes)) : null;
+
+      const clip = (area: CrossSection, window?: CutWindow) => {
+        const clipped = window ? own(area.intersect(section(rect(...window)))) : area;
+        return clipped.isEmpty() ? null : clipped;
+      };
+      return {
+        holes: (window) => clip(holes, window),
+        solid(window) {
+          const area = above && clip(above, window);
+          return area && own(own(wasm.Manifold.extrude(area, top - height)).translate([0, 0, height]));
+        },
+      };
+    },
+  };
+}
 
 /**
  * Band of a crossbar along a grid line: centred on an inner line, and inside the grid's extent
- * on the first and last ones.
+ * on the first and last ones; on a cut, one wall on each side of it.
  */
-function band(line: number, index: number, count: number, wall: number): [number, number] {
+function band(line: number, index: number, count: number, wall: number, cut: boolean): [number, number] {
   if (index === 0) return [line, line + wall];
   if (index === count) return [line - wall, line];
+  if (cut) return [line - wall, line + wall];
   return [line - wall / 2, line + wall / 2];
+}
+
+/** Every grid line from 0 to `count`. */
+const allLines = (count: number) => Array.from({ length: count + 1 }, (_, line) => line);
+
+/**
+ * Frame of crossbars (cadre à traverses), variant 3 of the margin prototype (#3), whose
+ * prototype calls it "cadre à nervures", the default margin, the cheapest to print that holds
+ * along the whole outline (ADR 0006-marge, ADR 0011): an outer wall along the whole outline,
+ * tied to the grid by a crossbar on every grid line.
+ */
+export const CROSSBAR_FRAME: MarginVariant = wallMargin(({ columns, rows }) => ({
+  columns: allLines(columns),
+  rows: allLines(rows),
+  zones: null,
+}));
+
+/**
+ * Corner brackets only (équerres de coin), variant 2 of the margin prototype (#3, ADR 0011):
+ * at each corner of the baseplate, an L of outer wall whose legs reach 10 mm past the grid
+ * lines, tied to the grid by the crossbars on the first and last grid lines; at a corner
+ * between two margins, the bracket closes a box. A side of the grid longer than 4 cells
+ * gets intermediate T brackets, spread over its grid lines so that no span is longer than 4
+ * cells: a crossbar, and the outer wall 10 mm on each side of it. The rest of the margin is
+ * empty, open onto the drawer. A T on a cut is doubled like its crossbar: each piece gets an
+ * L. A piece along the outline between the brackets has none, and is held by its clips.
+ */
+export const CORNER_BRACKETS: MarginVariant = wallMargin((frame) => {
+  const { columns, rows, cellSize, width, depth } = frame;
+  const [x0, y0, x1, y1] = gridRect(frame);
+  const far = width + depth;
+  const leg = BRACKET_LEG_MM;
+  const [middleColumns, middleRows] = [middleLines(columns), middleLines(rows)];
+  const zones: CutWindow[] = [
+    [-far, -far, x0 + leg, y0 + leg],
+    [x1 - leg, -far, far, y0 + leg],
+    [-far, y1 - leg, x0 + leg, far],
+    [x1 - leg, y1 - leg, far, far],
+    ...middleColumns.map((i): CutWindow => [x0 + i * cellSize - leg, -far, x0 + i * cellSize + leg, far]),
+    ...middleRows.map((j): CutWindow => [-far, y0 + j * cellSize - leg, far, y0 + j * cellSize + leg]),
+  ];
+  return { columns: [0, ...middleColumns, columns], rows: [0, ...middleRows, rows], zones };
+});
+
+/**
+ * Grid lines of the intermediate brackets along a side of `count` cells: as few as leave no
+ * span longer than 4 cells, spread evenly (the margin prototype, #3).
+ */
+function middleLines(count: number): number[] {
+  const brackets = Math.max(0, Math.ceil(count / BRACKET_SPAN_CELLS) - 1);
+  return Array.from({ length: brackets }, (_, m) => Math.round((count * (m + 1)) / (brackets + 1)));
 }
 
 /** Slack for the floating-point error of a width compared with a wall, or of a height with a layer. */
@@ -304,8 +401,14 @@ function floorOf(height: number, layerHeight: number, wideEnough: (z: number) =>
   }
 }
 
-/**
- * The margin built today: truncated cells, flush with the grid (#19). The frame of
- * crossbars, the provisional variant of #3, stays in the code, no longer exposed.
- */
-export const MARGIN: MarginVariant = TRUNCATED_CELLS;
+/** The variant of each shape of the margin (`BaseplateSettings.marginShape`, ADR 0011). */
+export const MARGIN_VARIANTS: Record<MarginShape, MarginVariant> = {
+  frame: CROSSBAR_FRAME,
+  cells: TRUNCATED_CELLS,
+  brackets: CORNER_BRACKETS,
+};
+
+/** The variant that builds the margin of a frame. */
+export function marginOf(frame: GridFrame): MarginVariant {
+  return MARGIN_VARIANTS[frame.marginShape];
+}

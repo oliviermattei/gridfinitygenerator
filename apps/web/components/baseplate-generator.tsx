@@ -1,6 +1,16 @@
 "use client";
 
-import { changedAdvancedSettings, spreadPieces, type Baseplate, type BaseplateSettings, type BuildPlate, type Quality } from "@repo/geometry";
+import {
+  MARGIN_SHAPES,
+  changedAdvancedSettings,
+  encodeSettings,
+  spreadPieces,
+  type Baseplate,
+  type BaseplateSettings,
+  type BuildPlate,
+  type MarginShape,
+  type Quality,
+} from "@repo/geometry";
 import { focusRing, glass } from "@repo/ui";
 import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
@@ -48,6 +58,28 @@ interface OnScreen {
   buildPlate: BuildPlate;
 }
 
+/** Volumes measured this session, at most: enough to go back and forth between a few baseplates. */
+const MAX_VOLUMES = 200;
+
+/** Key of the volume of a baseplate: its settings and the build plate it is cut for. */
+function volumeKey(settings: BaseplateSettings, { width, depth }: BuildPlate): string {
+  return `${encodeSettings(settings)}|${width}×${depth}`;
+}
+
+/** `volumes` with some more, the oldest dropped past MAX_VOLUMES. */
+function withVolumes(volumes: ReadonlyMap<string, number>, added: [key: string, volume: number][]): ReadonlyMap<string, number> {
+  const next = new Map(volumes);
+  for (const [key, volume] of added) {
+    next.delete(key);
+    next.set(key, volume);
+  }
+  for (const key of next.keys()) {
+    if (next.size <= MAX_VOLUMES) break;
+    next.delete(key);
+  }
+  return next;
+}
+
 /** A failure shown to the user, by the key of its message. */
 type Failure = "computeFailed" | "exportFailed";
 
@@ -90,6 +122,8 @@ export function BaseplateGenerator() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [recenter, setRecenter] = useState(0);
   const [preferences, setPreferences] = usePreferences();
+  // Volumes measured on final meshes, by settings and build plate: the shapes of the margin compare with them.
+  const [volumes, setVolumes] = useState<ReadonlyMap<string, number>>(() => new Map());
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
   const [panel, setPanel] = useState<HTMLElement | null>(null);
@@ -106,6 +140,11 @@ export function BaseplateGenerator() {
       onBaseplate(next, quality, computedFor, buildPlate) {
         setShown({ baseplate: next, quality, settings: computedFor, buildPlate });
         setError(null);
+        const volume = next.stats.volume;
+        if (quality === "final" && volume !== null) setVolumes((known) => withVolumes(known, [[volumeKey(computedFor, buildPlate), volume]]));
+      },
+      onVolumes(measured, buildPlate) {
+        setVolumes((known) => withVolumes(known, measured.map(({ settings, volume }) => [volumeKey(settings, buildPlate), volume])));
       },
       onError(reason) {
         console.error(reason);
@@ -126,6 +165,24 @@ export function BaseplateGenerator() {
   useEffect(() => {
     if (hydrated) engine.current?.show(settings, buildPlate);
   }, [settings, buildPlate, hydrated]);
+
+  // The volume of the baseplate with each shape of margin, as far as it is known.
+  const marginVolumes = useMemo(
+    () => Object.fromEntries(MARGIN_SHAPES.map((marginShape) => [marginShape, volumes.get(volumeKey({ ...settings, marginShape }, buildPlate))])),
+    [volumes, settings, buildPlate],
+  ) as Partial<Record<MarginShape, number>>;
+  // While the margin family is open, the other shapes are measured once the baseplate shown is.
+  const toCompare = useMemo(
+    () =>
+      openFamily === "margin"
+        ? MARGIN_SHAPES.filter((shape) => shape !== settings.marginShape && marginVolumes[shape] === undefined)
+        : [],
+    [openFamily, settings.marginShape, marginVolumes],
+  );
+  // After `show`, which drops the list of the settings shown before.
+  useEffect(() => {
+    if (hydrated) engine.current?.compare(toCompare.map((marginShape) => ({ ...settings, marginShape })));
+  }, [toCompare, settings, buildPlate, hydrated]);
 
   const baseplate = shown?.baseplate ?? null;
   // The pieces of a cut baseplate, set apart so that the cuts show.
@@ -228,6 +285,7 @@ export function BaseplateGenerator() {
       onDownloadTestKit={() => void exportPiece("test-kit", "3mf")}
       exportingTestKit={exporting?.piece === "test-kit"}
       downloadBusy={exporting !== null}
+      marginVolumes={marginVolumes}
     />
   );
 

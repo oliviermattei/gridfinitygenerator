@@ -99,8 +99,8 @@ export interface Baseplate {
  * Generates a baseplate: a grid of open pockets with the profile of the settings (hybrid by
  * default, ADR 0002, or flush) on a pitch of the cell size, sized for a drawer or by its
  * number of cells, its outline rounded and chamfered at the bottom by the settings, and its
- * margin (the grid carried on up to the outline in truncated cells, see margin.ts and ADR
- * 0008), with a countersunk screw hole on each inner intersection of the grid when the
+ * margin in the shape of the settings (a frame of crossbars by default, truncated cells or
+ * corner brackets, see margin.ts and ADR 0011), with a countersunk screw hole on each inner intersection of the grid when the
  * screws are on (screws.ts, ADR 0006). With a build plate it does not fit on
  * (`options.buildPlate`), it is cut on grid lines into pieces that do, each with its number
  * engraved underneath (split.ts, label.ts, ADR 0009), and, with the clips on, a slot astride
@@ -163,6 +163,7 @@ async function buildBaseplate(
     profile,
     lowerCells,
     margins,
+    marginShape: settings.marginShape,
     width,
     depth,
     // Never more than half the smallest side: a single row of cells gets round ends.

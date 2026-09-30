@@ -85,9 +85,9 @@ describe("split plan", () => {
     expect(spans(split)).toEqual({ columns: [5, 5], rows: [4] });
   });
 
-  it("cuts in the margin when it carries whole cells, the margin with the pieces on the outline", async () => {
+  it("cuts in a margin of truncated cells when it carries whole cells, the margin with the pieces on the outline", async () => {
     // 2 × 1 cells and 500 mm of margin in width: 250 mm on each side, 5 whole cells of it.
-    const split = await plan({ sizeMode: "cells", columns: 2, rows: 1, marginWidth: 500 }, PLATE_256);
+    const split = await plan({ sizeMode: "cells", columns: 2, rows: 1, marginWidth: 500, marginShape: "cells" }, PLATE_256);
     expect(split.pieces).toHaveLength(3);
     expect(split.pieces.every(({ fits }) => fits)).toBe(true);
     expect(split.columnCuts.some((line) => line < 0)).toBe(true);
@@ -139,18 +139,26 @@ describe("pieces of a cut baseplate", () => {
   });
 
   it("adds up to the whole baseplate, less the numbers engraved under the pieces", async () => {
-    const whole = await generateBaseplate({}, "final");
+    // Truncated cells: the cuts go between bricks, through the murets of the margin.
+    const whole = await generateBaseplate({ marginShape: "cells" }, "final");
     // Without the slots of the clips (clips.test.ts), which take their own material.
-    const cut = await generateBaseplate({ clips: false }, "final", { buildPlate: PLATE_256 });
+    const cut = await generateBaseplate({ clips: false, marginShape: "cells" }, "final", { buildPlate: PLATE_256 });
     const engraved = (whole.stats.volume as number) - (cut.stats.volume as number);
     expect(engraved).toBeGreaterThan(0);
     expect(engraved).toBeLessThan(cut.stats.pieces * LABEL_VOLUME_MAX_MM3);
     // The same bounding box: the pieces in their places make the baseplate.
     expect(cut.stats.dimensions).toEqual(whole.stats.dimensions);
     // Uncut, nothing is engraved: the same baseplate as without a build plate.
-    const fits = await generateBaseplate({}, "final", { buildPlate: { width: 400, depth: 400 } });
+    const fits = await generateBaseplate({ marginShape: "cells" }, "final", { buildPlate: { width: 400, depth: 400 } });
     expect(fits.stats.volume).toBe(whole.stats.volume);
     expect(fits.stats.pieces).toBe(1);
+    // The frame of crossbars doubles its crossbars on the cuts: on column line 4, across the
+    // front and back margins (13.5 mm less the 1.2 mm outer wall), on row line 3 across the
+    // left and right ones (10.5 mm less the wall): 1.2 mm more of crossbar, 2 mm high.
+    const frame = await generateBaseplate({}, "final");
+    const frameCut = await generateBaseplate({ clips: false }, "final", { buildPlate: PLATE_256 });
+    const doubled = 1.2 * 2 * (2 * (13.5 - 1.2) + 2 * (10.5 - 1.2));
+    expect((frameCut.stats.volume as number) - ((frame.stats.volume as number) - engraved)).toBeCloseTo(doubled, 2);
   });
 
   it("puts no screw on a crossing of murets that a cut goes through", async () => {

@@ -26,6 +26,15 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
       const baseplate = await generateBaseplate(request.settings, request.quality, { buildPlate: request.buildPlate });
       const { positions, indices } = baseplate.mesh;
       reply({ id: request.id, type: "baseplate", baseplate }, [positions.buffer, indices.buffer]);
+    } else if (request.type === "volumes") {
+      const volumes: number[] = [];
+      let triangles = 0;
+      for (const settings of request.settings) {
+        const { stats, mesh } = await generateBaseplate(settings, "final", { buildPlate: request.buildPlate });
+        volumes.push(stats.volume as number);
+        triangles = Math.max(triangles, mesh.indices.length / 3);
+      }
+      reply({ id: request.id, type: "volumes", volumes, triangles });
     } else {
       // Always the final quality: the exported mesh is the one the statistics measure.
       const generated =

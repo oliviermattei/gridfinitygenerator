@@ -3,6 +3,7 @@ import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
 import type { ClipLayout } from "./clips";
 import type { Margins } from "./layout";
+import type { MarginShape } from "./settings";
 import type { Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
 import type { ScrewHoles } from "./screws";
@@ -24,6 +25,8 @@ export interface GridFrame {
    */
   lowerCells: readonly LowerCell[];
   margins: Margins;
+  /** Shape of the margin (margin.ts): which variant builds it. */
+  marginShape: MarginShape;
   /** Size of the outline, grid and margins included. */
   width: number;
   depth: number;

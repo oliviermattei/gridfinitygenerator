@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { chooseCells, numberField, openSettings, readout } from "./support";
 
-// Drawer, alignment (#10) and margin (#10, #19).
+// Drawer, alignment (#10) and margin (#10, #19, #23).
 
 /** A value of the statistics frame on screen: on the right on desktop, in the sheet on mobile. */
 function stat(page: Page, id: "dimensions" | "cells" | "margin" | "volume") {
@@ -58,28 +58,30 @@ test("entering a drawer updates the cells, the preview and the statistics", asyn
   await expect(stat(page, "margin")).toHaveText("gauche 38, droite 0, arrière 6, avant 0 mm");
 });
 
-test("the margin carries the grid on up to the drawer, and the statistics count its truncated cells", async ({ page }, testInfo) => {
+test("the margin is a frame of crossbars by default, and the statistics count it", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
   const volume = stat(page, "volume");
 
-  // The default drawer: the 9 × 6 grid (77,2 cm³) and its margin of truncated cells, as high
-  // as the grid (24,3 cm³), as measured by the margin prototype (#3, variant 1 flush), less
-  // the slots of the 15 clips of its 4 pieces (0,4 cm³) for the default build plate.
+  // The default drawer: the 9 × 6 grid (77,2 cm³) and its frame of crossbars, 2 mm high
+  // (4,1 cm³), as measured by the margin prototype (#3, variant 3), 81,3 cm³ in one piece; for
+  // the default build plate, 4 pieces, less the slots of their 15 clips (0,4 cm³) and plus the
+  // crossbars doubled on the cuts (0,1 cm³).
   await expect(stat(page, "dimensions")).toHaveText("399 × 279 × 4,6 mm");
-  await expect(volume).toHaveText("101,1 cm³");
+  await expect(volume).toHaveText("81,0 cm³");
   const drawerTriangles = await page.getByTestId("mesh-preview").getAttribute("data-triangles");
   expect(drawerTriangles).not.toBeNull();
 
-  // 500 × 300 mm: 11 × 7 cells, a margin of 18,5 mm on the left and right, carried on in
-  // truncated cells, and of 2,5 mm at the back and front, too narrow for a hole: full.
+  // 500 × 300 mm: 11 × 7 cells, a margin of 18,5 mm on the left and right, a frame of
+  // crossbars, and of 2,5 mm at the back and front, too narrow for a hole: full.
   await numberField(page, "Largeur").fill("500");
   await numberField(page, "Profondeur").fill("300");
   await expect(stat(page, "cells")).toHaveText("11 × 7");
   await expect(stat(page, "margin")).toHaveText("gauche 18,5, droite 18,5, arrière 2,5, avant 2,5 mm");
   await expect(stat(page, "dimensions")).toHaveText("499 × 299 × 4,6 mm");
-  // 133,8 cm³ in one piece; 6 pieces here, and the slots of their 25 clips (0,7 cm³).
-  await expect(volume).toHaveText("133,1 cm³");
+  // 114,6 cm³ in one piece; 6 pieces here, less the slots of their 25 clips (0,7 cm³), plus
+  // the crossbars doubled on the cuts.
+  await expect(volume).toHaveText("114,0 cm³");
   await expect(page.getByTestId("mesh-preview")).not.toHaveAttribute("data-triangles", drawerTriangles ?? "");
 });
 

@@ -43,7 +43,7 @@ Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le ba
 _Avoid_: appui, contact
 
 **Marge**:
-La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme est une variante interchangeable du moteur. Depuis #19, c'est la grille prolongée : des cellules tronquées, fermées par un mur extérieur, à la hauteur de la grille (ADR 0008). Le cadre à traverses de #3 reste dans le code, mais n'est plus exposé.
+La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme se choisit parmi trois (#23, ADR 0011) : le **cadre à traverses** (par défaut, le plus économe), les **cellules tronquées** (la grille prolongée, ADR 0008) ou les **équerres** de coin seules.
 _Avoid_: padding, bordure, remplissage
 
 **Cellule tronquée**:
@@ -51,12 +51,20 @@ Une cellule de la grille prolongée dans la marge et coupée par le mur extérie
 _Avoid_: demi-cellule, cellule partielle, fausse poche
 
 **Mur extérieur**:
-Le mur de la marge qui suit tout le contour de la baseplate et s'appuie sur les parois du tiroir (1,2 mm, arrondi au nombre de lignes, deux au moins).
+Le mur de la marge qui suit le contour de la baseplate et s'appuie sur les parois du tiroir (1,2 mm, arrondi au nombre de lignes, deux au moins) : sur tout le contour pour le cadre à traverses et les cellules tronquées, aux équerres seulement pour les équerres de coin.
 _Avoid_: paroi, bordure, ceinture
 
+**Cadre à traverses**:
+La forme de marge par défaut : un mur extérieur de 2 mm de haut sur tout le contour, relié à la grille par une traverse sur chaque ligne de la grille (ADR 0006-marge, 0011).
+_Avoid_: cadre à nervures (nom du prototype #3), frame
+
 **Traverse**:
-Une barre du cadre à traverses (#3), qui n'est plus exposé, qui prolonge une ligne de la grille, dans l'alignement d'un muret, du bord de la grille jusqu'au mur extérieur.
+Une barre de 2 mm de haut qui prolonge une ligne de la grille, dans l'alignement d'un muret, du bord de la grille jusqu'au mur extérieur (cadre à traverses, équerres). Sur une coupe, elle est doublée : chaque pièce en garde une entière.
 _Avoid_: nervure (réservé au rejet de « muret »), rib, entretoise
+
+**Équerre**:
+Un morceau de mur extérieur de la forme de marge « équerres de coin » : un L à chaque coin, dont les jambes dépassent de 10 mm les lignes de la grille, relié à la grille par les traverses des premières et dernières lignes ; un T sur les côtés de plus de 4 cellules. Le reste de cette marge est vide (ADR 0011).
+_Avoid_: bracket (sauf dans le code), coin, cornière
 
 **Alignement**:
 La position de la grille dans la baseplate, parmi 9 (arrière gauche … avant droite), quand il reste une marge ; la marge prend le reste. L'arrière est le fond du tiroir.

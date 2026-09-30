@@ -85,10 +85,11 @@ describe("cell size", () => {
     expect((await checkMesh(baseplate.mesh)).status).toBe("NoError");
   });
 
-  it("carries the grid on into the margin at its pitch", async () => {
+  it("carries the grid on into a margin of truncated cells at its pitch", async () => {
     // 3 × 3 cells of 30 mm with 20 mm of margin all around: the grid spans ±45 mm, the outline
     // ±65 mm, the inside of its 1.2 mm outer wall ±63.8 mm.
-    const { mesh } = await generateBaseplate(cells(3, 3, { cellSize: 30, marginWidth: 40, marginDepth: 40 }), "preview");
+    const settings = cells(3, 3, { cellSize: 30, marginWidth: 40, marginDepth: 40, marginShape: "cells" });
+    const { mesh } = await generateBaseplate(settings, "preview");
     const { sections } = await checkMesh(mesh, POCKET_OPENINGS.map(({ z }) => z));
     for (const { z, inset } of POCKET_OPENINGS) {
       // Left margin, middle row: the cell from x = −75 to −45, cut by the outer wall.

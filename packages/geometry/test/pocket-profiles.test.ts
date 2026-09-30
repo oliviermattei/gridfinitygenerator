@@ -164,9 +164,9 @@ describe("flush profile, statistics", () => {
   });
 });
 
-describe("flush profile with a margin", () => {
+describe("flush profile with a margin of truncated cells", () => {
   it("carries the flush profile on into the margin, 4.25 mm high up to the outline", async () => {
-    const { mesh } = await generateBaseplate({ pocketProfile: "flush" }, "preview");
+    const { mesh } = await generateBaseplate({ pocketProfile: "flush", marginShape: "cells" }, "preview");
     const { sections, status, bounds } = await checkMesh(mesh, FLUSH_OPENINGS.map(({ z }) => z));
     expect(status).toBe("NoError");
     expectWithin(bounds.max[2], FLUSH_HEIGHT_MM);
@@ -182,10 +182,10 @@ describe("flush profile with a margin", () => {
   });
 });
 
-describe("flush profile with a narrow margin", () => {
+describe("flush profile with a narrow margin of truncated cells", () => {
   /** 3 × 2 cells with 3.2 mm of margin on every side: 2 mm between the grid and the outer wall. */
   const narrow = (layerHeight: number) =>
-    flushCells(3, 2, { marginWidth: 6.4, marginDepth: 6.4, layerHeight });
+    flushCells(3, 2, { marginWidth: 6.4, marginDepth: 6.4, layerHeight, marginShape: "cells" });
 
   it("gives a narrow truncated cell a floor on the upper slope of the flush profile", async () => {
     // The upper slope is 0.8 mm off the line of the grid at 3.85 mm: a floor at 4.0 mm, 20 layers.

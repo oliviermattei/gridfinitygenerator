@@ -3,8 +3,10 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import {
   BASEPLATE_SETTINGS,
+  MARGIN_SHAPES,
   changedAdvancedSettings,
   type BaseplateSettings,
+  type MarginShape,
   type PocketProfileName,
   type SizeMode,
 } from "@repo/geometry";
@@ -17,13 +19,26 @@ import { useFormats, useStrings } from "@/lib/locale";
 import type { Strings } from "@/lib/strings";
 import { LENGTH_DECIMALS, LENGTH_STEP, fromMillimetres, toMillimetres, type Unit } from "@/lib/units";
 import { AlignmentPad } from "./alignment-pad";
-import { AdvancedIcon, AlignIcon, ClipArt, ClipIcon, ProfileArt, ProfileIcon, ScrewArt, ScrewIcon, SizeIcon, TestKitArt } from "./illustrations";
+import {
+  AdvancedIcon,
+  AlignIcon,
+  ClipArt,
+  ClipIcon,
+  MarginArt,
+  MarginIcon,
+  ProfileArt,
+  ProfileIcon,
+  ScrewArt,
+  ScrewIcon,
+  SizeIcon,
+  TestKitArt,
+} from "./illustrations";
 
 /**
  * Families of settings in the panel. The print settings (layer height, line width) live in
  * the gear menu.
  */
-export type Family = "size" | "alignment" | "profile" | "screws" | "clips" | "advanced";
+export type Family = "size" | "alignment" | "margin" | "profile" | "screws" | "clips" | "advanced";
 
 /** "Valeurs par défaut", or the advanced settings changed: "Cellule 30 mm, chanfrein 0,6 mm". */
 function advancedSummary(settings: BaseplateSettings, t: Strings, f: Formats): string {
@@ -119,6 +134,11 @@ export interface FamiliesProps {
   exportingTestKit: boolean;
   /** Whether a download is being prepared: every download waits for it. */
   downloadBusy: boolean;
+  /**
+   * Volume of the baseplate with each shape of margin, the other settings as they are, in
+   * mm³, measured on the final mesh; missing while it is being measured.
+   */
+  marginVolumes: Partial<Record<MarginShape, number>>;
 }
 
 /** Families of settings as an exclusive accordion: opening one closes the others. */
@@ -132,6 +152,7 @@ export function Families({
   onDownloadTestKit,
   exportingTestKit,
   downloadBusy,
+  marginVolumes,
 }: FamiliesProps) {
   const t = useStrings();
   const f = useFormats();
@@ -159,6 +180,14 @@ export function Families({
         summary={t.alignments[settings.alignment]}
       >
         <AlignmentPad value={settings.alignment} onChange={(alignment) => onSettingsChange({ alignment })} />
+      </FamilyItem>
+      <FamilyItem
+        {...bind("margin")}
+        icon={<MarginIcon className="size-[18px]" />}
+        title={t.margin}
+        summary={t.marginShapeNames[settings.marginShape]}
+      >
+        <MarginFields settings={settings} onSettingsChange={onSettingsChange} summary={summary} volumes={marginVolumes} />
       </FamilyItem>
       <FamilyItem
         {...bind("profile")}
@@ -265,6 +294,45 @@ export function Families({
         <p className="mt-1 text-[12px] leading-snug text-muted">{t.holeGapHint}</p>
       </FamilyItem>
     </div>
+  );
+}
+
+/**
+ * The shape of the margin, each with the volume of the baseplate it gives, measured on its
+ * final mesh ("…" while it is), and what the chosen one is. Without a margin, the shape
+ * changes nothing, and no volume is shown.
+ */
+function MarginFields({
+  settings,
+  onSettingsChange,
+  summary,
+  volumes,
+}: FieldsProps & { summary: BaseplateSummary | null; volumes: Partial<Record<MarginShape, number>> }) {
+  const t = useStrings();
+  const f = useFormats();
+  const margins = summary?.layout.margins;
+  const hasMargin = !margins || margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0;
+  const volume = (shape: MarginShape) => {
+    const measured = volumes[shape];
+    return measured === undefined ? "…" : `${f.volumes.format(measured / 1000)} cm³`;
+  };
+  return (
+    <>
+      <ChoiceGroup<MarginShape>
+        label={t.margin}
+        value={settings.marginShape}
+        onChange={(marginShape) => onSettingsChange({ marginShape })}
+        columns={3}
+        options={MARGIN_SHAPES.map((shape) => ({
+          value: shape,
+          label: t.marginShapes[shape],
+          description: hasMargin ? volume(shape) : undefined,
+          art: <MarginArt kind={shape} className="h-auto w-full max-w-[64px]" />,
+        }))}
+      />
+      <p className="mt-3 text-[12.5px] leading-snug text-muted">{hasMargin ? t.marginShapeHints[settings.marginShape] : t.noMarginHint}</p>
+      {hasMargin && <p className="mt-1 text-[12px] leading-snug text-muted">{t.marginVolumesHint}</p>}
+    </>
   );
 }
 

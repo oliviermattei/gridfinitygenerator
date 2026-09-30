@@ -43,6 +43,16 @@ export type EngineRequest =
       pieceName: string;
       /** Name of the object of the clips in the 3MF, `{n}` standing for their number (« clip × {n} »). */
       clipName: string;
+    }
+  | {
+      id: number;
+      type: "volumes";
+      /**
+       * Baseplates to measure, in final quality: the one shown with another shape of margin,
+       * to compare what each shape costs (#23).
+       */
+      settings: BaseplateSettings[];
+      buildPlate: BuildPlate;
     };
 
 /** Loads the WASM ahead of the first request; it gets no response. */
@@ -67,5 +77,13 @@ export type EngineResponse =
       triangles: number;
       /** Time spent writing the file, in milliseconds (the mesh computation excluded). */
       serializeMs: number;
+    }
+  | {
+      id: number;
+      type: "volumes";
+      /** Volume of each baseplate of the request, in mm³, measured on its final mesh. */
+      volumes: number[];
+      /** Triangles of the largest of their meshes (final quality). */
+      triangles: number;
     }
   | { id: number; type: "error"; message: string };

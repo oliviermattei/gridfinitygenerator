@@ -2,7 +2,7 @@ import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
 import { slotTools } from "./clips";
 import { labelTool, type Label } from "./label";
-import { MARGIN } from "./margin";
+import { marginOf } from "./margin";
 import { withArena, type Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
 import { screwPositions, screwTool } from "./screws";
@@ -28,7 +28,7 @@ export function assembleWithBooleans(
 ): TriangleMesh[] {
   const { columns, rows, profile, width, depth, outerRadius, segmentsPerQuarter } = frame;
   return withArena((own) => {
-    const margin = MARGIN.prepare(wasm, own, frame);
+    const margin = marginOf(frame).prepare(wasm, own, frame);
     const outline = own(new wasm.CrossSection([roundedRect(width, depth, outerRadius, segmentsPerQuarter)]));
     const holes = margin?.holes();
     const slab = slabOf(wasm, own, holes ? own(outline.subtract(holes)) : outline, frame);

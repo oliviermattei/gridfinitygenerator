@@ -1,6 +1,6 @@
 // Split of a baseplate into pieces that fit the build plate (#21, ADR 0009).
 import type { Margins } from "./layout";
-import { MARGIN } from "./margin";
+import { marginOf } from "./margin";
 import { fitsOnBuildPlate, type BuildPlate } from "./print";
 import { gridRect, type GridFrame } from "./shapes";
 
@@ -20,7 +20,7 @@ export interface Lattice {
 
 export function latticeOf(frame: GridFrame): Lattice {
   const { columns, rows, cellSize, margins } = frame;
-  const whole = MARGIN.wholeCells?.(frame) ?? { left: 0, right: 0, back: 0, front: 0 };
+  const whole = marginOf(frame).wholeCells?.(frame) ?? { left: 0, right: 0, back: 0, front: 0 };
   return {
     // 0 − n, not −n: no −0 for a side without whole cells.
     columns: [0 - whole.left, columns + whole.right],

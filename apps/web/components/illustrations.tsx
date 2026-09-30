@@ -2,7 +2,7 @@
 // currentColor at 10 %, and the element that changes in var(--art), which turns to the
 // accent when its control is selected.
 
-import { ALIGNMENTS, type Alignment, type PocketProfileName } from "@repo/geometry";
+import { ALIGNMENTS, type Alignment, type MarginShape, type PocketProfileName } from "@repo/geometry";
 
 interface ArtProps {
   className?: string;
@@ -131,6 +131,62 @@ export function AlignArt({ alignment, className }: ArtProps & { alignment: Align
         <rect width="14" height="10" rx="1.6" fill={ART} fillOpacity={0.18} stroke={ART} strokeWidth={1.2} />
         <path d="M7 0 V10 M0 5 H14" stroke={ART} strokeWidth={1} />
       </g>
+    </svg>
+  );
+}
+
+/** Family icon "Marge": the corner of the drawer, and the grid set in from it. */
+export function MarginIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <path d="M3 21 V6 A3 3 0 0 1 6 3 H21" />
+      <path d="M9 21 V9 H21" strokeOpacity={0.45} />
+      <path d="M6.5 9 V6.5 H9" />
+    </svg>
+  );
+}
+
+/**
+ * The margin in a corner of the drawer, seen from above: the grid (two pockets of each
+ * side, in currentColor) and, in var(--art), what the shape adds between it and the drawer:
+ * the frame (an outer wall and a crossbar on each grid line), truncated cells (the pockets
+ * carried on, cut by the outer wall) or a bracket (an L of outer wall and two crossbars).
+ */
+export function MarginArt({ kind, className }: ArtProps & { kind: MarginShape }) {
+  // The drawer's corner at the top left; the grid from (22, 16), cells of 18.
+  const pockets = [
+    [22, 16],
+    [40, 16],
+    [22, 34],
+    [40, 34],
+  ] as const;
+  return (
+    <svg viewBox="0 0 64 52" className={className} aria-hidden fill="none">
+      <path d="M2 50 V8 A6 6 0 0 1 8 2 H62" {...stroke} strokeOpacity={0.35} />
+      <path d="M22 50 V16 H62" {...stroke} {...material} />
+      {pockets.map(([x, y]) => (
+        <rect key={`${x},${y}`} x={x + 2.5} y={y + 2.5} width="13" height="13" rx="2.5" {...stroke} strokeOpacity={0.55} />
+      ))}
+      {kind === "frame" && (
+        <path d="M4.5 50 V9 A4.5 4.5 0 0 1 9 4.5 H62 M22 4.5 V16 M40 4.5 V16 M58 4.5 V16 M4.5 16 H22 M4.5 34 H22" stroke={ART} strokeWidth={2.2} strokeLinecap="round" />
+      )}
+      {kind === "brackets" && (
+        <path d="M4.5 26 V9 A4.5 4.5 0 0 1 9 4.5 H32 M22 4.5 V16 M4.5 16 H22" stroke={ART} strokeWidth={2.2} strokeLinecap="round" />
+      )}
+      {kind === "cells" && (
+        <>
+          <path d="M4.5 50 V9 A4.5 4.5 0 0 1 9 4.5 H62" stroke={ART} strokeWidth={2.2} strokeLinecap="round" />
+          {[
+            [6.5, 6.5, 13, 7],
+            [24.5, 6.5, 13, 7],
+            [42.5, 6.5, 13, 7],
+            [6.5, 18.5, 13, 13],
+            [6.5, 36.5, 13, 13],
+          ].map(([x, y, w, h]) => (
+            <rect key={`${x},${y}`} x={x} y={y} width={w} height={h} rx="2" stroke={ART} strokeWidth={1.4} />
+          ))}
+        </>
+      )}
     </svg>
   );
 }

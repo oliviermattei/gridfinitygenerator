@@ -4,9 +4,11 @@ status: proposed
 
 # Marge en cellules tronquées, à ras de la grille
 
+> **Révisé par l'ADR 0011 (#23)** : les cellules tronquées ne sont plus la marge par défaut, mais l'une des trois formes au choix (`marginShape: "cells"`, clé `mg=cells`). Le cadre à traverses redevient le défaut. Les règles ci-dessous (mur extérieur, pas de fente, coins, briques sur le treillis) valent toujours pour cette forme.
+
 La marge provisoire de #3 et #10 était un cadre à traverses de 2,00 mm de haut. Le mainteneur le trouve peu esthétique : il veut que la marge ressemble à un bout de la grille (#19). La marge devient donc la variante 1 du prototype de marge, à ras : la grille continue dans la marge, cellule après cellule au même pas, jusqu'au bord du tiroir, où un mur extérieur la coupe. Chaque cellule de la marge que le mur coupe est une **cellule tronquée** : une poche vide, au profil de la grille et sans fond ; les autres sont des poches entières, sans vis. Les murets de la marge sont ceux de la grille, prolongés avec leur profil, leur hauteur complète (4,60 mm en hybride, 4,25 mm en ras) et leur plat.
 
-Le moteur branche cette forme comme une variante interchangeable (`TRUNCATED_CELLS` dans `packages/geometry/src/margin.ts`), sans changer son interface publique. Le cadre à traverses (`CROSSBAR_FRAME`) reste dans le code, mais n'est plus exposé.
+Le moteur branche cette forme comme une variante interchangeable (`TRUNCATED_CELLS` dans `packages/geometry/src/margin.ts`), sans changer son interface publique. Le cadre à traverses (`CROSSBAR_FRAME`) restait dans le code sans être exposé ; depuis #23, il est de nouveau le défaut (ADR 0011).
 
 ## Règles
 

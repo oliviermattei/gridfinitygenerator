@@ -19,6 +19,13 @@ export type SizeMode = "drawer" | "cells";
  */
 export type Alignment = "tl" | "t" | "tr" | "l" | "c" | "r" | "bl" | "b" | "br";
 
+/**
+ * Shape of the margin (margin.ts, ADR 0011): a frame of crossbars (`frame`, the cheapest, by
+ * default), truncated cells (`cells`, the grid carried on up to the outline), or corner
+ * brackets only (`brackets`).
+ */
+export type MarginShape = "frame" | "cells" | "brackets";
+
 export interface BaseplateSettings {
   /** Size mode: the drawer by default, or a number of cells (shelf, worktop…). */
   sizeMode: SizeMode;
@@ -38,6 +45,8 @@ export interface BaseplateSettings {
   marginDepth: number;
   /** Where the grid sits when there is a margin; the margin takes the rest. */
   alignment: Alignment;
+  /** Shape of the margin: the frame of crossbars by default, the cheapest. */
+  marginShape: MarginShape;
   /** Profile of the pockets: the hybrid one (ADR 0002) by default, or the flush one, 0.35 mm lower. */
   pocketProfile: PocketProfileName;
   /** Countersunk screw holes that fix the baseplate to the bottom of the drawer, on the inner intersections of the grid. */
@@ -92,6 +101,9 @@ export const STANDARD_CELL_SIZE_MM = 42;
 /** The 9 alignments, row by row from the back left to the front right (the order of a keypad). */
 export const ALIGNMENTS: readonly Alignment[] = ["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"];
 
+/** The shapes of the margin, the default (the cheapest) first. */
+export const MARGIN_SHAPES: readonly MarginShape[] = ["frame", "cells", "brackets"];
+
 /** Range and default of every baseplate setting (spec v1, table of settings). */
 export const BASEPLATE_SETTINGS = {
   sizeMode: { options: ["drawer", "cells"], default: "drawer" } as ChoiceSetting<SizeMode>,
@@ -103,6 +115,7 @@ export const BASEPLATE_SETTINGS = {
   marginWidth: { min: 0, max: 500, default: 0, integer: false },
   marginDepth: { min: 0, max: 500, default: 0, integer: false },
   alignment: { options: ALIGNMENTS, default: "c" } as ChoiceSetting<Alignment>,
+  marginShape: { options: MARGIN_SHAPES, default: "frame" } as ChoiceSetting<MarginShape>,
   pocketProfile: {
     options: Object.keys(POCKET_PROFILES) as PocketProfileName[],
     default: "hybrid",
@@ -132,6 +145,7 @@ export const DEFAULT_SETTINGS: BaseplateSettings = {
   marginWidth: BASEPLATE_SETTINGS.marginWidth.default,
   marginDepth: BASEPLATE_SETTINGS.marginDepth.default,
   alignment: BASEPLATE_SETTINGS.alignment.default,
+  marginShape: BASEPLATE_SETTINGS.marginShape.default,
   pocketProfile: BASEPLATE_SETTINGS.pocketProfile.default,
   screws: BASEPLATE_SETTINGS.screws.default,
   screwShank: BASEPLATE_SETTINGS.screwShank.default,

@@ -29,11 +29,16 @@ async function measureSettings(
   expect(ms).toBeLessThan(targetMs);
 }
 
-/** Drawers whose baseplate has a margin on every side (#10). */
+/** Drawers whose baseplate has a margin on every side (#10), a frame of crossbars by default (#23). */
 const DRAWERS: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["default drawer 400 × 280 (9 × 6, margin)", {}],
+  ["default drawer, margin of truncated cells", { marginShape: "cells" }],
+  ["default drawer, margin of corner brackets", { marginShape: "brackets" }],
   ["20 × 20 + margins 21 × 27", { sizeMode: "cells", columns: 20, rows: 20, marginWidth: 21, marginDepth: 27 }],
   ["drawer 1000 × 1000 (23 × 23, margin)", { drawerWidth: 1000, drawerDepth: 1000 }],
+  ["drawer 1000 × 1000, margin of truncated cells", { drawerWidth: 1000, drawerDepth: 1000, marginShape: "cells" }],
+  ["drawer 1000 × 1000, margin of corner brackets", { drawerWidth: 1000, drawerDepth: 1000, marginShape: "brackets" }],
+  ["drawer 1000 × 1000 in 20 mm cells (24 × 24, frame)", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20 }],
   ["default drawer with its 40 screws", { screws: true }],
   ["20 × 20 with its 361 screws", { sizeMode: "cells", columns: 20, rows: 20, screws: true }],
   ["drawer 1000 × 1000 with its 484 screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
@@ -44,24 +49,26 @@ const DRAWERS: [name: string, settings: Partial<BaseplateSettings>][] = [
 const PLATE_256 = { buildPlate: { width: 256, depth: 256 } };
 const CUT: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["default drawer cut in 4 pieces", {}],
+  ["default drawer cut in 4 pieces, truncated cells", { marginShape: "cells" }],
+  ["default drawer cut in 4 pieces, corner brackets", { marginShape: "brackets" }],
   ["20 × 20 cut in 16 pieces", { sizeMode: "cells", columns: 20, rows: 20 }],
   ["drawer 1000 × 1000 cut in 16 pieces", { drawerWidth: 1000, drawerDepth: 1000 }],
   ["drawer 1000 × 1000 cut in 16 pieces, with screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
 ];
 
 /**
- * Drawers that miss the spec targets since the margin carries the grid on (#19, ADR 0008),
- * held to wider local limits that still tell a regression:
+ * Drawers that miss the spec targets with a margin of truncated cells, which carries the grid
+ * on (#19, ADR 0008, a choice since #23), held to wider local limits that still tell a regression:
  * - a single column (1 × 23), whose margin of truncated cells goes through the boolean
  *   fallback: about 110 ms in preview, over the 100 ms target;
  * - the smallest cells in the largest drawer (#13): 24 × 24 cells, the rest in the margin,
  *   50 × 50 pockets in all, 3.3 million triangles in the final.
  */
 const BEYOND_TARGETS: [name: string, settings: Partial<BaseplateSettings>][] = [
-  ["drawer 60 × 1000 (1 × 23, margin, boolean path)", { drawerWidth: 60, drawerDepth: 1000 }],
-  ["drawer 1000 × 1000 in 20 mm cells (24 × 24, margin)", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20 }],
-  ["drawer 1000 × 1000 in 20 mm cells with its 529 screws", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20, screws: true }],
-  ["drawer 1000 × 1000 in 20 mm cells, sharp corners, 3 mm chamfer", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20, outerRadius: 0, bottomChamfer: 3 }],
+  ["drawer 60 × 1000 (1 × 23, margin, boolean path)", { drawerWidth: 60, drawerDepth: 1000, marginShape: "cells" }],
+  ["drawer 1000 × 1000 in 20 mm cells (24 × 24, margin)", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20, marginShape: "cells" }],
+  ["drawer 1000 × 1000 in 20 mm cells with its 529 screws", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20, screws: true, marginShape: "cells" }],
+  ["drawer 1000 × 1000 in 20 mm cells, sharp corners, 3 mm chamfer", { drawerWidth: 1000, drawerDepth: 1000, cellSize: 20, outerRadius: 0, bottomChamfer: 3, marginShape: "cells" }],
 ];
 
 describe("spec v1 performance targets (local)", () => {

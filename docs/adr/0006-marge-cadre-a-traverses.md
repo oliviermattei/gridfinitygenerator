@@ -4,6 +4,8 @@ status: accepted
 
 # Marge provisoire : cadre à traverses, 2,00 mm de haut
 
+> **Statut depuis #23 (ADR 0011)** : le cadre à traverses est de nouveau la marge par défaut, l'une des trois formes au choix (`marginShape: "frame"`). #19 l'avait remplacé par les cellules tronquées (ADR 0008). Ses règles valent toujours, avec un ajout : une traverse sur une ligne de coupe (ADR 0009) est doublée, une traverse entière de chaque côté. Les équerres de coin sont désormais implémentées, comme troisième forme.
+
 Le prototype de marge (#3, `prototypes/margin-variants`) a retenu, à titre provisoire, la variante « cadre à nervures ». Le moteur (#10) l'implémente seule, sous le nom de **cadre à traverses** : un **mur extérieur** suit le contour de la baseplate, et une **traverse** part de chaque ligne de la grille, dans l'alignement des murets, pour le relier à la grille. La variante est rangée derrière une interface interne (`MarginVariant` dans `packages/geometry/src/margin.ts`) : si la recette d'impression (#16) en retient une autre, on la remplace sans changer l'interface publique du moteur.
 
 Cotes et règles retenues :
@@ -14,7 +16,7 @@ Cotes et règles retenues :
 - **Traverses des première et dernière lignes** : elles restent à l'intérieur de l'emprise de la grille. Ainsi chaque coin de la marge est une boîte fermée.
 - **Trou plus étroit qu'un mur** : il est rempli, pour ne jamais imprimer une fente. En particulier, une marge plus étroite que deux murs n'a pas de trou.
 - **Marges au centième** : la mise en page arrondit les marges à 0,01 mm, et le partage selon l'alignement conserve leur somme. Aucune poussière flottante n'atteint la géométrie. La baseplate peut dépasser « tiroir − jeu » de 0,005 mm au plus, ce qui est invisible à l'impression.
-- **Équerres** : les équerres de coin du prototype (variante 2) ne sont pas implémentées.
+- **Équerres** : les équerres de coin du prototype (variante 2) ne sont pas implémentées (elles le sont depuis #23, ADR 0011).
 
 ## Consequences
 
