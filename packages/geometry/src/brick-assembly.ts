@@ -381,11 +381,14 @@ function cellBricks(
     return [own(own(wasm.Manifold.extrude(own(holes.translate([-cx, -cy])), profile.height + 2 * o)).translate([0, 0, -o]))];
   };
   const solids = new Map<string, Manifold>();
+  // Sides of each brick on the outline, which are no seam: nothing welds to them.
+  const outlineSides = new Map<string, [Side, Side]>();
   for (let i = lattice.columns[0]; i < lattice.columns[1]; i++)
     for (let j = lattice.rows[0]; j < lattice.rows[1]; j++) {
       const key = keys.of(i, j);
       if (solids.has(key)) continue;
       const [sx, sy] = kindOf(i, j, frame, lattice);
+      outlineSides.set(key, [sx, sy]);
       const kind = keys.kind(i, j, 0);
       const base = bases.get(kind) ?? baseOf(i, j, sx, sy);
       bases.set(kind, base);
@@ -395,8 +398,9 @@ function cellBricks(
   for (const label of labels) {
     const solid = solids.get(keys.of(...label.cell)) as Manifold;
     solids.set(labelKey(label, keys), own(solid.subtract(labelTool(wasm, own, frame, label))));
+    outlineSides.set(labelKey(label, keys), kindOf(...label.cell, frame, lattice));
   }
-  return new Map([...solids].map(([key, solid]) => [key, brickOf(meshOf(solid), half)]));
+  return new Map([...solids].map(([key, solid]) => [key, brickOf(meshOf(solid), half, outlineSides.get(key) as [Side, Side])]));
 }
 
 /**
@@ -437,17 +441,24 @@ function restY({ rests }: Lattice, sy: Side): number {
   return sy === 1 ? rests.back : sy === -1 ? rests.front : 0;
 }
 
-function brickOf(mesh: TriangleMesh, half: number): Brick {
+/**
+ * The brick of a mesh centred on its cell, with the seam faces each vertex and triangle lie
+ * on. A side on the outline (`sx`, `sy`) has no seam: the plane of the cell's edge crosses its
+ * margin, where a cut of the margin may leave vertices closer than the weld to each other.
+ */
+function brickOf(mesh: TriangleMesh, half: number, [sx, sy]: [Side, Side]): Brick {
   const { positions, indices } = mesh;
   const vertexFaces = new Uint8Array(positions.length / 3);
+  const seams = (sx === 1 ? 0 : PLUS_X) | (sx === -1 ? 0 : MINUS_X) | (sy === 1 ? 0 : PLUS_Y) | (sy === -1 ? 0 : MINUS_Y);
   for (let v = 0; v < vertexFaces.length; v++) {
     const x = positions[3 * v] as number;
     const y = positions[3 * v + 1] as number;
     vertexFaces[v] =
-      (Math.abs(x - half) < ON_FACE_MM ? PLUS_X : 0) |
-      (Math.abs(x + half) < ON_FACE_MM ? MINUS_X : 0) |
-      (Math.abs(y - half) < ON_FACE_MM ? PLUS_Y : 0) |
-      (Math.abs(y + half) < ON_FACE_MM ? MINUS_Y : 0);
+      seams &
+      ((Math.abs(x - half) < ON_FACE_MM ? PLUS_X : 0) |
+        (Math.abs(x + half) < ON_FACE_MM ? MINUS_X : 0) |
+        (Math.abs(y - half) < ON_FACE_MM ? PLUS_Y : 0) |
+        (Math.abs(y + half) < ON_FACE_MM ? MINUS_Y : 0));
   }
   const triangleFaces = new Uint8Array(indices.length / 3);
   for (let t = 0; t < triangleFaces.length; t++) {

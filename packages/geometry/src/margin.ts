@@ -102,7 +102,8 @@ interface WallLayout {
  * baseplate is cut on (split.ts) is doubled, one on each side of the cut, so that each piece
  * keeps a whole one. A hole narrower than a wall is left full: a margin narrower than two
  * walls (the outer wall and a hole) has no hole. With a bottom chamfer, the outer wall is
- * thicker by the chamfer on its inside, so that its foot stays one wall wide.
+ * thicker by the chamfer on its inside, so that its foot stays one wall wide; a hole open onto
+ * the outline must be a wall wide past the foot of the chamfer.
  */
 function wallMargin(layoutOf: (frame: GridFrame) => WallLayout): MarginVariant {
   return {
@@ -137,22 +138,26 @@ function wallMargin(layoutOf: (frame: GridFrame) => WallLayout): MarginVariant {
       // Without a wall along the whole outline, the holes open onto the outline between the
       // zones of the wall: they reach past it, so that the outline never lies on their edge.
       let open = inside;
-      let outline: CrossSection | null = null;
+      let foot: CrossSection | null = null;
       if (layout.zones) {
         const o = TOOL_OVERSHOOT_MM;
         open = section(rect(-width / 2 - o, -depth / 2 - o, width / 2 + o, depth / 2 + o));
         const zones = own(wasm.CrossSection.union(layout.zones.map((zone) => section(rect(...zone)))));
         solid.push(own(own(open.subtract(inside)).intersect(zones)));
-        outline = section(roundedRect(width, depth, outerRadius, segmentsPerQuarter));
+        // The foot of the outline, set in by the bottom chamfer (slabOf): a hole open onto the
+        // outline must reach past the foot, or the chamfer, which moves the foot of the outline
+        // in, would fold its bottom onto the grid's edge.
+        const chamfer = frame.bottomChamfer;
+        foot = section(roundedRect(width - 2 * chamfer, depth - 2 * chamfer, outerRadius - chamfer, segmentsPerQuarter));
       }
       // A hole narrower than a wall (a margin narrower than two walls) would print as a slit:
-      // it is left full. A hole is kept when something is left of it, within the outline, once
-      // shrunk by half a wall.
+      // it is left full. A hole is kept when something is left of it, within the foot of the
+      // outline, once shrunk by half a wall.
       const pieces = own(open.subtract(own(wasm.CrossSection.union(solid))))
         .decompose()
         .map(own)
         .filter((piece) => {
-          const within = outline ? own(piece.intersect(outline)) : piece;
+          const within = foot ? own(piece.intersect(foot)) : piece;
           return !own(within.offset(-(wall / 2 - SLIT_TOLERANCE_MM), "Miter")).isEmpty();
         });
       const holes = own(wasm.CrossSection.compose(pieces));

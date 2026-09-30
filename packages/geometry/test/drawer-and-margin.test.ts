@@ -8,7 +8,7 @@ import {
   type BaseplateSettings,
   type Quality,
 } from "../src/index";
-import { HYBRID_OPENINGS as POCKET_OPENINGS, checkMesh, holeReach, inSection, pocketOpening } from "./support/measure";
+import { HYBRID_OPENINGS as POCKET_OPENINGS, badEdges, checkMesh, holeReach, inSection, pocketOpening } from "./support/measure";
 
 const FRAME = { marginShape: "frame" } as const;
 const CELLS = { marginShape: "cells" } as const;
@@ -281,6 +281,34 @@ describe("margin: corner brackets only (#23)", () => {
     expect(solid([0, FRONT_WALL])).toBe(false);
   });
 
+  it.each([2.5, 3, 4])("leaves the holes of a margin of %s mm full under a chamfer of 3 mm: no hole reaches the foot of the chamfer", async (margin) => {
+    // The chamfer sets the foot of the outline 3 mm in; a hole between the brackets opens onto
+    // the outline, so its bottom would end on or past the foot (a pinched or folded mesh, #20).
+    // A hole is kept when it is at least one wall wide at the foot of the chamfer (4.2 mm).
+    const settings = { ...BRACKETS, sizeMode: "cells", columns: 4, rows: 2, marginWidth: 2 * margin, marginDepth: 2 * margin, bottomChamfer: 3 } as const;
+    const [bricks, booleans] = await Promise.all([
+      generateBaseplate(settings, "final", { strategy: "bricks" }),
+      generateBaseplate(settings, "final", { strategy: "boolean" }),
+    ]);
+    for (const { mesh } of [bricks, booleans]) {
+      expect((await checkMesh(mesh)).status).toBe("NoError");
+      expect(badEdges(mesh)).toBe(0);
+    }
+    expectWithin(bricks.stats.volume ?? Number.NaN, booleans.stats.volume ?? Number.NaN, 0.1);
+    const section = (await checkMesh(bricks.mesh, [1.9])).sections.get(1.9) ?? [];
+    // Between the corner brackets of the front, in the middle of the margin.
+    expect(inSection(section, [0, -42 - margin / 2])).toBe(true);
+  });
+
+  it("keeps the holes of a margin one wall wider than the chamfer", async () => {
+    const settings = { ...BRACKETS, sizeMode: "cells", columns: 4, rows: 2, marginWidth: 9, marginDepth: 9, bottomChamfer: 3 } as const;
+    const { mesh } = await generateBaseplate(settings, "final");
+    const check = await checkMesh(mesh, [1.9]);
+    expect(check.status).toBe("NoError");
+    expect(badEdges(mesh)).toBe(0);
+    expect(inSection(check.sections.get(1.9) ?? [], [0, -42 - 4.5 / 2])).toBe(false);
+  });
+
   it.each([
     { columns: 4, lines: [] },
     { columns: 5, lines: [3] },
@@ -504,6 +532,9 @@ async function expectSameSolid(settings: Partial<BaseplateSettings>, quality: Qu
   const [fastCheck, fallbackCheck] = await Promise.all([checkMesh(fast.mesh), checkMesh(fallback.mesh)]);
   expect(fastCheck.status).toBe("NoError");
   expect(fallbackCheck.status).toBe("NoError");
+  // NoError does not see an edge pinched between four faces (ADR 0014).
+  expect(badEdges(fast.mesh)).toBe(0);
+  expect(badEdges(fallback.mesh)).toBe(0);
   expectWithin(fastCheck.volume, fallbackCheck.volume, VOLUME_TOLERANCE_MM3);
   expect(fastCheck.genus).toBe(fallbackCheck.genus);
   for (const axis of [0, 1, 2] as const) {
@@ -529,6 +560,9 @@ describe.each(MARGIN_SHAPES)("assembly strategies with a margin of shape %s", (m
       ["a single cell in wide margins all around", { sizeMode: "cells", columns: 1, rows: 1, marginWidth: 120, marginDepth: 90 }],
       ["80 mm cells, a 3 mm chamfer, a radius of 10 mm and screws", { drawerWidth: 500, drawerDepth: 300, cellSize: 80, bottomChamfer: 3, outerRadius: 10, screws: true, alignment: "br" }],
       ["the flush profile, sharp corners and a chamfer", { drawerWidth: 333, drawerDepth: 222, pocketProfile: "flush", outerRadius: 0, bottomChamfer: 0.8 }],
+      // The margin's cut above a margin of 0.5 mm lies on the edge of the cell, where the 3 mm
+      // chamfer of the rounded corner leaves vertices closer than the weld of the seams (#20).
+      ["a margin of 0.5 mm by a rounded corner, under a chamfer of 3 mm", { sizeMode: "cells", columns: 2, rows: 2, marginWidth: 16, marginDepth: 0.5, alignment: "tr", outerRadius: 2.3, bottomChamfer: 3 }],
     ])("%s: same volume, bounds and genus as the boolean fallback, NoError", async (_, settings) => {
       await expectSameSolid({ ...settings, marginShape }, quality);
     });
