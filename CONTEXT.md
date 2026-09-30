@@ -87,8 +87,16 @@ La matière qui porte la tête d'une vis. En v1, c'est le croisement des murets 
 _Avoid_: bossage, socle, boss
 
 **Jeu des trous**:
-Le jeu ajouté au Ø de la tige et au Ø de la tête d'une vis pour qu'elle entre sans forcer (0,5 mm par défaut) ; réglage avancé.
+Le jeu ajouté au Ø de la tige et au Ø de la tête d'une vis pour qu'elle entre sans forcer (0,5 mm par défaut), et au Ø des logements d'aimants ; réglage avancé.
 _Avoid_: tolérance, clearance
+
+**Aimant**:
+Un disque aimanté de 6 × 2 mm, glissé par-dessous dans un logement d'aimant, qui tient la baseplate au fond d'un tiroir en tôle (#24, ADR 0012).
+_Avoid_: magnet (sauf dans le code)
+
+**Logement d'aimant**:
+Le trou borgne, ouvert en dessous, qui reçoit un aimant sous un croisement de murets tenu par la matière : Ø 6 mm plus le jeu des trous, 2,2 mm de profondeur arrondis à la couche. Toujours présent, sans réglage ; aucun là où il y a une vis, ni sur une coupe, ni au bord de la grille, sauf quand la marge prolonge les murets (cellules tronquées) et garde un mur entre le trou et le contour (ADR 0012).
+_Avoid_: trou d'aimant, alvéole, poche (réservé aux bacs)
 
 **Bac**:
 Le contenant Gridfinity posé sur la baseplate ; hors du périmètre généré, mais il fixe les contraintes de compatibilité.

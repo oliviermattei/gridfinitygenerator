@@ -4,6 +4,7 @@ import { brickSlotTool, slotsByCell, type BrickSide, type ClipLayout } from "./c
 import { labelTool, type Label } from "./label";
 import { marginOf, type CutWindow, type MarginCut } from "./margin";
 import { withArena, type Own } from "./manifold";
+import { hasMagnet, magnetTool } from "./magnets";
 import { hasScrew, screwTool } from "./screws";
 import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, slabOf, type GridFrame } from "./shapes";
 import { latticeOf, type Lattice, type PiecePlan } from "./split";
@@ -18,9 +19,10 @@ import { latticeOf, type Lattice, type PiecePlan } from "./split";
  * its piece of margin), and the four corners (rounded like the outline, with their margin).
  * A corner is only a corner on both axes, so every axis of the lattice (below) needs at
  * least two cells; single rows and columns without whole cells of margin go through the
- * boolean fallback, and so does a grid of mixed pocket profiles (the test kit). With screws, a kind of cell is also told apart by its corners
- * that hold a screw: the brick carries a quarter of each of their holes, whose circles have
- * a vertex on the seams, so that neighbouring quarters weld. With clips (clips.ts), it is
+ * boolean fallback, and so does a grid of mixed pocket profiles (the test kit). A kind of cell is also told apart by its corners
+ * that hold a screw or a magnet (magnets.ts): the brick carries a quarter of each of their holes
+ * (half of a magnet hole on the edge of the lattice, with the margin beyond it), whose circles
+ * have a vertex on the seams, so that neighbouring quarters weld. With clips (clips.ts), it is
  * also told apart by its sides on a cut that hold a clip, and where along them: the brick
  * carries its half of each slot, open on its face on the cut, which no neighbour welds to.
  *
@@ -101,15 +103,15 @@ interface Brick extends TriangleMesh {
 type Side = -1 | 0 | 1;
 
 /**
- * Key of a kind of cell in the table of bricks: its sides, its corners that hold a screw,
+ * Key of a kind of cell in the table of bricks: its sides, its corners that hold a screw or a magnet,
  * whether it is a cell of the margin on the outline (its pocket comes from the margin's cut,
  * which may differ from the grid's pocket: along a side without margin, the outer wall cuts
  * it; an inner cell of the margin is an inner cell of the grid), and the shape of the
  * margin's holes in it, which differ along a side when the margin does not repeat from cell
  * to cell (brackets, a crossbar doubled on a cut).
  */
-const kindKey = (sx: Side, sy: Side, screws: number, margin: boolean, holes = "") =>
-  `${sx},${sy},${screws}${margin && (sx !== 0 || sy !== 0) ? ",margin" : ""}${holes ? `,holes:${holes}` : ""}`;
+const kindKey = (sx: Side, sy: Side, corners: number, margin: boolean, holes = "") =>
+  `${sx},${sy},${corners}${margin && (sx !== 0 || sy !== 0) ? ",margin" : ""}${holes ? `,holes:${holes}` : ""}`;
 
 /** Corners of a cell, as offsets of the intersection of grid lines from the cell index. */
 const CORNERS: readonly (readonly [da: 0 | 1, db: 0 | 1])[] = [
@@ -119,17 +121,27 @@ const CORNERS: readonly (readonly [da: 0 | 1, db: 0 | 1])[] = [
   [1, 0],
 ];
 
-/** Bit set of the corners of cell (i, j) that hold a screw, one bit per entry of CORNERS. */
-function screwCorners(i: number, j: number, frame: GridFrame): number {
-  return CORNERS.reduce((bits, [da, db], corner) => (hasScrew(frame, i + da, j + db) ? bits | (1 << corner) : bits), 0);
+/** Bit of a corner that holds a magnet: the bits of the screws, shifted past them. */
+const MAGNET_BIT = 1 << CORNERS.length;
+
+/**
+ * Bit set of the corners of cell (i, j) that hold a screw (one bit per entry of CORNERS) or a
+ * magnet (the same bits, times MAGNET_BIT); a corner never holds both.
+ */
+function holeCorners(i: number, j: number, frame: GridFrame, lattice: Lattice): number {
+  return CORNERS.reduce((bits, [da, db], corner) => {
+    const [a, b] = [i + da, j + db];
+    if (hasScrew(frame, a, b)) return bits | (1 << corner);
+    return hasMagnet(frame, lattice, a, b) ? bits | (MAGNET_BIT << corner) : bits;
+  }, 0);
 }
 
 /** The key of the brick of each cell, and the slots of the cells with clips. */
 interface BrickKeys {
   /** Key of the brick of cell (i, j). */
   of(i: number, j: number): string;
-  /** Key of its kind without its screws and slots. */
-  kind(i: number, j: number, screws: number): string;
+  /** Key of its kind with the given screw and magnet corners (bits of `holeCorners`), without its slots. */
+  kind(i: number, j: number, corners: number): string;
   /** Shift of the clip on each side of cell (i, j) along it (undefined without one), undefined for a cell without clips. */
   slots(i: number, j: number): readonly (number | undefined)[] | undefined;
 }
@@ -137,13 +149,13 @@ interface BrickKeys {
 function brickKeys(frame: GridFrame, lattice: Lattice, holes: ReadonlyMap<string, string>): BrickKeys {
   const cells = slotsByCell(frame.clips);
   const slots = (i: number, j: number) => cells.get(`${i},${j}`);
-  const kind = (i: number, j: number, screws: number) =>
-    kindKey(...kindOf(i, j, frame, lattice), screws, !inGrid(i, j, frame), holes.get(`${i},${j}`));
+  const kind = (i: number, j: number, corners: number) =>
+    kindKey(...kindOf(i, j, frame, lattice), corners, !inGrid(i, j, frame), holes.get(`${i},${j}`));
   return {
     slots,
     kind,
     of(i, j) {
-      const key = kind(i, j, screwCorners(i, j, frame));
+      const key = kind(i, j, holeCorners(i, j, frame, lattice));
       const sides = slots(i, j);
       return sides ? `${key},clips:${sides.map((offset) => (offset === undefined ? "-" : offset.toFixed(4))).join("|")}` : key;
     },
@@ -209,8 +221,8 @@ function shapeKey(section: CrossSection, cx: number, cy: number): string {
  * (cell plus margin, cut by the outline at the corners, less the margin's holes, with the
  * bottom chamfer of the outline) minus the pocket tool and the margin's solid cut (which
  * holds the pocket of a cell of the margin, cut by the outline). Then the
- * quarter of a screw hole is removed at each corner of the brick that holds a screw, and
- * its half of a slot on each side that holds a clip.
+ * quarter of a screw or magnet hole is removed at each corner of the brick that holds one,
+ * and its half of a slot on each side that holds a clip.
  */
 function cellBricks(
   wasm: ManifoldToplevel,
@@ -225,17 +237,19 @@ function cellBricks(
   const half = cellSize / 2;
   const pocket = pocketTool(wasm, own, frame);
   const screw = frame.screws && screwTool(wasm, own, { ...frame, screws: frame.screws });
-  // The corner screws of a brick, far from each other, compose; the bore of a head meets
-  // the corners of the pockets, so they are removed after the pocket.
-  const withScrews = (solid: Manifold, corners: number) => {
-    if (!screw || corners === 0) return solid;
-    const tools = CORNERS.filter((_, corner) => corners & (1 << corner)).map(([da, db]) =>
-      own(screw.translate([(2 * da - 1) * half, (2 * db - 1) * half, 0])),
+  const magnet = frame.magnets && magnetTool(wasm, own, { ...frame, magnets: frame.magnets });
+  // The tools of the corners of a brick, of the given bits, around its cell centre.
+  const cornerTools = (tool: Manifold | null, corners: number, bit: number) =>
+    CORNERS.flatMap(([da, db], corner) =>
+      tool && corners & (bit << corner) ? [own(tool.translate([(2 * da - 1) * half, (2 * db - 1) * half, 0]))] : [],
     );
-    return own(solid.subtract(own(wasm.Manifold.compose(tools))));
-  };
-  // The brick of a kind of cell without its screws, shared by the bricks of that kind whatever
-  // their screws: manifold computes it once.
+  // The corner screws and magnets of a brick, far from each other, compose. They are removed
+  // after the pocket, from the brick of the kind shared by all their patterns: the bore of a
+  // head meets the corners of the pockets, and a small subtraction of a few holes costs far
+  // less than the pocket and the margin's cut again for each pattern of holes.
+  const holeTools = (corners: number) => [...cornerTools(screw, corners, 1), ...cornerTools(magnet, corners, MAGNET_BIT)];
+  // The brick of a kind of cell without its screws and magnets, shared by the bricks of that
+  // kind whatever their holes: manifold computes it once.
   const bases = new Map<string, Manifold>();
   // A cut shows the faces of the bricks along it: with a bottom chamfer, the slabs of the
   // bricks on the outline have a ring of vertices at the top of the chamfer, on their seams
@@ -267,8 +281,9 @@ function cellBricks(
     const slab = slabOf(wasm, own, area, frame, [cx, cy]);
     return tools.length === 0 ? slab : own(slab.subtract(own(wasm.Manifold.compose(tools))));
   };
-  // The slots are far from the corners and from each other: after the screws, they compose.
-  // The tool of a slot on a side, at a shift along it, is the same for every brick.
+  // The slots are far from the corners and from each other: they compose with the holes of
+  // the corners, in the same subtraction. The tool of a slot on a side, at a shift along it,
+  // is the same for every brick.
   const slotTools = new Map<string, Manifold>();
   const slotTool = (side: BrickSide, offset: number) => {
     const key = `${side}@${offset}`;
@@ -276,26 +291,19 @@ function cellBricks(
     slotTools.set(key, tool);
     return tool;
   };
-  const withSlots = (solid: Manifold, sides: readonly (number | undefined)[] | undefined) => {
-    if (!sides) return solid;
-    const tools = sides.flatMap((offset, side) => (offset === undefined ? [] : [slotTool(side as BrickSide, offset)]));
-    return own(solid.subtract(own(wasm.Manifold.compose(tools))));
-  };
-  const screwed = new Map<string, Manifold>();
+  const sideTools = (sides: readonly (number | undefined)[] | undefined) =>
+    (sides ?? []).flatMap((offset, side) => (offset === undefined ? [] : [slotTool(side as BrickSide, offset)]));
   const solids = new Map<string, Manifold>();
   for (let i = lattice.columns[0]; i < lattice.columns[1]; i++)
     for (let j = lattice.rows[0]; j < lattice.rows[1]; j++) {
       const key = keys.of(i, j);
       if (solids.has(key)) continue;
       const [sx, sy] = kindOf(i, j, frame, lattice);
-      const corners = screwCorners(i, j, frame);
       const kind = keys.kind(i, j, 0);
       const base = bases.get(kind) ?? baseOf(i, j, sx, sy);
       bases.set(kind, base);
-      const withCorners = keys.kind(i, j, corners);
-      const solid = screwed.get(withCorners) ?? withScrews(base, corners);
-      screwed.set(withCorners, solid);
-      solids.set(key, withSlots(solid, keys.slots(i, j)));
+      const tools = [...holeTools(holeCorners(i, j, frame, lattice)), ...sideTools(keys.slots(i, j))];
+      solids.set(key, tools.length === 0 ? base : own(base.subtract(own(wasm.Manifold.compose(tools)))));
     }
   for (const label of labels) {
     const solid = solids.get(keys.of(...label.cell)) as Manifold;

@@ -14,6 +14,8 @@ const FRAME = { marginShape: "frame" } as const;
 const CELLS = { marginShape: "cells" } as const;
 const BRACKETS = { marginShape: "brackets" } as const;
 const PLATE_256 = { buildPlate: { width: 256, depth: 256 } };
+/** The prototype of the margins drilled no magnet holes (#24): its volumes are without them. */
+const BARE = { magnets: false };
 
 // Drawer mode, alignment (#10) and the three shapes of the margin (#23), observed through
 // the public interface only. Reference values: prototypes/margin-variants (README and
@@ -136,10 +138,10 @@ describe("cells mode", () => {
 describe("margin: frame of crossbars, the default (#10, #23)", () => {
   it("is the default margin: the volume of the prototype for the default drawer and for the test bench", async () => {
     // results.json of prototypes/margin-variants, ribbed frame ("cadre à nervures") at 2.00 mm, final quality.
-    const drawer = await generateBaseplate({}, "final");
+    const drawer = await generateBaseplate({}, "final", BARE);
     expectWithin(drawer.stats.volume ?? Number.NaN, 81_340.055, 0.5);
     const bench = { sizeMode: "cells", columns: 2, rows: 2, marginWidth: 25, marginDepth: 25, alignment: "bl" } as const;
-    const { stats, layout } = await generateBaseplate(bench, "final");
+    const { stats, layout } = await generateBaseplate(bench, "final", BARE);
     expectMargins(layout.margins, { left: 0, right: 25, back: 25, front: 0 });
     expectWithin(stats.volume ?? Number.NaN, 6_555.835, 0.5);
   });
@@ -238,10 +240,10 @@ describe("margin: corner brackets only (#23)", () => {
 
   it("gives the volume of the prototype's corner brackets at 2.00 mm, for the default drawer and the test bench", async () => {
     // results.json of prototypes/margin-variants, brackets ("équerres de coin seules") at 2.00 mm, final quality.
-    const drawer = await generateBaseplate(BRACKETS, "final");
+    const drawer = await generateBaseplate(BRACKETS, "final", BARE);
     expectWithin(drawer.stats.volume ?? Number.NaN, 78_263.255, 0.5);
     const bench = { ...BRACKETS, sizeMode: "cells", columns: 2, rows: 2, marginWidth: 25, marginDepth: 25, alignment: "bl" } as const;
-    expectWithin((await generateBaseplate(bench, "final")).stats.volume ?? Number.NaN, 6_134.395, 0.5);
+    expectWithin((await generateBaseplate(bench, "final", BARE)).stats.volume ?? Number.NaN, 6_134.395, 0.5);
   });
 
   it("closes a box at each corner and leaves the rest of the margin open onto the drawer", async () => {
@@ -333,10 +335,10 @@ describe("margin on a cut (#21, #23)", () => {
 describe("margin: truncated cells, the grid carried on to the outline (#19, a choice since #23)", () => {
   it("gives the volume of the prototype's truncated cells, flush with the grid, for the default drawer and the test bench", async () => {
     // results.json of prototypes/margin-variants, truncated cells ("cellules tronquées") at 4.60 mm, final quality.
-    const drawer = await generateBaseplate(CELLS, "final");
+    const drawer = await generateBaseplate(CELLS, "final", BARE);
     expectWithin(drawer.stats.volume ?? Number.NaN, 101_533.007, 0.5);
     const bench = { ...CELLS, sizeMode: "cells", columns: 2, rows: 2, marginWidth: 25, marginDepth: 25, alignment: "bl" } as const;
-    const { stats, layout } = await generateBaseplate(bench, "final");
+    const { stats, layout } = await generateBaseplate(bench, "final", BARE);
     expectMargins(layout.margins, { left: 0, right: 25, back: 25, front: 0 });
     expectWithin(stats.volume ?? Number.NaN, 10_344.856, 0.5);
   });

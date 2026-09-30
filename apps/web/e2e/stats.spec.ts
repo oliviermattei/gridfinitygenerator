@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { chooseCells, closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings } from "./support";
 
 /** A value of the statistics frame on screen: on the right on desktop, in the sheet on mobile. */
-function stat(page: Page, id: "dimensions" | "cells" | "margin" | "layers" | "volume" | "screws" | "pieces" | "fit") {
+function stat(page: Page, id: "dimensions" | "cells" | "margin" | "layers" | "volume" | "screws" | "magnets" | "pieces" | "fit") {
   return page.getByTestId(`stat-${id}`).filter({ visible: true });
 }
 
@@ -21,15 +21,17 @@ test("the statistics frame shows the real numbers of the baseplate, and … whil
   await expect(stat(page, "margin")).toHaveText("gauche 10,5, droite 10,5, arrière 13,5, avant 13,5 mm");
   await expect(stat(page, "layers")).toHaveText("23 couches de 0,2 mm");
   await expect(stat(page, "screws")).toHaveText("aucune");
+  // A magnet under each inner crossing of the grid, but on the cuts of the pieces: 28 to buy.
+  await expect(stat(page, "magnets")).toHaveText("28 (Ø 6 × 2 mm)");
   // Larger than the default build plate (256 × 256 mm): cut into 4 pieces that fit on it.
   await expect(stat(page, "pieces")).toHaveText("4");
   await expect(stat(page, "fit")).toHaveText("tient");
   // Measured on the final meshes of the pieces, in cm³: no grams, no estimate. The grid and
   // its frame of crossbars, as measured by the margin prototype (#3, variant 3), less the
-  // numbers engraved under the pieces (about 1 mm³ each) and the slots of the clips that join
-  // them (27,8 mm³ each), plus the crossbars doubled on the cuts.
+  // numbers engraved under the pieces (about 1 mm³ each), the slots of the clips that join
+  // them (27,8 mm³ each) and the magnet holes (72,9 mm³ each), plus the crossbars doubled on the cuts.
   const volume = stat(page, "volume");
-  await expect(volume).toHaveText("81,0 cm³");
+  await expect(volume).toHaveText("79,0 cm³");
   await expect(volume).not.toHaveAttribute("aria-busy");
 
   await chooseCells(page);

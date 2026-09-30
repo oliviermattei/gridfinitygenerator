@@ -65,10 +65,10 @@ test("the margin is a frame of crossbars by default, and the statistics count it
 
   // The default drawer: the 9 × 6 grid (77,2 cm³) and its frame of crossbars, 2 mm high
   // (4,1 cm³), as measured by the margin prototype (#3, variant 3), 81,3 cm³ in one piece; for
-  // the default build plate, 4 pieces, less the slots of their 15 clips (0,4 cm³) and plus the
-  // crossbars doubled on the cuts (0,1 cm³).
+  // the default build plate, 4 pieces, less the slots of their 15 clips (0,4 cm³), plus the
+  // crossbars doubled on the cuts (0,1 cm³), and less the holes of their 28 magnets (2,0 cm³).
   await expect(stat(page, "dimensions")).toHaveText("399 × 279 × 4,6 mm");
-  await expect(volume).toHaveText("81,0 cm³");
+  await expect(volume).toHaveText("79,0 cm³");
   const drawerTriangles = await page.getByTestId("mesh-preview").getAttribute("data-triangles");
   expect(drawerTriangles).not.toBeNull();
 
@@ -80,8 +80,8 @@ test("the margin is a frame of crossbars by default, and the statistics count it
   await expect(stat(page, "margin")).toHaveText("gauche 18,5, droite 18,5, arrière 2,5, avant 2,5 mm");
   await expect(stat(page, "dimensions")).toHaveText("499 × 299 × 4,6 mm");
   // 114,6 cm³ in one piece; 6 pieces here, less the slots of their 25 clips (0,7 cm³), plus
-  // the crossbars doubled on the cuts.
-  await expect(volume).toHaveText("114,0 cm³");
+  // the crossbars doubled on the cuts, and less the holes of their 40 magnets (2,9 cm³).
+  await expect(volume).toHaveText("111,1 cm³");
   await expect(page.getByTestId("mesh-preview")).not.toHaveAttribute("data-triangles", drawerTriangles ?? "");
 });
 

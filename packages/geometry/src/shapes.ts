@@ -6,6 +6,7 @@ import type { Margins } from "./layout";
 import type { MarginShape } from "./settings";
 import type { Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
+import type { MagnetHoles } from "./magnets";
 import type { ScrewHoles } from "./screws";
 
 /**
@@ -40,8 +41,13 @@ export interface GridFrame {
   /** Countersunk screw holes on the inner intersections of the grid, null without screws. */
   screws: ScrewHoles | null;
   /**
+   * Magnet holes under the crossings of the murets the material holds (magnets.ts), where no
+   * screw sits; null without them (the test kit, the benches).
+   */
+  magnets: MagnetHoles | null;
+  /**
    * Grid lines the baseplate is cut on for the build plate (`SplitPlan`), across X and
-   * across Y: no screw sits on an intersection they cut. Empty without a cut.
+   * across Y: no screw nor magnet sits on an intersection they cut. Empty without a cut.
    */
   cuts: { columns: readonly number[]; rows: readonly number[] };
   /** Clips astride the cuts, whose slots the pieces carry (clips.ts); null without them. */
@@ -211,6 +217,18 @@ export function pocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame, p
   }));
   const { positions, indices } = loft(layers);
   return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: positions, triVerts: indices })));
+}
+
+/**
+ * Counter-clockwise circle centred on the origin, starting on the +X axis. With a multiple of
+ * 4 segments, a vertex lies exactly on each axis (cos 90° is not exactly 0 in floating point).
+ */
+export function circle(radius: number, segments: number): [number, number][] {
+  const exact = (value: number) => (Math.abs(value) < 1e-12 ? 0 : value);
+  return Array.from({ length: segments }, (_, k) => {
+    const angle = (2 * Math.PI * k) / segments;
+    return [radius * exact(Math.cos(angle)), radius * exact(Math.sin(angle))] as [number, number];
+  });
 }
 
 /** Closed mesh through horizontal layers with the same number of CCW points, bottom to top. */

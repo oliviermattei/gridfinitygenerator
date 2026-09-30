@@ -91,13 +91,16 @@ describe("layout of the screws, as extrabold: the inner intersections of the gri
     expectPositions(backLeft.layout.screws, grid(steps(-199.5 + 42, 8), steps(-139.5 + 27 + 42, 5)));
   });
 
-  it("has neither screw nor hole when the screws are off, the default", async () => {
+  it("has no screw hole when the screws are off, the default: a magnet hole on each inner intersection instead", async () => {
     const { layout, stats, mesh } = await generateBaseplate({ sizeMode: "cells", columns: 4, rows: 3 }, "preview");
     expect(layout.screws).toEqual([]);
     expect(stats.screws).toBe(0);
-    // At the foot of the frame: the outline and one pocket per cell, nothing else.
+    expectPositions(layout.magnets, grid([-42, 0, 42], [-21, 21]));
+    // At the foot of the frame: the outline, one pocket per cell and the 6 magnet holes.
     const { sections } = await checkMesh(mesh, [0.5]);
-    expect(sections.get(0.5)).toHaveLength(1 + 12);
+    expect(sections.get(0.5)).toHaveLength(1 + 12 + 6);
+    // Above the magnets (2.20 mm), nothing else.
+    expect((await checkMesh(mesh, [2.5])).sections.get(2.5)).toHaveLength(1 + 12);
   });
 });
 
@@ -193,9 +196,10 @@ describe("the head is not seated on the pocket slopes", () => {
     [4, 7, 0.3],
   ])("takes away, at every height of reference, nothing but the holes (shank %s, head %s, gap %s), and adds no material", async (screwShank, screwHead, holeGap) => {
     const settings = screwedCells(4, 3, { screwShank, screwHead, holeGap });
+    // Without the magnet holes, which the crossings without a screw get (magnets.test.ts).
     const [plain, screwed] = await Promise.all([
-      generateBaseplate({ ...settings, screws: false }, "final"),
-      generateBaseplate(settings, "final"),
+      generateBaseplate({ ...settings, screws: false }, "final", { magnets: false }),
+      generateBaseplate(settings, "final", { magnets: false }),
     ]);
     const heights = POCKET_OPENINGS.map(({ z }) => z);
     const [before, after] = await Promise.all([checkMesh(plain.mesh, heights), checkMesh(screwed.mesh, heights)]);

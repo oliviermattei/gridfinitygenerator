@@ -5,6 +5,7 @@ import { labelsOf } from "./label";
 import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold, withArena } from "./manifold";
 import { FLUSH_PROFILE, POCKET_PROFILES } from "./pocket-profile";
+import { magnetHolesOf, magnetPositions } from "./magnets";
 import { layerCount, type BuildPlate } from "./print";
 import { screwHolesOf, screwPositions } from "./screws";
 import { clampSettings, type BaseplateSettings } from "./settings";
@@ -39,6 +40,8 @@ export interface BaseplateStats {
   pieces: number;
   /** Number of screws that fix the baseplate to the drawer: one per screw hole, none without screws. */
   screws: number;
+  /** Number of magnets that hold the baseplate in a sheet-metal drawer: one per magnet hole. */
+  magnets: number;
   /** Number of clips to print, which hold the pieces together: none for a single piece or without clips. */
   clips: number;
 }
@@ -62,6 +65,11 @@ export interface GenerateOptions {
    * baseplate is never cut.
    */
   buildPlate?: BuildPlate | null;
+  /**
+   * Whether to drill the magnet holes, true by default. They are not a setting (ADR 0012):
+   * false is for the benches and tests that measure what the holes take away.
+   */
+  magnets?: boolean;
 }
 
 /** One piece of the baseplate, a closed shell of its mesh, in the order of `layout.split.pieces`. */
@@ -101,7 +109,8 @@ export interface Baseplate {
  * number of cells, its outline rounded and chamfered at the bottom by the settings, and its
  * margin in the shape of the settings (a frame of crossbars by default, truncated cells or
  * corner brackets, see margin.ts and ADR 0011), with a countersunk screw hole on each inner intersection of the grid when the
- * screws are on (screws.ts, ADR 0006). With a build plate it does not fit on
+ * screws are on (screws.ts, ADR 0006), and a magnet hole under each other crossing of the
+ * murets the material holds, always (magnets.ts, ADR 0012). With a build plate it does not fit on
  * (`options.buildPlate`), it is cut on grid lines into pieces that do, each with its number
  * engraved underneath (split.ts, label.ts, ADR 0009), and, with the clips on, a slot astride
  * the cut in the middle of each side of a cell along it, for a clip printed apart (clips.ts,
@@ -172,6 +181,7 @@ async function buildBaseplate(
     segmentsPerQuarter: SEGMENTS_PER_QUARTER[quality],
     segmentsPerHole: SEGMENTS_PER_HOLE[quality],
     screws: screwHolesOf(settings, profile),
+    magnets: options.magnets === false || lowerCells.length > 0 ? null : magnetHolesOf(settings),
     cuts: { columns: [], rows: [] },
     clips: null,
     layerHeight: settings.layerHeight,
@@ -182,7 +192,7 @@ async function buildBaseplate(
   const clips = clipsOf(settings.clips, uncut, split, labels);
   const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips };
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
-  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame), split, clips };
+  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame), magnets: magnetPositions(frame, latticeOf(frame)), split, clips };
   const meshes =
     strategy === "bricks"
       ? assembleWithBricks(wasm, frame, quality === "final", split.pieces, labels)
@@ -197,6 +207,7 @@ async function buildBaseplate(
       layers: layerCount(frame.profile.height, settings.layerHeight),
       pieces: pieces.length,
       screws: layout.screws.length,
+      magnets: layout.magnets.length,
       clips: clips?.placements.length ?? 0,
     },
     pieces,

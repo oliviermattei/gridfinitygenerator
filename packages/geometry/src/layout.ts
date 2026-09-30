@@ -24,6 +24,11 @@ export interface BaseplateLayout {
    */
   screws: [x: number, y: number][];
   /**
+   * Centre of each magnet hole, in millimetres, in the coordinates of the mesh: the crossings
+   * of the murets the material holds, but where a screw sits or a cut goes (magnets.ts).
+   */
+  magnets: [x: number, y: number][];
+  /**
    * How the baseplate is cut into pieces that fit the build plate given to the engine: the
    * grid lines cut, and each piece with its cells and footprint. A single piece without a
    * build plate, or when the baseplate fits on it.
@@ -70,7 +75,7 @@ const CELL_EPSILON = 1e-9;
  * - Cells mode: the margins in width and depth are added to the grid.
  * The margin of each axis is then spread by the alignment.
  */
-export function layoutOf(settings: BaseplateSettings): Omit<BaseplateLayout, "screws" | "split" | "clips"> {
+export function layoutOf(settings: BaseplateSettings): Omit<BaseplateLayout, "screws" | "magnets" | "split" | "clips"> {
   const { cellSize } = settings;
   let columns: number;
   let rows: number;

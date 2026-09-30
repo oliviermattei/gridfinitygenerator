@@ -5,15 +5,16 @@ import { labelTool, type Label } from "./label";
 import { marginOf } from "./margin";
 import { withArena, type Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
+import { magnetPositions, magnetTool } from "./magnets";
 import { screwPositions, screwTool } from "./screws";
 import { TOOL_OVERSHOOT_MM, cellCentre, gridRect, meshOf, pocketTool, roundedRect, slabOf, type GridFrame } from "./shapes";
-import type { PiecePlan } from "./split";
+import { latticeOf, type PiecePlan } from "./split";
 
 /**
  * Grouped boolean assembly (ADR 0004 fallback): the slab of the outline (with its bottom
  * chamfer, less the margin's holes) minus every pocket
  * tool and the margin's cut at once, then minus the tops of the lower cells, then minus
- * every screw hole and every slot of a clip astride a cut (clips.ts). Works for any grid, including single rows and columns and grids of
+ * every screw hole, every magnet hole and every slot of a clip astride a cut (clips.ts). Works for any grid, including single rows and columns and grids of
  * mixed pocket profiles (the test kit).
  *
  * A baseplate cut for the build plate is then cut into its pieces, in the order of `pieces`:
@@ -57,6 +58,11 @@ export function assembleWithBooleans(
       const screw = screwTool(wasm, own, { ...frame, screws: frame.screws });
       const screws = positions.map((position) => own(screw.translate([...position, 0])));
       solid = own(solid.subtract(own(wasm.Manifold.compose(screws))));
+    }
+    const magnets = magnetPositions(frame, latticeOf(frame));
+    if (frame.magnets && magnets.length > 0) {
+      const magnet = magnetTool(wasm, own, { ...frame, magnets: frame.magnets });
+      solid = own(solid.subtract(own(wasm.Manifold.compose(magnets.map((position) => own(magnet.translate([...position, 0])))))));
     }
     if (frame.clips && frame.clips.placements.length > 0) solid = own(solid.subtract(slotTools(wasm, own, frame.clips)));
     if (pieces.length <= 1) return [meshOf(solid)];

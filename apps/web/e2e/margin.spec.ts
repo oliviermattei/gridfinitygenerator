@@ -23,38 +23,39 @@ test("the margin comes in three shapes, each with the volume it gives, the frame
   await expect(shape(page, "Cadre")).toBeChecked();
 
   // The default drawer cut in 4 pieces for the default build plate, measured on the final
-  // meshes: the current shape, then the other two, measured once it is shown.
-  await expect(volume(page)).toHaveText("81,0 cm³");
-  await expect(shape(page, "Cadre")).toContainText("81,0 cm³");
-  await expect(shape(page, "Cellules")).toContainText("101,1 cm³");
-  await expect(shape(page, "Équerres")).toContainText("77,9 cm³");
+  // meshes: the current shape, then the other two, measured once it is shown. The truncated
+  // cells carry the magnets on to the edge of the grid: 54 holes instead of 28.
+  await expect(volume(page)).toHaveText("79,0 cm³");
+  await expect(shape(page, "Cadre")).toContainText("79,0 cm³");
+  await expect(shape(page, "Cellules")).toContainText("97,2 cm³");
+  await expect(shape(page, "Équerres")).toContainText("75,8 cm³");
 
   // Changing the shape changes the volume shown, and the family says which one it is.
   await shape(page, "Équerres").click();
-  await expect(volume(page)).toHaveText("77,9 cm³");
+  await expect(volume(page)).toHaveText("75,8 cm³");
   await expect(family).toHaveAccessibleName("Marge Équerres de coin");
   await expect(page.getByText(/Une équerre de 2 mm à chaque coin/).filter({ visible: true })).toBeVisible();
   await shape(page, "Cellules").click();
-  await expect(volume(page)).toHaveText("101,1 cm³");
+  await expect(volume(page)).toHaveText("97,2 cm³");
   await expect(family).toHaveAccessibleName("Marge Cellules tronquées");
 
   // Kept on reload, like every setting of the baseplate.
   await page.reload();
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Marge/ })).toHaveAccessibleName("Marge Cellules tronquées");
-  await expect(volume(page)).toHaveText("101,1 cm³");
+  await expect(volume(page)).toHaveText("97,2 cm³");
 });
 
 test("a shared link carries the shape of the margin, and a link without it gives the frame", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate?v=1&mg=brackets");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Marge/ })).toHaveAccessibleName("Marge Équerres de coin");
-  await expect(volume(page)).toHaveText("77,9 cm³");
+  await expect(volume(page)).toHaveText("75,8 cm³");
 
   await page.goto("/fr/baseplate?v=1&w=400");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Marge/ })).toHaveAccessibleName("Marge Cadre à traverses");
-  await expect(volume(page)).toHaveText("81,0 cm³");
+  await expect(volume(page)).toHaveText("79,0 cm³");
 });
 
 test("without a margin, the shape changes nothing and no volume is compared", async ({ page }, testInfo) => {

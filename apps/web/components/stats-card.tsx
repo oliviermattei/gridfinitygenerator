@@ -74,6 +74,9 @@ export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, 
         <Stat label={t.statScrews} id="screws">
           {stats && (stats.screws === 0 ? t.none : String(stats.screws))}
         </Stat>
+        <Stat label={t.statMagnets} id="magnets">
+          {stats && (stats.magnets === 0 ? t.noMagnet : t.magnetCount(String(stats.magnets)))}
+        </Stat>
         <Stat label={t.statPieces} id="pieces">
           {stats && String(stats.pieces)}
         </Stat>

@@ -4,7 +4,7 @@ import type { Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
 import { roundDownToLayer } from "./print";
 import type { BaseplateSettings } from "./settings";
-import { TOOL_OVERSHOOT_MM, gridRect, loft, type GridFrame } from "./shapes";
+import { TOOL_OVERSHOOT_MM, circle, gridRect, loft, type GridFrame } from "./shapes";
 
 /**
  * Countersunk screw holes of a baseplate, one on each inner intersection of the grid, as
@@ -93,16 +93,4 @@ export function screwTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame & {
   );
   const { positions, indices } = loft(levels.map((z) => ({ z, points: circle(radiusAt(z), segmentsPerHole) })));
   return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: positions, triVerts: indices })));
-}
-
-/**
- * Counter-clockwise circle centred on the origin, starting on the +X axis. With a multiple of
- * 4 segments, a vertex lies exactly on each axis (cos 90° is not exactly 0 in floating point).
- */
-function circle(radius: number, segments: number): [number, number][] {
-  const exact = (value: number) => (Math.abs(value) < 1e-12 ? 0 : value);
-  return Array.from({ length: segments }, (_, k) => {
-    const angle = (2 * Math.PI * k) / segments;
-    return [radius * exact(Math.cos(angle)), radius * exact(Math.sin(angle))] as [number, number];
-  });
 }

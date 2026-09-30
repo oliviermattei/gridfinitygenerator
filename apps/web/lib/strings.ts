@@ -63,6 +63,10 @@ const fr = {
   statHeight: "Hauteur",
   statVolume: "Matière",
   statScrews: "Vis",
+  statMagnets: "Aimants",
+  /** Magnets to buy: how many, and their size (the holes take 6 × 2 mm discs). */
+  magnetCount: (count: string) => `${count} (Ø 6 × 2 mm)`,
+  noMagnet: "aucun",
   statPieces: "Pièces",
   statClips: "Clips",
   none: "aucune",
@@ -154,7 +158,7 @@ const fr = {
   holeGap: "Jeu des trous",
   lessHoleGap: "Moins de jeu aux trous",
   moreHoleGap: "Plus de jeu aux trous",
-  holeGapHint: "Ajouté au Ø de la tige et de la tête, pour que les vis entrent sans forcer.",
+  holeGapHint: "Ajouté au Ø de la tige et de la tête des vis, et au Ø des logements d'aimants, pour qu'ils entrent sans forcer.",
   advancedDefaults: "Valeurs par défaut",
   /** The advanced settings that differ from their default, in the order of the family. */
   advancedChanges: {
@@ -263,6 +267,9 @@ const en: Strings = {
   statHeight: "Height",
   statVolume: "Material",
   statScrews: "Screws",
+  statMagnets: "Magnets",
+  magnetCount: (count: string) => `${count} (Ø 6 × 2 mm)`,
+  noMagnet: "none",
   statPieces: "Pieces",
   statClips: "Clips",
   none: "none",
@@ -353,7 +360,7 @@ const en: Strings = {
   holeGap: "Hole gap",
   lessHoleGap: "Less gap at the holes",
   moreHoleGap: "More gap at the holes",
-  holeGapHint: "Added to the shank and head Ø, so that the screws go in without forcing.",
+  holeGapHint: "Added to the shank and head Ø of the screws, and to the Ø of the magnet holes, so that they go in without forcing.",
   advancedDefaults: "Default values",
   advancedChanges: {
     cellSize: (value: string) => `cell ${value} mm`,

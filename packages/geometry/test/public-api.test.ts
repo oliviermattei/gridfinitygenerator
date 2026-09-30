@@ -247,7 +247,9 @@ describe("serializeStl", () => {
     const original = await checkMesh(baseplate.mesh);
     const reread = await checkMesh(readBinaryStl(bytes));
     expect(reread.status).toBe("NoError");
-    expectWithin(reread.volume, original.volume);
+    // Coordinates are written to 0.00001 mm: each vertex moves by up to 0.000005 mm, which
+    // changes the volume of a 20 × 20 (half a million mm³) by a few thousandths of a mm³.
+    expectWithin(reread.volume, original.volume, Math.max(TOLERANCE_MM, 1e-8 * original.volume));
     for (const axis of [0, 1, 2] as const) {
       expectWithin(reread.bounds.min[axis], original.bounds.min[axis]);
       expectWithin(reread.bounds.max[axis], original.bounds.max[axis]);
@@ -289,7 +291,9 @@ describe("serialize3mf", () => {
     const original = await checkMesh(baseplate.mesh);
     const reread = await checkMesh(content.mesh);
     expect(reread.status).toBe("NoError");
-    expectWithin(reread.volume, original.volume);
+    // Coordinates are written to 0.00001 mm: each vertex moves by up to 0.000005 mm, which
+    // changes the volume of a 20 × 20 (half a million mm³) by a few thousandths of a mm³.
+    expectWithin(reread.volume, original.volume, Math.max(TOLERANCE_MM, 1e-8 * original.volume));
     for (const axis of [0, 1, 2] as const) {
       expectWithin(reread.bounds.min[axis], original.bounds.min[axis]);
       expectWithin(reread.bounds.max[axis], original.bounds.max[axis]);

@@ -25,6 +25,11 @@ export interface MarginVariant {
    * bricks lay as such (ADR 0004). None when absent: a margin that does not carry the grid on.
    */
   wholeCells?(frame: GridFrame): Record<keyof Margins, number>;
+  /**
+   * Whether the margin carries the murets of the grid on at their full height, so that a
+   * crossing on the edge of the grid is a whole crossing, which can hold a magnet (magnets.ts).
+   */
+  carriesMurets: boolean;
 }
 
 /**
@@ -47,6 +52,15 @@ const FRAME_HEIGHT_MM = 2;
 const FRAME_WALL_MM = 1.2;
 /** Fewest lines in a wall or a crossbar: a single extrusion would print badly. */
 const FRAME_MIN_LINES = 2;
+
+/**
+ * Width of the walls of the margin (the outer wall, the crossbars): 1.2 mm rounded up to a
+ * whole number of lines, never fewer than two. It is also the least material left between a
+ * magnet hole and the outline.
+ */
+export function wallWidth(frame: Pick<GridFrame, "lineWidth">): number {
+  return roundUpToLine(FRAME_WALL_MM, frame.lineWidth, FRAME_MIN_LINES);
+}
 /** A hole exactly one wall wide is still a hole: slack for the rounding of the offset. */
 const SLIT_TOLERANCE_MM = 1e-3;
 
@@ -85,11 +99,12 @@ interface WallLayout {
  */
 function wallMargin(layoutOf: (frame: GridFrame) => WallLayout): MarginVariant {
   return {
+    carriesMurets: false,
     prepare(wasm, own, frame) {
       const { margins, cellSize, width, depth, outerRadius, segmentsPerQuarter, profile } = frame;
       if (margins.left <= 0 && margins.right <= 0 && margins.back <= 0 && margins.front <= 0) return null;
       const height = roundUpToLayer(FRAME_HEIGHT_MM, frame.layerHeight);
-      const wall = roundUpToLine(FRAME_WALL_MM, frame.lineWidth, FRAME_MIN_LINES);
+      const wall = wallWidth(frame);
       const [x0, y0, x1, y1] = gridRect(frame);
       const top = profile.height + TOOL_OVERSHOOT_MM;
       // Farther than any part of the baseplate; `keep` reaches beyond `bound` on its open sides.
@@ -265,6 +280,8 @@ interface TruncatedCell {
  * corner of the outline, the hole must also hold a disc one wall wide at the height of its floor.
  */
 export const TRUNCATED_CELLS: MarginVariant = {
+  carriesMurets: true,
+
   prepare(wasm, own, frame) {
     const { margins, columns, rows, cellSize, segmentsPerQuarter, profile, layerHeight } = frame;
     if (margins.left <= 0 && margins.right <= 0 && margins.back <= 0 && margins.front <= 0) return null;
@@ -371,7 +388,7 @@ export const TRUNCATED_CELLS: MarginVariant = {
  * the half sides and the corner radius of its inside, and the inset of the pocket at the top.
  */
 function outerWallOf(frame: GridFrame) {
-  const wall = roundUpToLine(FRAME_WALL_MM, frame.lineWidth, FRAME_MIN_LINES);
+  const wall = wallWidth(frame);
   const outerWall = wall + frame.bottomChamfer;
   return {
     wall,
