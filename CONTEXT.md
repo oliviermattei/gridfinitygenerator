@@ -182,6 +182,18 @@ _Avoid_: languette, tenon
 Le numéro gravé sous une pièce, dans un demi-muret, en chiffres de 3 mm empilés et en miroir, pour qu'il se lise quand on retourne la pièce (0,4 mm de profondeur, arrondi à la couche). Une baseplate d'une seule pièce n'en a pas.
 _Avoid_: étiquette (réservé aux bacs), label, repère
 
+**Pile**:
+Des pièces d'une baseplate découpée imprimées l'une sur l'autre en une seule impression, en mono-matière : la première à l'endroit, les autres retournées sur celle du dessous, une couche d'air entre deux (le **pas** de la pile : la hauteur d'une pièce plus une couche). Une pièce ne se pose que sur une pièce qui la porte ; sinon elle commence une autre pile (#28, ADR 0016).
+_Avoid_: stack (sauf dans le code), empilement (sauf pour l'action), pile de plaques
+
+**Oreille**:
+Dans une pile, un disque d'une couche sur un coin de pièce, qui l'empêche de se décoller ; à couper au cutter (ADR 0016).
+_Avoid_: mouse ear (sauf dans le code), languette, patin
+
+**Pion**:
+Dans une pile, la colonne de 0,8 mm qui monte du plateau à un coin que les pièces partagent, et que relient les oreilles de chacune (ADR 0016).
+_Avoid_: pin (sauf dans le code), tige (réservé à la vis), pilier
+
 **Plateau**:
 Le plateau d'impression de l'imprimante, uniquement. Sa taille utile est une préférence locale : elle décide de la découpe, mais n'entre pas dans le lien de partage.
 _Avoid_: build plate, lit, bed (et jamais pour désigner la baseplate)

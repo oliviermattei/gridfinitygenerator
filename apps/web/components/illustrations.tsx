@@ -139,6 +139,17 @@ export function ClipIcon({ className }: ArtProps) {
   );
 }
 
+/** Family icon "Empiler les pièces": three pieces in section, one on another, a layer of air between them. */
+export function StackIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <rect x="3" y="15.5" width="18" height="4.5" rx="1" />
+      <rect x="3" y="9.5" width="18" height="4" rx="1" />
+      <rect x="6" y="3.5" width="12" height="4" rx="1" />
+    </svg>
+  );
+}
+
 /**
  * Clips: the muret on a cut in section, a piece on each side of the dashed cut; the clip
  * (in var(--art)) pushed up from below, flush with the bottom, grips the tooth of each piece

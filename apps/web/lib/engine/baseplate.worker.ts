@@ -1,5 +1,18 @@
 // Runs the geometry engine (and its manifold-3d WASM) off the main thread.
-import { generateBaseplate, generateTestKit, loadEngine, printClips, printPieces, serialize3mf, serializeStl, zipFiles } from "@repo/geometry";
+import {
+  generateBaseplate,
+  generateTestKit,
+  loadEngine,
+  printClips,
+  printPieces,
+  printStacks,
+  serialize3mf,
+  serializeStl,
+  stackPlanOf,
+  stackRuleOf,
+  zipFiles,
+  type TriangleMesh,
+} from "@repo/geometry";
 import { exportName } from "../export-file";
 import type { EngineRequest, EngineResponse, EngineWarmUp, FileExtension } from "./protocol";
 
@@ -42,30 +55,45 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
           ? await generateTestKit(request.settings, "final")
           : await generateBaseplate(request.settings, "final", { buildPlate: request.buildPlate });
       const { mesh, ...baseplate } = generated;
-      const name = exportName(request.piece, baseplate, request.settings);
+      // Stacked (#28) when asked and when the baseplate allows it: several pieces, a margin
+      // held upside down, a type that prints upside down.
+      const stacked = request.piece === "baseplate" && request.stack !== null && stackRuleOf(request.settings, baseplate.layout).blockers.length === 0;
+      const name = exportName(request.piece, baseplate, request.settings, stacked);
       const start = performance.now();
       let bytes: Uint8Array;
       let extension: FileExtension = request.format;
+      let stacks = 0;
       if (baseplate.pieces.length <= 1) {
         bytes = request.format === "3mf" ? serialize3mf(mesh, { name, shareLink: request.link }) : serializeStl(mesh);
       } else {
-        const pieces = printPieces(generated);
-        // The clips, as many as the cuts take, beside the pieces.
-        const clips = printClips(generated, pieces);
+        // The pieces, each its own object, or the stacks, each an object of a shell per piece.
+        let parts: { mesh: TriangleMesh; name: string; file: string }[];
+        if (stacked && request.stack) {
+          const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, request.settings.layerHeight);
+          const printed = await printStacks(generated, plan, { ...request.stack, layerHeight: request.settings.layerHeight, lineWidth: request.settings.lineWidth });
+          stacks = printed.length;
+          parts = printed.map(({ mesh: stackMesh, pieces }, index) => ({
+            mesh: stackMesh,
+            name: request.stackName.replace("{n}", String(index + 1)).replace("{pieces}", pieces.join(", ")),
+            file: `${name}-${index + 1}.stl`,
+          }));
+        } else {
+          parts = printPieces(generated).map((pieceMesh, index) => {
+            const number = String(baseplate.pieces[index]?.number ?? index + 1);
+            return { mesh: pieceMesh, name: request.pieceName.replace("{n}", number), file: `${name}-piece-${number}.stl` };
+          });
+        }
+        // The clips, as many as the cuts take, beside the pieces (never stacked).
+        const clips = printClips(generated, parts.map((part) => part.mesh));
         const count = String(baseplate.stats.clips);
         if (request.format === "3mf") {
-          // One 3MF, one named object per piece, laid out apart from each other, and one for the clips.
-          const objects = pieces.map((pieceMesh, index) => ({
-            mesh: pieceMesh,
-            name: request.pieceName.replace("{n}", String(baseplate.pieces[index]?.number ?? index + 1)),
-          }));
+          // One 3MF, one named object per piece (or stack), laid out apart from each other, and one for the clips.
+          const objects = parts.map(({ mesh: partMesh, name: partName }) => ({ mesh: partMesh, name: partName }));
           if (clips) objects.push({ mesh: clips, name: request.clipName.replace("{n}", count) });
           bytes = serialize3mf(objects, { name, shareLink: request.link });
         } else {
-          // STL has no named objects: a zip of one file per piece, and one for the clips.
-          const files = pieces.map(
-            (pieceMesh, index) => [`${name}-piece-${baseplate.pieces[index]?.number ?? index + 1}.stl`, serializeStl(pieceMesh)] as [string, Uint8Array],
-          );
+          // STL has no named objects: a zip of one file per piece (or stack), and one for the clips.
+          const files = parts.map(({ mesh: partMesh, file }) => [file, serializeStl(partMesh)] as [string, Uint8Array]);
           if (clips) files.push([`${name}-clip-x${count}.stl`, serializeStl(clips)]);
           bytes = zipFiles(files);
           extension = "zip";
@@ -73,7 +101,7 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
       }
       const serializeMs = performance.now() - start;
       const triangles = mesh.indices.length / 3;
-      reply({ id: request.id, type: "export", bytes, name, extension, baseplate, triangles, serializeMs }, [bytes.buffer]);
+      reply({ id: request.id, type: "export", bytes, name, extension, baseplate, triangles, serializeMs, stacks }, [bytes.buffer]);
     }
   } catch (error) {
     reply({ id: request.id, type: "error", message: error instanceof Error ? error.message : String(error) });

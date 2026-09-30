@@ -165,6 +165,39 @@ const fr = {
   clipsSkeleton: "Sans objet en Skeleton",
   clipsSkeletonHint:
     "Pas de clips en Skeleton : le milieu des murets, où ils se logent, est entaillé. Les pièces sont posées bout à bout, et le tiroir les tient.",
+  stack: "Empiler les pièces",
+  stackOff: "Désactivé",
+  stackSummary: (pieces: number, stacks: number) => (stacks === 1 ? `${pieces} pièces en une pile` : `${pieces} pièces en ${stacks} piles`),
+  /** Why the pieces cannot be stacked, in the summary of the family. */
+  stackBlockedShort: {
+    "single-piece": "Sans découpe",
+    "low-margin": "Marge trop basse",
+    tray: "Sans objet en Tray",
+    clickbase: "Sans objet en CLICKbase",
+  },
+  stackBlocked: {
+    "single-piece": "La baseplate tient sur votre plateau : une seule pièce, rien à empiler.",
+    "low-margin":
+      "La marge en cadre ou en équerres fait 2 mm de haut : sous une pièce retournée, elle commencerait en l'air, loin au-dessus de la pièce du dessous. Pour empiler, prenez la marge en cellules tronquées, pleine hauteur.",
+    tray: "Retourné, le fond d'un Tray ponterait toute la poche, et en s'affaissant il remonterait vers le pied du bac, posé 0,2 mm au-dessus.",
+    clickbase: "Les toiles d'un CLICKbase portent ses lamelles quand il est imprimé à l'endroit ; retourné, elles s'imprimeraient sur les lamelles et y souderaient.",
+  },
+  stackUseCells: "Passer aux cellules tronquées",
+  stackHint: (pitch: string) =>
+    `Toutes les pièces en une impression, sans multimatériau : la première à l'endroit, les autres retournées sur celle du dessous, une couche d'air entre deux (pas de ${pitch} mm). Les clips restent à part.`,
+  stackPlan: (index: number, pieces: string, height: string) => `Pile ${index} : pièces ${pieces}, ${height} mm`,
+  stackApart:
+    "Une pièce ne se pose que sur une pièce qui la porte (même grille, murs de marge l'un sur l'autre) : sinon, elle commence une autre pile.",
+  stackLayerWarning: (layer: string) =>
+    `Couches de ${layer} mm : au-delà de 0,2 mm, PrusaSlicer et OrcaSlicer signalent la couche vide entre deux pièces.`,
+  stackSkeletonWarning: "En Skeleton, la bande des murets entaillés est imprimée en pont entre deux poteaux, sur chaque pièce retournée.",
+  stackEars: "Oreilles aux coins",
+  stackEarsHint: "Un disque d'une couche sur chaque coin de la pièce du bas, contre le décollement. À couper au cutter.",
+  stackPins: "Pions de 0,8 mm",
+  stackPinsHint: "Une colonne fine traverse la pile à chaque coin que les pièces partagent, et une oreille la relie à chacune : les coins ne se soulèvent pas.",
+  stackTips:
+    "Au trancheur : même hauteur de couche, sans couches variables ; désactivez le ralentissement des surplombs. Séparez les pièces à la lame, en faisant le tour.",
+  stackPreference: "Préférence de ce navigateur : elle n'entre pas dans le lien de partage.",
   advanced: "Avancé",
   drawerGap: "Jeu au tiroir",
   lessGap: "Moins de jeu",
@@ -218,6 +251,8 @@ const fr = {
   pieceName: "pièce {n}",
   /** Name of the clips of a cut baseplate in the 3MF; `{n}` is how many. */
   clipName: "clip × {n}",
+  /** Name of a stack of pieces in the 3MF; `{n}` is its number, `{pieces}` the numbers of its pieces from the bottom up. */
+  stackName: "pile {n} : pièces {pieces}",
   // Errors
   computeFailed: "Le calcul de la baseplate a échoué. Modifiez un réglage pour réessayer.",
   exportFailed: "Le téléchargement a échoué. Réessayez.",
@@ -382,6 +417,35 @@ const en: Strings = {
   clipsSkeleton: "Not with Skeleton",
   clipsSkeletonHint:
     "No clips with Skeleton: the middle of the walls, where they sit, is notched. The pieces lie end to end, and the drawer holds them.",
+  stack: "Stack the pieces",
+  stackOff: "Off",
+  stackSummary: (pieces: number, stacks: number) => (stacks === 1 ? `${pieces} pieces in one stack` : `${pieces} pieces in ${stacks} stacks`),
+  stackBlockedShort: {
+    "single-piece": "No cut",
+    "low-margin": "Margin too low",
+    tray: "Not with Tray",
+    clickbase: "Not with CLICKbase",
+  },
+  stackBlocked: {
+    "single-piece": "The baseplate fits on your build plate: a single piece, nothing to stack.",
+    "low-margin":
+      "A frame or bracket margin is 2 mm high: under a piece upside down, it would start in the air, well above the piece beneath. To stack, choose the margin in truncated cells, full height.",
+    tray: "Upside down, the floor of a Tray would bridge the whole pocket, and its sag would rise towards the foot of the bin, which sits 0.2 mm above it.",
+    clickbase: "The webs of a CLICKbase hold its lamellas up when it prints right side up; upside down, they would print on the lamellas and weld to them.",
+  },
+  stackUseCells: "Switch to truncated cells",
+  stackHint: (pitch: string) =>
+    `Every piece in one print, without multi-material: the first right side up, the others upside down on the one beneath, one layer of air between two (pitch of ${pitch} mm). The clips stay apart.`,
+  stackPlan: (index: number, pieces: string, height: string) => `Stack ${index}: pieces ${pieces}, ${height} mm`,
+  stackApart: "A piece only goes on a piece that holds it (same grid, margin walls on each other): otherwise it starts another stack.",
+  stackLayerWarning: (layer: string) => `Layers of ${layer} mm: above 0.2 mm, PrusaSlicer and OrcaSlicer report the empty layer between two pieces.`,
+  stackSkeletonWarning: "With Skeleton, the band of the notched walls prints as a bridge between two posts, on each piece upside down.",
+  stackEars: "Corner ears",
+  stackEarsHint: "A one-layer disc on each corner of the bottom piece, against lifting. Cut off with a knife.",
+  stackPins: "0.8 mm pins",
+  stackPinsHint: "A thin column goes through the stack at each corner the pieces share, and an ear ties it to each of them: the corners do not lift.",
+  stackTips: "In the slicer: the same layer height, no variable layers; turn off the slowdown for overhangs. Separate the pieces with a blade, all the way round.",
+  stackPreference: "A preference of this browser: it is not in the share link.",
   advanced: "Advanced",
   drawerGap: "Drawer gap",
   lessGap: "Less gap",
@@ -431,6 +495,7 @@ const en: Strings = {
   stlDescription: "For the slicers that cannot read 3MF. Cut, the baseplate comes as a zip, one file per piece, and the clips.",
   pieceName: "piece {n}",
   clipName: "clip × {n}",
+  stackName: "stack {n}: pieces {pieces}",
   // Errors
   computeFailed: "The baseplate could not be computed. Change a setting to try again.",
   exportFailed: "The download failed. Try again.",

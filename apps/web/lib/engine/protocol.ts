@@ -43,6 +43,16 @@ export type EngineRequest =
       pieceName: string;
       /** Name of the object of the clips in the 3MF, `{n}` standing for their number (« clip × {n} »). */
       clipName: string;
+      /**
+       * The pieces of a cut baseplate stacked for a single print (#28), with their options;
+       * null to lay them side by side. Ignored when the baseplate cannot be stacked (`stackRuleOf`).
+       */
+      stack: { ears: boolean; pins: boolean } | null;
+      /**
+       * Name of a stack in the 3MF, `{n}` standing for its number and `{pieces}` for the numbers
+       * of its pieces from the bottom up (« pile {n} : pièces {pieces} »).
+       */
+      stackName: string;
     }
   | {
       id: number;
@@ -70,6 +80,8 @@ export type EngineResponse =
       bytes: Uint8Array;
       /** Name of the file without its extension, also the name of the object in a 3MF of a single piece. */
       name: string;
+      /** Number of stacks the pieces were exported in; 0 when they were not stacked. */
+      stacks: number;
       /** Extension of the file: a zip holds the STL files of the pieces of a cut baseplate, and of its clips. */
       extension: FileExtension;
       baseplate: BaseplateSummary;

@@ -257,7 +257,16 @@ export function BaseplateGenerator() {
     setExporting({ piece, format });
     setError(null);
     try {
-      const options = { link: shareLinkOf(settings), buildPlate, pieceName: t.pieceName, clipName: t.clipName };
+      // The pieces stacked when the preference is on; the engine checks the baseplate allows it (the pins take the ears).
+      const { stack } = preferences;
+      const options = {
+        link: shareLinkOf(settings),
+        buildPlate,
+        pieceName: t.pieceName,
+        clipName: t.clipName,
+        stack: stack.on ? { ears: stack.ears || stack.pins, pins: stack.pins } : null,
+        stackName: t.stackName,
+      };
       const { bytes, name, extension } = await client.exportFile(piece, settings, format, options);
       download(bytes as Uint8Array<ArrayBuffer>, `${name}.${extension}`, MEDIA_TYPES[extension]);
     } catch (reason) {
@@ -301,6 +310,8 @@ export function BaseplateGenerator() {
       downloadBusy={exporting !== null}
       marginVolumes={marginVolumes}
       typeVolumes={typeVolumes}
+      stack={preferences.stack}
+      onStackChange={(patch) => setPreferences({ stack: { ...preferences.stack, ...patch } })}
     />
   );
 

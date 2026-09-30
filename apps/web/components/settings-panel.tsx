@@ -9,6 +9,8 @@ import {
   changedAdvancedSettings,
   clickbaseOf,
   skeletonOf,
+  stackPlanOf,
+  stackRuleOf,
   takesClips,
   trayFloorOf,
   type BaseplateSettings,
@@ -22,6 +24,7 @@ import { ChevronDown, Download, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import type { Formats } from "@/lib/format";
+import type { StackPreference } from "@/lib/preferences";
 import { useFormats, useStrings } from "@/lib/locale";
 import type { Strings } from "@/lib/strings";
 import { LENGTH_DECIMALS, LENGTH_STEP, fromMillimetres, toMillimetres, type Unit } from "@/lib/units";
@@ -38,6 +41,7 @@ import {
   ScrewArt,
   ScrewIcon,
   SizeIcon,
+  StackIcon,
   TestKitArt,
   TypeArt,
   TypeIcon,
@@ -47,7 +51,7 @@ import {
  * Families of settings in the panel. The print settings (layer height, line width) live in
  * the gear menu.
  */
-export type Family = "size" | "type" | "alignment" | "margin" | "profile" | "screws" | "clips" | "advanced";
+export type Family = "size" | "type" | "alignment" | "margin" | "profile" | "screws" | "clips" | "stack" | "advanced";
 
 /** "Valeurs par défaut", or the advanced settings changed: "Cellule 30 mm, chanfrein 0,6 mm". */
 function advancedSummary(settings: BaseplateSettings, t: Strings, f: Formats): string {
@@ -150,6 +154,9 @@ export interface FamiliesProps {
   marginVolumes: Partial<Record<MarginShape, number>>;
   /** Volume of the baseplate of each type, the other settings as they are, in mm³, as `marginVolumes`. */
   typeVolumes: Partial<Record<BaseplateType, number>>;
+  /** Stacked print of the pieces (#28): a preference of this browser, not a setting. */
+  stack: StackPreference;
+  onStackChange: (patch: Partial<StackPreference>) => void;
 }
 
 /** Families of settings as an exclusive accordion: opening one closes the others. */
@@ -165,6 +172,8 @@ export function Families({
   downloadBusy,
   marginVolumes,
   typeVolumes,
+  stack,
+  onStackChange,
 }: FamiliesProps) {
   const t = useStrings();
   const f = useFormats();
@@ -284,6 +293,16 @@ export function Families({
           <p className="text-[12.5px] leading-snug text-muted">{clipsHint(settings, summary, t)}</p>
         </div>
       </FamilyItem>
+      {summary && summary.stats.pieces > 1 && (
+        <StackFamily
+          {...bind("stack")}
+          settings={settings}
+          onSettingsChange={onSettingsChange}
+          summary={summary}
+          stack={stack}
+          onStackChange={onStackChange}
+        />
+      )}
       <FamilyItem
         {...bind("advanced")}
         icon={<AdvancedIcon className="size-[18px]" />}
@@ -503,6 +522,114 @@ function clipsHint(settings: BaseplateSettings, summary: BaseplateSummary | null
   if (!takesClips(settings.baseplateType)) return t.clipsSkeletonHint;
   if (!settings.clips) return t.clipsOffHint;
   return summary && summary.stats.pieces <= 1 ? t.clipsUncutHint : t.clipsHint;
+}
+
+/**
+ * Stacked print of the pieces of a cut baseplate (#28, ADR 0016), shown only with several
+ * pieces: the switch, its stacks as the engine lays them out from the pieces, what to know
+ * before printing, and the ears and pins. The switch is off, and says why, when the
+ * baseplate cannot be stacked. A preference of this browser, not a setting of the baseplate.
+ */
+function StackFamily({
+  settings,
+  onSettingsChange,
+  summary,
+  stack,
+  onStackChange,
+  open,
+  onOpenChange,
+}: FieldsProps & {
+  summary: BaseplateSummary;
+  stack: StackPreference;
+  onStackChange: (patch: Partial<StackPreference>) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const t = useStrings();
+  const f = useFormats();
+  const { blockers, warnings } = stackRuleOf(settings, summary.layout);
+  const [blocker] = blockers;
+  const height = summary.stats.dimensions.height;
+  const plan = stackPlanOf(summary.layout, height, settings.layerHeight);
+  const on = stack.on && !blocker;
+  const summaryText = blocker ? t.stackBlockedShort[blocker] : on ? t.stackSummary(summary.stats.pieces, plan.stacks.length) : t.stackOff;
+  const warning = (text: string, key: string) => (
+    <p key={key} className="mt-2 flex gap-2 rounded-ctl bg-accent-tint px-3 py-2.5 text-[12.5px] leading-snug text-ink-soft" data-testid={`stack-warning-${key}`}>
+      <TriangleAlert className="mt-px size-4 shrink-0 text-accent-strong" aria-hidden />
+      {text}
+    </p>
+  );
+  return (
+    <FamilyItem
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<StackIcon className="size-[18px]" />}
+      title={t.stack}
+      summary={summaryText}
+      on={on}
+      control={
+        <ToggleSwitch
+          label={t.stack}
+          checked={on}
+          disabled={Boolean(blocker)}
+          onChange={(checked) => {
+            onStackChange({ on: checked });
+            // Turning the stack on opens its family: its stacks and options are in sight at once.
+            if (checked) onOpenChange(true);
+          }}
+        />
+      }
+    >
+      {blocker ? (
+        <>
+          <p className="text-[12.5px] leading-snug text-muted">{t.stackBlocked[blocker]}</p>
+          {blocker === "low-margin" && (
+            <button
+              type="button"
+              onClick={() => onSettingsChange({ marginShape: "cells" })}
+              className={`mt-2.5 flex h-10 items-center rounded-ctl border border-line-strong bg-surface px-3 text-[13px] font-semibold transition-colors hover:bg-sunken ${focusRing}`}
+            >
+              {t.stackUseCells}
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="text-[12.5px] leading-snug text-muted">{t.stackHint(f.fine.format(plan.pitch))}</p>
+          <ul className="mt-2 flex flex-col gap-0.5 text-[12.5px] text-ink-soft tabular-nums" data-testid="stack-plan">
+            {plan.stacks.map((pieces, index) => (
+              <li key={index}>
+                {t.stackPlan(index + 1, pieces.map(({ number }) => number).join(", "), f.fine.format((pieces.length - 1) * plan.pitch + height))}
+              </li>
+            ))}
+          </ul>
+          {plan.stacks.length > 1 && <p className="mt-1 text-[12px] leading-snug text-muted">{t.stackApart}</p>}
+          {warnings.map((kind) => (kind === "layer-height" ? warning(t.stackLayerWarning(f.fine.format(settings.layerHeight)), kind) : warning(t.stackSkeletonWarning, kind)))}
+          {on && (
+            <div className="mt-3 flex flex-col gap-2.5">
+              <StackOption label={t.stackEars} hint={t.stackEarsHint} checked={stack.ears || stack.pins} disabled={stack.pins} onChange={(ears) => onStackChange({ ears })} />
+              <StackOption label={t.stackPins} hint={t.stackPinsHint} checked={stack.pins} onChange={(pins) => onStackChange({ pins })} />
+            </div>
+          )}
+          <p className="mt-3 text-[12px] leading-snug text-muted">{t.stackTips}</p>
+        </>
+      )}
+      <p className="mt-1 text-[12px] leading-snug text-muted">{t.stackPreference}</p>
+    </FamilyItem>
+  );
+}
+
+/** An option of the stack: its switch, its name and what it does. */
+function StackOption({ label, hint, checked, disabled = false, onChange }: { label: string; hint: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-semibold">{label}</p>
+        <p className="text-[12px] leading-snug text-muted">{hint}</p>
+      </div>
+      <ToggleSwitch label={label} checked={checked} disabled={disabled} onChange={onChange} />
+    </div>
+  );
 }
 
 /** The diameters of the screws, or what they are for while they are off. */

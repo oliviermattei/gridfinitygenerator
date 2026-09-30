@@ -31,6 +31,19 @@ export type Nozzle = (typeof NOZZLES)[number];
 /** Usable size of a build plate, per axis, in millimetres. */
 export const BUILD_PLATE_RANGE = { min: 50, max: 1000 } as const;
 
+/**
+ * Stacked print of the pieces of a cut baseplate (#28, ADR 0016): an export preference, kept
+ * in this browser only, out of the share link. Its ears and pins are options of the stack.
+ */
+export interface StackPreference {
+  /** Whether the pieces are exported stacked, when the baseplate allows it. */
+  on: boolean;
+  /** One-layer mouse ears on the corners of the bottom piece of each stack. */
+  ears: boolean;
+  /** Pins of 0.8 mm through the ears of the corners the pieces share; they take the ears. */
+  pins: boolean;
+}
+
 export interface Preferences {
   /**
    * Language chosen in the menu, null until then. Only the redirection of the site root
@@ -44,6 +57,7 @@ export interface Preferences {
   nozzle: Nozzle;
   /** Usable area of the build plate, in millimetres. */
   buildPlate: BuildPlate;
+  stack: StackPreference;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -52,6 +66,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   previewColor: "brand",
   nozzle: 0.4,
   buildPlate: { width: 256, depth: 256 },
+  stack: { on: false, ears: false, pins: false },
 };
 
 function isPreviewColor(value: unknown): value is PreviewColor {
@@ -77,6 +92,8 @@ function parse(raw: string | null): Preferences {
     // Corrupted preferences: the defaults.
   }
   const plate = (stored.buildPlate ?? {}) as Partial<Record<keyof BuildPlate, unknown>>;
+  const stack = (stored.stack ?? {}) as Partial<Record<keyof StackPreference, unknown>>;
+  const flag = (value: unknown, fallback: boolean) => (typeof value === "boolean" ? value : fallback);
   return {
     language: isLocale(stored.language) ? stored.language : DEFAULT_PREFERENCES.language,
     unit: isUnit(stored.unit) ? stored.unit : DEFAULT_PREFERENCES.unit,
@@ -85,6 +102,11 @@ function parse(raw: string | null): Preferences {
     buildPlate: {
       width: plateLength(plate.width, DEFAULT_PREFERENCES.buildPlate.width),
       depth: plateLength(plate.depth, DEFAULT_PREFERENCES.buildPlate.depth),
+    },
+    stack: {
+      on: flag(stack.on, DEFAULT_PREFERENCES.stack.on),
+      ears: flag(stack.ears, DEFAULT_PREFERENCES.stack.ears),
+      pins: flag(stack.pins, DEFAULT_PREFERENCES.stack.pins),
     },
   };
 }

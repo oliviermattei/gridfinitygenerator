@@ -44,8 +44,15 @@ export interface EngineClient {
     piece: ExportPiece,
     settings: BaseplateSettings,
     format: ExportFormat,
-    options: { link: string; buildPlate: BuildPlate; pieceName: string; clipName: string },
-  ): Promise<{ bytes: Uint8Array; name: string; extension: FileExtension; baseplate: BaseplateSummary }>;
+    options: {
+      link: string;
+      buildPlate: BuildPlate;
+      pieceName: string;
+      clipName: string;
+      stack: { ears: boolean; pins: boolean } | null;
+      stackName: string;
+    },
+  ): Promise<{ bytes: Uint8Array; name: string; extension: FileExtension; baseplate: BaseplateSummary; stacks: number }>;
   dispose(): void;
 }
 
@@ -283,11 +290,11 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
         void render();
       }
     },
-    async exportFile(piece, settings, format, { link, buildPlate, pieceName, clipName }) {
+    async exportFile(piece, settings, format, { link, buildPlate, pieceName, clipName, stack, stackName }) {
       const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : (`export-${format}` as const);
-      const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName, clipName }, label).response;
+      const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName, clipName, stack, stackName }, label).response;
       if (response.type !== "export") throw new Error(`Unexpected engine response: ${response.type}`);
-      return { bytes: response.bytes, name: response.name, extension: response.extension, baseplate: response.baseplate };
+      return { bytes: response.bytes, name: response.name, extension: response.extension, baseplate: response.baseplate, stacks: response.stacks };
     },
     dispose() {
       shown = null;

@@ -53,3 +53,19 @@ export type { ClipPlacement, ClipSlot } from "./clips";
 export { serializeStl } from "./stl";
 export { serialize3mf, type ThreeMfObject, type ThreeMfOptions } from "./three-mf";
 export { zipFiles } from "./zip";
+export {
+  EAR_RADIUS_MM,
+  PIN_DIAMETER_MM,
+  STACK_MAX_LAYER_MM,
+  printStacks,
+  stackPitch,
+  stackPlanOf,
+  stackRuleOf,
+  type PrintedStack,
+  type StackBlocker,
+  type StackFlip,
+  type StackOptions,
+  type StackPlan,
+  type StackWarning,
+  type StackedPiece,
+} from "./stack";

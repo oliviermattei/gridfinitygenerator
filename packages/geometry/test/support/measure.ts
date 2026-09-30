@@ -166,6 +166,17 @@ export async function areaOutside(a: [number, number][][], b: [number, number][]
   }
 }
 
+/** Area of a section (the contours of `MeshCheck.sections`), in mm². */
+export async function sectionArea(contours: [number, number][][]): Promise<number> {
+  const manifold = await manifoldModule();
+  const section = new manifold.CrossSection(contours, "EvenOdd");
+  try {
+    return section.area();
+  } finally {
+    section.delete();
+  }
+}
+
 /**
  * Radius of the largest disc the holes of a section around `point` can hold, to the
  * hundredth of a millimetre: 0 when `point` is in the material. A hole is the empty part of
