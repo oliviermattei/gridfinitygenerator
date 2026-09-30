@@ -240,7 +240,10 @@ rectifiedCanvas.addEventListener("click", async (event) => {
       if (device === "webgpu" && !("gpu" in navigator)) device = "wasm";
       state.message = "Chargement de SlimSAM (servi par cette origine)…";
       showState();
-      const sam = await loadSam($<HTMLSelectElement>("dtype").value as Dtype, device);
+      // fp16 sur CPU (WASM) bloque plus de 10 min : fp32 y est plus rapide que le quantifié.
+      const chosen = $<HTMLSelectElement>("dtype").value;
+      const dtype = (chosen === "auto" ? (device === "webgpu" ? "fp16" : "fp32") : chosen) as Dtype;
+      const sam = await loadSam(dtype, device);
       const { segmentation: rough, timing } = await segmentSam(state.cv, sam, r, click);
       segmentation = rough;
       if (rough && method === "sam-refined") {

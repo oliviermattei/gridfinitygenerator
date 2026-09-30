@@ -53,7 +53,7 @@
       </label>
       <label>Seuil manuel (vide = auto) <input id="threshold" type="number" min="1" max="255" placeholder="auto" /></label>
       <label>SlimSAM : poids
-        <select id="dtype"><option value="fp16">fp16 (20,8 Mo)</option><option value="q8">quantifié (13,8 Mo)</option><option value="fp32">fp32 (39,9 Mo)</option></select>
+        <select id="dtype"><option value="auto">auto (fp16 en WebGPU, fp32 en WASM)</option><option value="fp16">fp16 (20,8 Mo)</option><option value="q8">quantifié (13,8 Mo)</option><option value="fp32">fp32 (39,9 Mo)</option></select>
       </label>
       <label>SlimSAM : moteur
         <select id="device"><option value="webgpu">WebGPU</option><option value="wasm">WASM (CPU)</option></select>
