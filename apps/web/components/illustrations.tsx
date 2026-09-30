@@ -2,7 +2,7 @@
 // currentColor at 10 %, and the element that changes in var(--art), which turns to the
 // accent when its control is selected.
 
-import { ALIGNMENTS, type Alignment, type MarginShape, type PocketProfileName } from "@repo/geometry";
+import { ALIGNMENTS, type Alignment, type BaseplateType, type MarginShape, type PocketProfileName } from "@repo/geometry";
 
 interface ArtProps {
   className?: string;
@@ -39,6 +39,46 @@ export function SizeIcon({ className }: ArtProps) {
     <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
       <rect x="4" y="7" width="16" height="12" rx="2" />
       <path d="M4 3.5 H20 M4 2 V5 M20 2 V5" />
+    </svg>
+  );
+}
+
+/** Family icon "Type": a pocket between two murets, in section, on a floor. */
+export function TypeIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <path d="M3 5 H5.5 L8 7.5 V17 H16 V7.5 L18.5 5 H21 V20 H3 Z" />
+      <path d="M8 17 H16" strokeOpacity={0.45} />
+    </svg>
+  );
+}
+
+/**
+ * Type of baseplate, in section: a pocket between two murets, the bin foot dashed, on the
+ * drawer or the desk. The open grid (normal) has nothing under the pocket; the tray raises
+ * the pocket on a floor (in var(--art)), and the foot stays clear of it, on its slopes.
+ */
+export function TypeArt({ kind, className }: ArtProps & { kind: BaseplateType }) {
+  // The pockets of the tray rise by 8, on a floor of 11: the foot stays clear of it.
+  const lift = kind === "tray" ? 8 : 0;
+  const wall = (side: 1 | -1) => {
+    const x = (at: number) => (side === 1 ? at : 120 - at);
+    return `M${x(2)} ${18 - lift} H${x(14)} L${x(26.9)} ${30.9 - lift} V${41.7 - lift} L${x(31.1)} ${45.9 - lift} V51 H${x(2)} Z`;
+  };
+  return (
+    <svg viewBox="0 0 120 56" className={className} aria-hidden fill="none">
+      <path d="M2 51 H118" {...stroke} strokeOpacity={0.35} />
+      <path d={wall(1)} {...stroke} {...material} />
+      <path d={wall(-1)} {...stroke} {...material} />
+      {kind === "tray" && <path d="M31.1 40 H88.9 V51 H31.1 Z" fill={ART} />}
+      <path
+        d="M16.5 9 V18.5 L29 31 V41.3 L33.2 45.5 H86.8 L91 41.3 V31 L103.5 18.5 V9"
+        transform={`translate(0 ${-lift})`}
+        stroke={ART}
+        strokeWidth={1.6}
+        strokeDasharray="3 2.4"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

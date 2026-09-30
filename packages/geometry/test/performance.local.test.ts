@@ -43,6 +43,11 @@ const DRAWERS: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["20 × 20 with its 361 screws", { sizeMode: "cells", columns: 20, rows: 20, screws: true }],
   ["drawer 1000 × 1000 with its 484 screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
   ["24 × 24 cells of 80 mm, 3 mm chamfer, 529 screws", { sizeMode: "cells", columns: 24, rows: 24, cellSize: 80, bottomChamfer: 3, screws: true }],
+  // A tray (#25) raises the pockets over a floor: as many booleans as the open baseplate.
+  ["default drawer, tray", { baseplateType: "tray" }],
+  ["1 × 24 tray (boolean path)", { sizeMode: "cells", columns: 1, rows: 24, baseplateType: "tray" }],
+  ["drawer 1000 × 1000, tray", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray" }],
+  ["drawer 1000 × 1000, tray, margin of truncated cells", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray", marginShape: "cells" }],
 ];
 
 /** Baseplates cut for a build plate of 256 × 256 mm (#21): held to the same targets. */
@@ -54,6 +59,8 @@ const CUT: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["20 × 20 cut in 16 pieces", { sizeMode: "cells", columns: 20, rows: 20 }],
   ["drawer 1000 × 1000 cut in 16 pieces", { drawerWidth: 1000, drawerDepth: 1000 }],
   ["drawer 1000 × 1000 cut in 16 pieces, with screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
+  ["drawer 1000 × 1000 cut in 16 pieces, tray", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray" }],
+  ["drawer 1000 × 1000 cut in 16 pieces, tray with screws", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray", screws: true }],
 ];
 
 /**

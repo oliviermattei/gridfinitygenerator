@@ -264,7 +264,8 @@ interface TruncatedCell {
  * Truncated cells (cellules tronquées), variant 1 of the margin prototype (#3), flush with
  * the grid (#19): the grid goes on into the margin, cell after cell on the same pitch, and
  * the outline cuts it. Each cell of the margin is an empty pocket of the grid's profile,
- * open at the bottom, cut by an outer wall that follows the whole outline. The murets of
+ * open at the bottom (on the floor of a tray, whose profile has one), cut by an outer wall
+ * that follows the whole outline. The murets of
  * the margin are the grid's murets carried on: same profile, same full height, same flat top.
  *
  * The outer wall is 1.2 mm wide, rounded up to a whole number of lines, never fewer than

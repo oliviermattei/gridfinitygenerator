@@ -1,3 +1,4 @@
+import { BASEPLATE_TYPES, type BaseplateType } from "./baseplate-type";
 import { POCKET_PROFILES, type PocketProfileName } from "./pocket-profile";
 
 /**
@@ -8,7 +9,7 @@ import { POCKET_PROFILES, type PocketProfileName } from "./pocket-profile";
  * Local preferences (nozzle, build plate, preview colour…) are not baseplate settings.
  */
 
-export type { PocketProfileName };
+export type { BaseplateType, PocketProfileName };
 
 /** How the size of the baseplate is given: by the drawer it fills, or by a number of cells. */
 export type SizeMode = "drawer" | "cells";
@@ -47,6 +48,11 @@ export interface BaseplateSettings {
   alignment: Alignment;
   /** Shape of the margin: the frame of crossbars by default, the cheapest. */
   marginShape: MarginShape;
+  /**
+   * Type of baseplate (baseplate-type.ts, ADR 0013): the open grid by default, the cheapest,
+   * or a tray, the grid on a solid floor.
+   */
+  baseplateType: BaseplateType;
   /** Profile of the pockets: the hybrid one (ADR 0002) by default, or the flush one, 0.35 mm lower. */
   pocketProfile: PocketProfileName;
   /** Countersunk screw holes that fix the baseplate to the bottom of the drawer, on the inner intersections of the grid. */
@@ -116,6 +122,7 @@ export const BASEPLATE_SETTINGS = {
   marginDepth: { min: 0, max: 500, default: 0, integer: false },
   alignment: { options: ALIGNMENTS, default: "c" } as ChoiceSetting<Alignment>,
   marginShape: { options: MARGIN_SHAPES, default: "frame" } as ChoiceSetting<MarginShape>,
+  baseplateType: { options: BASEPLATE_TYPES, default: "normal" } as ChoiceSetting<BaseplateType>,
   pocketProfile: {
     options: Object.keys(POCKET_PROFILES) as PocketProfileName[],
     default: "hybrid",
@@ -146,6 +153,7 @@ export const DEFAULT_SETTINGS: BaseplateSettings = {
   marginDepth: BASEPLATE_SETTINGS.marginDepth.default,
   alignment: BASEPLATE_SETTINGS.alignment.default,
   marginShape: BASEPLATE_SETTINGS.marginShape.default,
+  baseplateType: BASEPLATE_SETTINGS.baseplateType.default,
   pocketProfile: BASEPLATE_SETTINGS.pocketProfile.default,
   screws: BASEPLATE_SETTINGS.screws.default,
   screwShank: BASEPLATE_SETTINGS.screwShank.default,

@@ -10,6 +10,11 @@ export interface PocketProfile {
   readonly topRadius: number;
   /** [z, inset] from bottom to top; the last point is the top flat of the muret. */
   readonly points: readonly (readonly [z: number, inset: number])[];
+  /**
+   * Height of the solid floor under the pocket, where its first point lies (a tray,
+   * baseplate-type.ts); absent for a pocket open at the bottom, whose first point is at 0.
+   */
+  readonly floor?: number;
 }
 
 /**

@@ -53,6 +53,11 @@ const V1 = {
   al: choice(["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"], "c"),
   /** Shape of the margin (#23): frame of crossbars, truncated cells, or corner brackets. */
   mg: choice(["frame", "cells", "brackets"], "frame"),
+  /**
+   * Type of baseplate (#25): the open grid, a tray on a solid floor, and the types planned
+   * (#26, #27), which the engine brings back to the default until it builds them.
+   */
+  ty: choice(["normal", "tray", "skeleton", "clickbase"], "normal"),
   /** Pocket profile. */
   pr: choice(["hybrid", "flush"], "hybrid"),
   /** Screw holes, and their shank and head diameters in millimetres (head ≥ shank). */
@@ -94,6 +99,7 @@ const LINK_KEYS = {
   marginDepth: "my",
   alignment: "al",
   marginShape: "mg",
+  baseplateType: "ty",
   pocketProfile: "pr",
   screws: "sc",
   screwShank: "ss",

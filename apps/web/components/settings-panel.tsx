@@ -3,9 +3,12 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import {
   BASEPLATE_SETTINGS,
+  BASEPLATE_TYPES,
   MARGIN_SHAPES,
   changedAdvancedSettings,
+  trayFloorOf,
   type BaseplateSettings,
+  type BaseplateType,
   type MarginShape,
   type PocketProfileName,
   type SizeMode,
@@ -32,13 +35,15 @@ import {
   ScrewIcon,
   SizeIcon,
   TestKitArt,
+  TypeArt,
+  TypeIcon,
 } from "./illustrations";
 
 /**
  * Families of settings in the panel. The print settings (layer height, line width) live in
  * the gear menu.
  */
-export type Family = "size" | "alignment" | "margin" | "profile" | "screws" | "clips" | "advanced";
+export type Family = "size" | "type" | "alignment" | "margin" | "profile" | "screws" | "clips" | "advanced";
 
 /** "Valeurs par défaut", or the advanced settings changed: "Cellule 30 mm, chanfrein 0,6 mm". */
 function advancedSummary(settings: BaseplateSettings, t: Strings, f: Formats): string {
@@ -139,6 +144,8 @@ export interface FamiliesProps {
    * mm³, measured on the final mesh; missing while it is being measured.
    */
   marginVolumes: Partial<Record<MarginShape, number>>;
+  /** Volume of the baseplate of each type, the other settings as they are, in mm³, as `marginVolumes`. */
+  typeVolumes: Partial<Record<BaseplateType, number>>;
 }
 
 /** Families of settings as an exclusive accordion: opening one closes the others. */
@@ -153,6 +160,7 @@ export function Families({
   exportingTestKit,
   downloadBusy,
   marginVolumes,
+  typeVolumes,
 }: FamiliesProps) {
   const t = useStrings();
   const f = useFormats();
@@ -172,6 +180,14 @@ export function Families({
         <p className="mt-3 text-[12.5px] text-muted tabular-nums" data-testid="size-result">
           {summary ? sizeResult(summary, unit, t, f) : "…"}
         </p>
+      </FamilyItem>
+      <FamilyItem
+        {...bind("type")}
+        icon={<TypeIcon className="size-[18px]" />}
+        title={t.baseplateType}
+        summary={t.baseplateTypeNames[settings.baseplateType]}
+      >
+        <TypeFields settings={settings} onSettingsChange={onSettingsChange} volumes={typeVolumes} />
       </FamilyItem>
       <FamilyItem
         {...bind("alignment")}
@@ -332,6 +348,39 @@ function MarginFields({
       />
       <p className="mt-3 text-[12.5px] leading-snug text-muted">{hasMargin ? t.marginShapeHints[settings.marginShape] : t.noMarginHint}</p>
       {hasMargin && <p className="mt-1 text-[12px] leading-snug text-muted">{t.marginVolumesHint}</p>}
+    </>
+  );
+}
+
+/**
+ * The type of baseplate, each with the volume of the baseplate it gives, measured on its
+ * final mesh ("…" while it is), and what the chosen one is.
+ */
+function TypeFields({ settings, onSettingsChange, volumes }: FieldsProps & { volumes: Partial<Record<BaseplateType, number>> }) {
+  const t = useStrings();
+  const f = useFormats();
+  const volume = (type: BaseplateType) => {
+    const measured = volumes[type];
+    return measured === undefined ? "…" : `${f.volumes.format(measured / 1000)} cm³`;
+  };
+  const floor = trayFloorOf(settings.layerHeight);
+  return (
+    <>
+      <ChoiceGroup<BaseplateType>
+        label={t.baseplateType}
+        value={settings.baseplateType}
+        onChange={(baseplateType) => onSettingsChange({ baseplateType })}
+        options={BASEPLATE_TYPES.map((type) => ({
+          value: type,
+          label: t.baseplateTypes[type],
+          description: volume(type),
+          art: <TypeArt kind={type} className="h-auto w-full max-w-[128px]" />,
+        }))}
+      />
+      <p className="mt-3 text-[12.5px] leading-snug text-muted">
+        {settings.baseplateType === "tray" ? t.trayHint(f.fine.format(floor.thickness), f.fine.format(floor.gap)) : t.normalHint}
+      </p>
+      <p className="mt-1 text-[12px] leading-snug text-muted">{t.typeVolumesHint}</p>
     </>
   );
 }

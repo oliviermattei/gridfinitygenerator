@@ -1,12 +1,14 @@
 "use client";
 
 import {
+  BASEPLATE_TYPES,
   MARGIN_SHAPES,
   changedAdvancedSettings,
   encodeSettings,
   spreadPieces,
   type Baseplate,
   type BaseplateSettings,
+  type BaseplateType,
   type BuildPlate,
   type MarginShape,
   type Quality,
@@ -122,7 +124,7 @@ export function BaseplateGenerator() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [recenter, setRecenter] = useState(0);
   const [preferences, setPreferences] = usePreferences();
-  // Volumes measured on final meshes, by settings and build plate: the shapes of the margin compare with them.
+  // Volumes measured on final meshes, by settings and build plate: the shapes of the margin and the types compare with them.
   const [volumes, setVolumes] = useState<ReadonlyMap<string, number>>(() => new Map());
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
@@ -166,23 +168,34 @@ export function BaseplateGenerator() {
     if (hydrated) engine.current?.show(settings, buildPlate);
   }, [settings, buildPlate, hydrated]);
 
-  // The volume of the baseplate with each shape of margin, as far as it is known.
+  // The volume of the baseplate with each shape of margin, and of each type, as far as it is known.
   const marginVolumes = useMemo(
     () => Object.fromEntries(MARGIN_SHAPES.map((marginShape) => [marginShape, volumes.get(volumeKey({ ...settings, marginShape }, buildPlate))])),
     [volumes, settings, buildPlate],
   ) as Partial<Record<MarginShape, number>>;
-  // While the margin family is open, the other shapes are measured once the baseplate shown is.
-  const toCompare = useMemo(
-    () =>
-      openFamily === "margin"
-        ? MARGIN_SHAPES.filter((shape) => shape !== settings.marginShape && marginVolumes[shape] === undefined)
-        : [],
-    [openFamily, settings.marginShape, marginVolumes],
-  );
+  const typeVolumes = useMemo(
+    () => Object.fromEntries(BASEPLATE_TYPES.map((baseplateType) => [baseplateType, volumes.get(volumeKey({ ...settings, baseplateType }, buildPlate))])),
+    [volumes, settings, buildPlate],
+  ) as Partial<Record<BaseplateType, number>>;
+  // The baseplate of the current settings, once computed: whether it has a margin, whose shape changes its volume.
+  const current = shown !== null && shown.settings === settings && shown.buildPlate === buildPlate ? shown.baseplate : null;
+  const margins = current?.layout.margins;
+  const hasMargin = margins !== undefined && (margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0);
+  // While the margin family (with a margin) or the type family is open, the other shapes or
+  // types are measured once the baseplate shown is.
+  const toCompare = useMemo((): BaseplateSettings[] => {
+    if (openFamily === "margin" && hasMargin) {
+      return MARGIN_SHAPES.filter((shape) => shape !== settings.marginShape && marginVolumes[shape] === undefined).map((marginShape) => ({ ...settings, marginShape }));
+    }
+    if (openFamily === "type") {
+      return BASEPLATE_TYPES.filter((type) => type !== settings.baseplateType && typeVolumes[type] === undefined).map((baseplateType) => ({ ...settings, baseplateType }));
+    }
+    return [];
+  }, [openFamily, hasMargin, settings, marginVolumes, typeVolumes]);
   // After `show`, which drops the list of the settings shown before.
   useEffect(() => {
-    if (hydrated) engine.current?.compare(toCompare.map((marginShape) => ({ ...settings, marginShape })));
-  }, [toCompare, settings, buildPlate, hydrated]);
+    if (hydrated) engine.current?.compare(toCompare);
+  }, [toCompare, hydrated]);
 
   const baseplate = shown?.baseplate ?? null;
   // The pieces of a cut baseplate, set apart so that the cuts show.
@@ -286,6 +299,7 @@ export function BaseplateGenerator() {
       exportingTestKit={exporting?.piece === "test-kit"}
       downloadBusy={exporting !== null}
       marginVolumes={marginVolumes}
+      typeVolumes={typeVolumes}
     />
   );
 

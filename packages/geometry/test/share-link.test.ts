@@ -26,6 +26,8 @@ describe("share link round trip", () => {
     expect(decodeSettings(encodeSettings(flush))).toEqual(flush);
     const advanced: BaseplateSettings = { ...DEFAULT_SETTINGS, cellSize: 36.5, outerRadius: 0, bottomChamfer: 0.8 };
     expect(decodeSettings(encodeSettings(advanced))).toEqual(advanced);
+    const tray: BaseplateSettings = { ...DEFAULT_SETTINGS, baseplateType: "tray" };
+    expect(decodeSettings(encodeSettings(tray))).toEqual(tray);
     const unclipped: BaseplateSettings = { ...DEFAULT_SETTINGS, clips: false };
     expect(decodeSettings(encodeSettings(unclipped))).toEqual(unclipped);
     expect(decodeSettings(encodeSettings(DEFAULT_SETTINGS))).toEqual(DEFAULT_SETTINGS);
@@ -52,6 +54,9 @@ describe("share link content", () => {
     expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "frame" })).toBe("v=1");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "cells" })).toBe("v=1&mg=cells");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "brackets", alignment: "t" })).toBe("v=1&al=t&mg=brackets");
+    // The open grid is the default type (#25): only the tray is written.
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "normal" })).toBe("v=1");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "tray", pocketProfile: "flush" })).toBe("v=1&ty=tray&pr=flush");
   });
 
   it("writes the settings brought into their ranges", () => {
@@ -71,6 +76,7 @@ describe("frozen v1 links", () => {
       my: 0,
       al: "c",
       mg: "frame",
+      ty: "normal",
       pr: "hybrid",
       sc: false,
       ss: 3,
@@ -88,7 +94,7 @@ describe("frozen v1 links", () => {
 
   it("a given v1 link always gives the same settings", () => {
     const link =
-      "v=1&mode=cells&w=512.5&d=300&cx=7&cy=5&mx=12.5&my=30&al=tr&mg=brackets&pr=flush&sc=1&ss=4&sh=8&cs=40&tol=0.3&or=2&ch=0.6&gap=2&lh=0.28&lw=0.6";
+      "v=1&mode=cells&w=512.5&d=300&cx=7&cy=5&mx=12.5&my=30&al=tr&mg=brackets&ty=tray&pr=flush&sc=1&ss=4&sh=8&cs=40&tol=0.3&or=2&ch=0.6&gap=2&lh=0.28&lw=0.6";
     expect(readShareLink(link)).toEqual({
       mode: "cells",
       w: 512.5,
@@ -100,6 +106,8 @@ describe("frozen v1 links", () => {
       al: "tr",
       // `mg` came into the v1 table with the choice of the margin (#23), before v1 was published: the frame by default.
       mg: "brackets",
+      // `ty` came into the v1 table with the types of baseplate (#25), before v1 was published: normal by default.
+      ty: "tray",
       pr: "flush",
       sc: true,
       ss: 4,
@@ -125,6 +133,7 @@ describe("frozen v1 links", () => {
       marginDepth: 30,
       alignment: "tr",
       marginShape: "brackets",
+      baseplateType: "tray",
       // `pr` was in the v1 table from the start; the engine reads it since the flush profile (#12).
       pocketProfile: "flush",
       screws: true,
@@ -196,6 +205,12 @@ describe("reading any link", () => {
     expect(readShareLink("v=1&mg=solid")).toMatchObject({ mg: "frame" });
     expect(decodeSettings("v=1&mg=cells")).toEqual({ ...DEFAULT_SETTINGS, marginShape: "cells" });
     expect(decodeSettings("v=1&pr=rebuilt")).toEqual(DEFAULT_SETTINGS);
+    // The types planned (#26, #27) are read from a link, and give the open grid until the engine builds them.
+    expect(readShareLink("v=1&ty=skeleton")).toMatchObject({ ty: "skeleton" });
+    expect(decodeSettings("v=1&ty=skeleton")).toEqual(DEFAULT_SETTINGS);
+    expect(decodeSettings("v=1&ty=clickbase")).toEqual(DEFAULT_SETTINGS);
+    expect(decodeSettings("v=1&ty=solid")).toEqual(DEFAULT_SETTINGS);
+    expect(decodeSettings("v=1&ty=tray")).toEqual({ ...DEFAULT_SETTINGS, baseplateType: "tray" });
     // Plain decimals only: no hexadecimal, exponent or Infinity.
     expect(decodeSettings("v=1&cx=0x10&cy=1e1&lw=Infinity")).toEqual(DEFAULT_SETTINGS);
   });

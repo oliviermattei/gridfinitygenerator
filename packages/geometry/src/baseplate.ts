@@ -1,3 +1,4 @@
+import { BASEPLATE_TYPE_VARIANTS } from "./baseplate-type";
 import { assembleWithBooleans } from "./boolean-assembly";
 import { assembleWithBricks, canAssembleWithBricks } from "./brick-assembly";
 import { clipLayoutOf, clipSolid, type ClipLayout } from "./clips";
@@ -105,7 +106,8 @@ export interface Baseplate {
 
 /**
  * Generates a baseplate: a grid of open pockets with the profile of the settings (hybrid by
- * default, ADR 0002, or flush) on a pitch of the cell size, sized for a drawer or by its
+ * default, ADR 0002, or flush) on a pitch of the cell size, or of pockets on a solid floor
+ * for a tray (the type of baseplate, baseplate-type.ts, ADR 0013), sized for a drawer or by its
  * number of cells, its outline rounded and chamfered at the bottom by the settings, and its
  * margin in the shape of the settings (a frame of crossbars by default, truncated cells or
  * corner brackets, see margin.ts and ADR 0011), with a countersunk screw hole on each inner intersection of the grid when the
@@ -133,8 +135,9 @@ export async function generateBaseplate(
  * whose back cell has the flush one, to try how bins seat in each before printing a large
  * baseplate. It is as high as its hybrid cell (4.60 mm); the flush cell is 0.35 mm lower,
  * and the muret between them steps down on the line between the cells. Of the settings, it
- * only takes those that are not about the size, the alignment, the pocket profile or the
- * screws (a 1 × 2 grid has no inner intersection): the cell size, the outer corner radius
+ * only takes those that are not about the size, the alignment, the pocket profile, the type
+ * of baseplate (it is always open) or the screws (a 1 × 2 grid has no inner intersection):
+ * the cell size, the outer corner radius
  * and the bottom chamfer, so that it tries the pockets and the outline of the baseplate to
  * print, and the print settings.
  */
@@ -147,6 +150,7 @@ export async function generateTestKit(input: Partial<BaseplateSettings>, quality
     marginWidth: 0,
     marginDepth: 0,
     pocketProfile: "hybrid",
+    baseplateType: "normal",
     screws: false,
   });
   return buildBaseplate(settings, quality, [{ i: 0, j: 1, profile: FLUSH_PROFILE }]);
@@ -164,7 +168,8 @@ async function buildBaseplate(
   const { margins } = cells;
   const width = cells.columns * cells.cellSize + margins.left + margins.right;
   const depth = cells.rows * cells.cellSize + margins.back + margins.front;
-  const profile = POCKET_PROFILES[settings.pocketProfile];
+  const type = BASEPLATE_TYPE_VARIANTS[settings.baseplateType];
+  const profile = type.profile(POCKET_PROFILES[settings.pocketProfile], settings.layerHeight);
   const uncut: GridFrame = {
     columns: cells.columns,
     rows: cells.rows,
@@ -189,7 +194,7 @@ async function buildBaseplate(
   };
   const split = splitPlanOf(uncut, options.buildPlate ?? null);
   const labels = labelsOf(split);
-  const clips = clipsOf(settings.clips, uncut, split, labels);
+  const clips = clipsOf(settings.clips && type.clips, uncut, split, labels);
   const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips };
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
   const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame), magnets: magnetPositions(frame, latticeOf(frame)), split, clips };

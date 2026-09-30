@@ -38,6 +38,14 @@ _Avoid_: profil de base, socket profile, flush (sauf dans le code)
 Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arrière le profil ras, à imprimer pour essayer ses bacs dans chacun avant une grande baseplate. Chaque cellule garde sa hauteur : le muret entre les deux descend d'une marche de 0,35 mm sur la ligne qui les sépare.
 _Avoid_: échantillon, sample, test print
 
+**Type de baseplate**:
+Ce que la baseplate a sous sa grille, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond, le moins de matière) ou **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces). Skeleton et CLICKbase viendront (#26, #27).
+_Avoid_: style, variante, plateau (réservé au plateau d'impression)
+
+**Fond**:
+La dalle pleine d'un Tray sous chaque poche (0,6 mm, arrondis à la couche), cellules tronquées comprises ; les trous d'une marge en cadre ou en équerres n'en ont pas. La poche monte de son épaisseur plus une couche de jeu, pour que le bac reste assis sur ses pentes, 0,2 mm au-dessus du fond (ADR 0013). À ne pas confondre avec le fond du tiroir, ni avec le fond plat d'une cellule tronquée étroite.
+_Avoid_: plancher, socle, floor (sauf dans le code)
+
 **Assise**:
 Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le bac ; un bac bien assis n'a aucun jeu latéral.
 _Avoid_: appui, contact

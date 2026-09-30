@@ -28,7 +28,7 @@ export interface EngineClient {
   show(settings: BaseplateSettings, buildPlate: BuildPlate): void;
   /**
    * Baseplates to compare with the settings shown (the same one with another shape of
-   * margin): once the final quality of the settings shown is done, and when it has a margin,
+   * margin, or of another type): once the final quality of the settings shown is done,
    * their volumes are measured, all in one request, and reported through `onVolumes`. Newer
    * settings shown drop the list (they call for their own), and cancel its request.
    */
@@ -89,8 +89,8 @@ interface Shown {
   next: Quality | "volumes" | null;
   /** Baseplates to compare with it (`compare`). */
   compare: readonly BaseplateSettings[];
-  /** Whether its final quality is shown, and has a margin: the shape of the margin then changes its volume. */
-  comparable: boolean;
+  /** Whether its final quality is shown: the volumes to compare come after it. */
+  done: boolean;
 }
 
 /**
@@ -254,8 +254,8 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
         try {
           const baseplate = await generate(target.settings, target.buildPlate, quality);
           if (shown !== target) continue; // stale: dropped, the latest settings come next
-          if (quality === "final") target.comparable = hasMargin(baseplate);
-          target.next = quality === "preview" ? "final" : target.comparable && target.compare.length > 0 ? "volumes" : null;
+          if (quality === "final") target.done = true;
+          target.next = quality === "preview" ? "final" : target.compare.length > 0 ? "volumes" : null;
           events.onBaseplate(baseplate, quality, target.settings, target.buildPlate);
         } catch (error) {
           if (shown !== target) continue;
@@ -270,7 +270,7 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
 
   return {
     show(settings, buildPlate) {
-      shown = { settings, buildPlate, next: "preview", compare: [], comparable: false };
+      shown = { settings, buildPlate, next: "preview", compare: [], done: false };
       cancelStaleFinal();
       void render();
     },
@@ -278,7 +278,7 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
       if (!shown) return;
       shown.compare = settings;
       // Done with the settings shown: the volumes are measured now; otherwise after their final.
-      if (shown.next === null && shown.comparable && settings.length > 0) {
+      if (shown.next === null && shown.done && settings.length > 0) {
         shown.next = "volumes";
         void render();
       }
@@ -303,7 +303,3 @@ function triangleCount(response: EngineResponse): number {
   return 0;
 }
 
-/** Whether a baseplate has a margin, whose shape changes its volume. */
-function hasMargin({ layout: { margins } }: Baseplate): boolean {
-  return margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0;
-}

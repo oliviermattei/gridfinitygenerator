@@ -48,8 +48,8 @@ export type EngineRequest =
       id: number;
       type: "volumes";
       /**
-       * Baseplates to measure, in final quality: the one shown with another shape of margin,
-       * to compare what each shape costs (#23).
+       * Baseplates to measure, in final quality: the one shown with another shape of margin
+       * (#23) or of another type (#25), to compare what each one costs.
        */
       settings: BaseplateSettings[];
       buildPlate: BuildPlate;

@@ -6,7 +6,7 @@ Public, free, open-source (MIT) website of Gridfinity tools. First tool: a gener
 
 - **Spec v1**: GitHub issue #1 ("Spec v1 : générateur de baseplates"). It is the source of truth for scope and decisions; work is split into tickets from it.
 - **Glossary**: `CONTEXT.md` (French domain terms: baseplate, cellule, poche, muret, marge, tiroir, plateau…). Use these terms in code, issues and UI copy.
-- **Decisions**: `docs/adr/` (Next.js, pocket profile 4.60 mm, monorepo with a separate geometry engine, manifold-3d with cell bricks, 3MF with deflate, provisional margin as a frame of crossbars, countersunk screws, language and units, margin in truncated cells, split for the build plate, U clips pushed up under the murets, margin shape to choose with the frame of crossbars by default, magnet holes under the crossings of the murets).
+- **Decisions**: `docs/adr/` (Next.js, pocket profile 4.60 mm, monorepo with a separate geometry engine, manifold-3d with cell bricks, 3MF with deflate, provisional margin as a frame of crossbars, countersunk screws, language and units, margin in truncated cells, split for the build plate, U clips pushed up under the murets, margin shape to choose with the frame of crossbars by default, magnet holes under the crossings of the murets, type of baseplate with the tray's pockets raised on a floor).
 - **Research**: `docs/research/` (extrabold reverse engineering with real export measurements, Gridfinity spec, licensing, ModuBOX).
 - **Prototypes** (throwaway, kept as reference on `main`):
   - `prototypes/geometry-perf/`: manifold-3d vs JSCAD bench; verdict in `RESULTS.md`.
@@ -14,6 +14,8 @@ Public, free, open-source (MIT) website of Gridfinity tools. First tool: a gener
   - `prototypes/margin-variants/`: margin variants (#3); print files for the acceptance run #16.
   - `prototypes/split/`: bench of the split for the build plate (#21): plans, engraved numbers, print files.
   - `prototypes/clips/`: bench of the clips between pieces (#22): slot, skin towards the pocket, kit of 4 graded gaps, print files.
+  - `prototypes/magnets/`: bench of the magnet holes under the crossings (#24): walls around the hole, edge crossings, print files.
+  - `prototypes/tray/`: bench of the tray (#25): where a bin foot stops over the floor, material, print files.
 
 ## Product principles
 

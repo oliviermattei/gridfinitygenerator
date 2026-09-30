@@ -17,6 +17,7 @@ export {
   type Quality,
   type TriangleMesh,
 } from "./baseplate";
+export { BASEPLATE_TYPES, trayFloorOf, type BaseplateType, type TrayFloor } from "./baseplate-type";
 export {
   ADVANCED_SETTINGS,
   ALIGNMENTS,

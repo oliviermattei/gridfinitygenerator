@@ -17,7 +17,10 @@ export interface GridFrame {
   columns: number;
   rows: number;
   cellSize: number;
-  /** Pocket profile of the cells; the frame is as high as it. */
+  /**
+   * Pocket profile of the cells, as the type of baseplate makes it (baseplate-type.ts): the
+   * frame is as high as it, and its floor, if any, is under every pocket.
+   */
   profile: PocketProfile;
   /**
    * Cells cut to a lower profile than `profile` (the test kit): each one is lowered to the
@@ -198,7 +201,8 @@ function footOfChamfer({ width, depth, outerRadius: radius, bottomChamfer: chamf
  * the frame's own by default. Below the frame, the first segment of the profile goes on
  * straight (a vertical step stays vertical, a slope widens), so that the bottom of the
  * frame cuts the tool across a face, not along a ring of its edges; above the frame, the
- * tool goes up vertically from the top flat.
+ * tool goes up vertically from the top flat. A profile with a floor (a tray) starts at its
+ * floor, inside the frame: the floor is what the tool leaves under it.
  */
 export function pocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame, profile = frame.profile): Manifold {
   const { cellSize, segmentsPerQuarter } = frame;
@@ -207,8 +211,9 @@ export function pocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame, p
   if (!first || !second || !last) throw new Error("A pocket profile needs at least two points");
   if (second[0] <= first[0]) throw new Error("A pocket profile rises from its first point to its second");
   const slope = (second[1] - first[1]) / (second[0] - first[0]);
+  const bottom = profile.floor ? first : ([first[0] - TOOL_OVERSHOOT_MM, first[1] - slope * TOOL_OVERSHOOT_MM] as const);
   const layers = [
-    [first[0] - TOOL_OVERSHOOT_MM, first[1] - slope * TOOL_OVERSHOOT_MM] as const,
+    bottom,
     ...profile.points.slice(1),
     [last[0] + TOOL_OVERSHOOT_MM, last[1]] as const,
   ].map(([z, inset]) => ({
