@@ -1,5 +1,5 @@
 // Runs the geometry engine (and its manifold-3d WASM) off the main thread.
-import { generateBaseplate, generateTestKit, loadEngine, printPieces, serialize3mf, serializeStl, zipFiles } from "@repo/geometry";
+import { generateBaseplate, generateTestKit, loadEngine, printClips, printPieces, serialize3mf, serializeStl, zipFiles } from "@repo/geometry";
 import { exportName } from "../export-file";
 import type { EngineRequest, EngineResponse, EngineWarmUp, FileExtension } from "./protocol";
 
@@ -39,20 +39,28 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
       let extension: FileExtension = request.format;
       if (baseplate.pieces.length <= 1) {
         bytes = request.format === "3mf" ? serialize3mf(mesh, { name, shareLink: request.link }) : serializeStl(mesh);
-      } else if (request.format === "3mf") {
-        // One 3MF, one named object per piece, laid out apart from each other.
-        const objects = printPieces(generated).map((pieceMesh, index) => ({
-          mesh: pieceMesh,
-          name: request.pieceName.replace("{n}", String(baseplate.pieces[index]?.number ?? index + 1)),
-        }));
-        bytes = serialize3mf(objects, { name, shareLink: request.link });
       } else {
-        // STL has no named objects: a zip of one file per piece.
-        const files = printPieces(generated).map(
-          (pieceMesh, index) => [`${name}-piece-${baseplate.pieces[index]?.number ?? index + 1}.stl`, serializeStl(pieceMesh)] as [string, Uint8Array],
-        );
-        bytes = zipFiles(files);
-        extension = "zip";
+        const pieces = printPieces(generated);
+        // The clips, as many as the cuts take, beside the pieces.
+        const clips = printClips(generated, pieces);
+        const count = String(baseplate.stats.clips);
+        if (request.format === "3mf") {
+          // One 3MF, one named object per piece, laid out apart from each other, and one for the clips.
+          const objects = pieces.map((pieceMesh, index) => ({
+            mesh: pieceMesh,
+            name: request.pieceName.replace("{n}", String(baseplate.pieces[index]?.number ?? index + 1)),
+          }));
+          if (clips) objects.push({ mesh: clips, name: request.clipName.replace("{n}", count) });
+          bytes = serialize3mf(objects, { name, shareLink: request.link });
+        } else {
+          // STL has no named objects: a zip of one file per piece, and one for the clips.
+          const files = pieces.map(
+            (pieceMesh, index) => [`${name}-piece-${baseplate.pieces[index]?.number ?? index + 1}.stl`, serializeStl(pieceMesh)] as [string, Uint8Array],
+          );
+          if (clips) files.push([`${name}-clip-x${count}.stl`, serializeStl(clips)]);
+          bytes = zipFiles(files);
+          extension = "zip";
+        }
       }
       const serializeMs = performance.now() - start;
       const triangles = mesh.indices.length / 3;

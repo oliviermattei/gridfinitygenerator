@@ -177,8 +177,8 @@ export function BaseplateGenerator() {
    * Downloads the baseplate of the settings, or the test kit (always a single 3MF). The 3MF
    * carries the share link of the settings: the page that generates it again (the test kit
    * from its button, since it takes the cell size, the outline and the print settings). A
-   * baseplate cut for the build plate comes as one 3MF with a named object per piece, or as
-   * a zip of one STL per piece.
+   * baseplate cut for the build plate comes as one 3MF with a named object per piece and one
+   * for its clips, or as a zip of one STL per piece and one for the clips.
    */
   async function exportPiece(piece: ExportPiece, format: ExportFormat) {
     const client = engine.current;
@@ -186,7 +186,7 @@ export function BaseplateGenerator() {
     setExporting({ piece, format });
     setError(null);
     try {
-      const options = { link: shareLinkOf(settings), buildPlate, pieceName: t.pieceName };
+      const options = { link: shareLinkOf(settings), buildPlate, pieceName: t.pieceName, clipName: t.clipName };
       const { bytes, name, extension } = await client.exportFile(piece, settings, format, options);
       download(bytes as Uint8Array<ArrayBuffer>, `${name}.${extension}`, MEDIA_TYPES[extension]);
     } catch (reason) {

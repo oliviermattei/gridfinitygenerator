@@ -1,3 +1,4 @@
+import type { ClipLayout } from "./clips";
 import { BASEPLATE_SETTINGS, type Alignment, type BaseplateSettings } from "./settings";
 import type { SplitPlan } from "./split";
 
@@ -28,6 +29,11 @@ export interface BaseplateLayout {
    * build plate, or when the baseplate fits on it.
    */
   split: SplitPlan;
+  /**
+   * The clips that hold the pieces together: the slot, and where each clip goes along the
+   * cuts. Null for a single piece, or with the clips off (clips.ts, ADR 0010).
+   */
+  clips: ClipLayout | null;
 }
 
 /**
@@ -64,7 +70,7 @@ const CELL_EPSILON = 1e-9;
  * - Cells mode: the margins in width and depth are added to the grid.
  * The margin of each axis is then spread by the alignment.
  */
-export function layoutOf(settings: BaseplateSettings): Omit<BaseplateLayout, "screws" | "split"> {
+export function layoutOf(settings: BaseplateSettings): Omit<BaseplateLayout, "screws" | "split" | "clips"> {
   const { cellSize } = settings;
   let columns: number;
   let rows: number;

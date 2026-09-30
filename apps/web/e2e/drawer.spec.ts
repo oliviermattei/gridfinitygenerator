@@ -64,9 +64,10 @@ test("the margin carries the grid on up to the drawer, and the statistics count 
   const volume = stat(page, "volume");
 
   // The default drawer: the 9 × 6 grid (77,2 cm³) and its margin of truncated cells, as high
-  // as the grid (24,3 cm³), as measured by the margin prototype (#3, variant 1 flush).
+  // as the grid (24,3 cm³), as measured by the margin prototype (#3, variant 1 flush), less
+  // the slots of the 15 clips of its 4 pieces (0,4 cm³) for the default build plate.
   await expect(stat(page, "dimensions")).toHaveText("399 × 279 × 4,6 mm");
-  await expect(volume).toHaveText("101,5 cm³");
+  await expect(volume).toHaveText("101,1 cm³");
   const drawerTriangles = await page.getByTestId("mesh-preview").getAttribute("data-triangles");
   expect(drawerTriangles).not.toBeNull();
 
@@ -77,7 +78,8 @@ test("the margin carries the grid on up to the drawer, and the statistics count 
   await expect(stat(page, "cells")).toHaveText("11 × 7");
   await expect(stat(page, "margin")).toHaveText("gauche 18,5, droite 18,5, arrière 2,5, avant 2,5 mm");
   await expect(stat(page, "dimensions")).toHaveText("499 × 299 × 4,6 mm");
-  await expect(volume).toHaveText("133,8 cm³");
+  // 133,8 cm³ in one piece; 6 pieces here, and the slots of their 25 clips (0,7 cm³).
+  await expect(volume).toHaveText("133,1 cm³");
   await expect(page.getByTestId("mesh-preview")).not.toHaveAttribute("data-triangles", drawerTriangles ?? "");
 });
 

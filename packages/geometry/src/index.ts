@@ -8,6 +8,7 @@ export {
   type Baseplate,
   type BaseplateLayout,
   type BaseplatePiece,
+  type ClipLayout,
   type PiecePlan,
   type SplitPlan,
   type Margins,
@@ -41,7 +42,8 @@ export {
   type ShareLinkSettings,
 } from "./share-link";
 export { fitsOnBuildPlate, narrowMargin, roundUpToLayer, type BuildPlate } from "./print";
-export { PRINT_GAP_MM, pieceMesh, printPieces, spreadPieces } from "./pieces";
+export { PRINT_GAP_MM, pieceMesh, printClips, printPieces, spreadPieces } from "./pieces";
+export type { ClipPlacement, ClipSlot } from "./clips";
 export { serializeStl } from "./stl";
 export { serialize3mf, type ThreeMfObject, type ThreeMfOptions } from "./three-mf";
 export { zipFiles } from "./zip";

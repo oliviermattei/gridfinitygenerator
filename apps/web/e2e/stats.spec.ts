@@ -26,9 +26,10 @@ test("the statistics frame shows the real numbers of the baseplate, and … whil
   await expect(stat(page, "fit")).toHaveText("tient");
   // Measured on the final meshes of the pieces, in cm³: no grams, no estimate. The grid
   // carried on into its margin in truncated cells, as measured by the margin prototype (#3,
-  // variant 1 flush), less the numbers engraved under the pieces (about 1 mm³ each).
+  // variant 1 flush), less the numbers engraved under the pieces (about 1 mm³ each) and the
+  // slots of the clips that join them (27,8 mm³ each).
   const volume = stat(page, "volume");
-  await expect(volume).toHaveText("101,5 cm³");
+  await expect(volume).toHaveText("101,1 cm³");
   await expect(volume).not.toHaveAttribute("aria-busy");
 
   await chooseCells(page);

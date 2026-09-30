@@ -1,6 +1,7 @@
 // Shapes shared by the assembly strategies: outlines, the pocket tool and mesh helpers.
 import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
+import type { ClipLayout } from "./clips";
 import type { Margins } from "./layout";
 import type { Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
@@ -40,6 +41,8 @@ export interface GridFrame {
    * across Y: no screw sits on an intersection they cut. Empty without a cut.
    */
   cuts: { columns: readonly number[]; rows: readonly number[] };
+  /** Clips astride the cuts, whose slots the pieces carry (clips.ts); null without them. */
+  clips: ClipLayout | null;
   /** Print settings the thicknesses and widths chosen by the generator follow. */
   layerHeight: number;
   lineWidth: number;

@@ -1,5 +1,6 @@
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
+import { brickSlotTool, slotsByCell, type BrickSide, type ClipLayout } from "./clips";
 import { labelTool, type Label } from "./label";
 import { MARGIN } from "./margin";
 import { withArena, type Own } from "./manifold";
@@ -19,7 +20,9 @@ import { latticeOf, type Lattice, type PiecePlan } from "./split";
  * least two cells; single rows and columns without whole cells of margin go through the
  * boolean fallback, and so does a grid of mixed pocket profiles (the test kit). With screws, a kind of cell is also told apart by its corners
  * that hold a screw: the brick carries a quarter of each of their holes, whose circles have
- * a vertex on the seams, so that neighbouring quarters weld.
+ * a vertex on the seams, so that neighbouring quarters weld. With clips (clips.ts), it is
+ * also told apart by its sides on a cut that hold a clip, and where along them: the brick
+ * carries its half of each slot, open on its face on the cut, which no neighbour welds to.
  *
  * Bricks are laid on the lattice of the grid (`latticeOf`): the grid, and the whole cells
  * the margin carries on beyond it, which are inner cells; the rest of the margin goes to
@@ -56,18 +59,19 @@ export function assembleWithBricks(
     );
   }
   const lattice = latticeOf(frame);
-  const bricks = cellBricks(wasm, frame, lattice, labels);
+  const keys = brickKeys(frame, lattice);
+  const bricks = cellBricks(wasm, frame, lattice, keys, labels);
   return pieces.map((piece, index) => {
     const label = labels[index];
-    const mesh = joinBricks(bricks, frame, lattice, piece, label ? { cell: label.cell, key: labelKey(label, frame, lattice) } : null);
+    const mesh = joinBricks(bricks, frame, keys, piece, label ? { cell: label.cell, key: labelKey(label, keys) } : null);
     if (checked) assertManifold(wasm, mesh);
     return mesh;
   });
 }
 
 /** Key of the brick that holds a label: the brick of its cell, less the digits. */
-function labelKey(label: Label, frame: GridFrame, lattice: Lattice): string {
-  return `${brickKey(...label.cell, frame, lattice)},label:${label.text}@${label.side}`;
+function labelKey(label: Label, keys: BrickKeys): string {
+  return `${keys.of(...label.cell)},label:${label.text}@${label.side}`;
 }
 
 /** Bit per cut face of a brick: +X, −X, +Y, −Y (the faces a neighbouring brick touches). */
@@ -113,9 +117,25 @@ function screwCorners(i: number, j: number, frame: GridFrame): number {
   return CORNERS.reduce((bits, [da, db], corner) => (hasScrew(frame, i + da, j + db) ? bits | (1 << corner) : bits), 0);
 }
 
-/** Key of the brick of cell (i, j). */
-function brickKey(i: number, j: number, frame: GridFrame, lattice: Lattice): string {
-  return kindKey(...kindOf(i, j, frame, lattice), screwCorners(i, j, frame), !inGrid(i, j, frame));
+/** The key of the brick of each cell, and the slots of the cells with clips. */
+interface BrickKeys {
+  /** Key of the brick of cell (i, j). */
+  of(i: number, j: number): string;
+  /** Shift of the clip on each side of cell (i, j) along it (undefined without one), undefined for a cell without clips. */
+  slots(i: number, j: number): readonly (number | undefined)[] | undefined;
+}
+
+function brickKeys(frame: GridFrame, lattice: Lattice): BrickKeys {
+  const cells = slotsByCell(frame.clips);
+  const slots = (i: number, j: number) => cells.get(`${i},${j}`);
+  return {
+    slots,
+    of(i, j) {
+      const key = kindKey(...kindOf(i, j, frame, lattice), screwCorners(i, j, frame), !inGrid(i, j, frame));
+      const sides = slots(i, j);
+      return sides ? `${key},clips:${sides.map((offset) => (offset === undefined ? "-" : offset.toFixed(4))).join("|")}` : key;
+    },
+  };
 }
 
 /**
@@ -143,9 +163,10 @@ function inGrid(i: number, j: number, { columns, rows }: GridFrame): boolean {
  * (cell plus margin, cut by the outline at the corners, less the margin's holes, with the
  * bottom chamfer of the outline) minus the pocket tool and the margin's solid cut (which
  * holds the pocket of a cell of the margin, cut by the outline). Then the
- * quarter of a screw hole is removed at each corner of the brick that holds a screw.
+ * quarter of a screw hole is removed at each corner of the brick that holds a screw, and
+ * its half of a slot on each side that holds a clip.
  */
-function cellBricks(wasm: ManifoldToplevel, frame: GridFrame, lattice: Lattice, labels: readonly Label[]): Map<string, Brick> {
+function cellBricks(wasm: ManifoldToplevel, frame: GridFrame, lattice: Lattice, keys: BrickKeys, labels: readonly Label[]): Map<string, Brick> {
   const { cellSize, profile } = frame;
   const half = cellSize / 2;
   return withArena((own) => {
@@ -194,22 +215,40 @@ function cellBricks(wasm: ManifoldToplevel, frame: GridFrame, lattice: Lattice, 
       const slab = slabOf(wasm, own, area, frame, [cx, cy]);
       return tools.length === 0 ? slab : own(slab.subtract(own(wasm.Manifold.compose(tools))));
     };
+    // The slots are far from the corners and from each other: after the screws, they compose.
+    // The tool of a slot on a side, at a shift along it, is the same for every brick.
+    const slotTools = new Map<string, Manifold>();
+    const slotTool = (side: BrickSide, offset: number) => {
+      const key = `${side}@${offset}`;
+      const tool = slotTools.get(key) ?? brickSlotTool(wasm, own, frame, (frame.clips as ClipLayout).slot, side, offset);
+      slotTools.set(key, tool);
+      return tool;
+    };
+    const withSlots = (solid: Manifold, sides: readonly (number | undefined)[] | undefined) => {
+      if (!sides) return solid;
+      const tools = sides.flatMap((offset, side) => (offset === undefined ? [] : [slotTool(side as BrickSide, offset)]));
+      return own(solid.subtract(own(wasm.Manifold.compose(tools))));
+    };
+    const screwed = new Map<string, Manifold>();
     const solids = new Map<string, Manifold>();
     for (let i = lattice.columns[0]; i < lattice.columns[1]; i++)
       for (let j = lattice.rows[0]; j < lattice.rows[1]; j++) {
+        const key = keys.of(i, j);
+        if (solids.has(key)) continue;
         const [sx, sy] = kindOf(i, j, frame, lattice);
         const corners = screwCorners(i, j, frame);
         const margin = !inGrid(i, j, frame);
-        const key = kindKey(sx, sy, corners, margin);
-        if (solids.has(key)) continue;
         const kind = kindKey(sx, sy, 0, margin);
         const base = bases.get(kind) ?? baseOf(i, j, sx, sy);
         bases.set(kind, base);
-        solids.set(key, withScrews(base, corners));
+        const withCorners = kindKey(sx, sy, corners, margin);
+        const solid = screwed.get(withCorners) ?? withScrews(base, corners);
+        screwed.set(withCorners, solid);
+        solids.set(key, withSlots(solid, keys.slots(i, j)));
       }
     for (const label of labels) {
-      const solid = solids.get(brickKey(...label.cell, frame, lattice)) as Manifold;
-      solids.set(labelKey(label, frame, lattice), own(solid.subtract(labelTool(wasm, own, frame, label))));
+      const solid = solids.get(keys.of(...label.cell)) as Manifold;
+      solids.set(labelKey(label, keys), own(solid.subtract(labelTool(wasm, own, frame, label))));
     }
     return new Map([...solids].map(([key, solid]) => [key, brickOf(meshOf(solid), half)]));
   });
@@ -283,13 +322,13 @@ function brickOf(mesh: TriangleMesh, half: number): Brick {
 function joinBricks(
   bricks: Map<string, Brick>,
   frame: GridFrame,
-  lattice: Lattice,
+  keys: BrickKeys,
   piece: PiecePlan,
   label: { cell: readonly [number, number]; key: string } | null,
 ): TriangleMesh {
   const [[i0, i1], [j0, j1]] = [piece.columns, piece.rows];
   const brickAt = (i: number, j: number) =>
-    bricks.get(label && label.cell[0] === i && label.cell[1] === j ? label.key : brickKey(i, j, frame, lattice)) as Brick;
+    bricks.get(label && label.cell[0] === i && label.cell[1] === j ? label.key : keys.of(i, j)) as Brick;
   let vertexCount = 0;
   let indexCount = 0;
   for (let i = i0; i < i1; i++)

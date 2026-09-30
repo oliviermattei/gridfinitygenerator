@@ -64,7 +64,9 @@ const fr = {
   statVolume: "Matière",
   statScrews: "Vis",
   statPieces: "Pièces",
+  statClips: "Clips",
   none: "aucune",
+  noClip: "aucun",
   computing: "calcul en cours",
   layers: (count: number, layerHeight: string) => `${count} couches de ${layerHeight} mm`,
   margins: (left: string, right: string, back: string, front: string, unit: string) =>
@@ -126,6 +128,14 @@ const fr = {
   screwShank: "Ø tige",
   screwHead: "Ø tête",
   screwsHint: "La tête se loge dans le croisement des murets, sous les pentes des poches. Le jeu des trous se règle dans Avancé.",
+  clips: "Clips",
+  clipsOff: "Désactivés",
+  clipsUncut: "Sans découpe",
+  clipsSummary: (count: string) => `${count} clips à imprimer`,
+  clipsHint:
+    "Agrafes en U qui relient les pièces : elles s'enfoncent par-dessous dans le pied des murets, à cheval sur chaque coupe, et ne se voient pas de dessus. Elles sont dans le fichier, avec les pièces, couchées sur le côté.",
+  clipsUncutHint: "La baseplate tient sur votre plateau : pas de découpe, donc pas de clip.",
+  clipsOffHint: "Sans clips, les pièces sont posées bout à bout, et le tiroir les tient.",
   advanced: "Avancé",
   drawerGap: "Jeu au tiroir",
   lessGap: "Moins de jeu",
@@ -174,9 +184,11 @@ const fr = {
   preparing: { "3mf": "Préparation du 3MF…", stl: "Préparation du STL…" },
   otherFormats: "Autres formats",
   threeMfDescription: "Recommandé : s'ouvre dans le trancheur, avec le lien de ses réglages.",
-  stlDescription: "Pour les trancheurs qui ne lisent pas le 3MF. Découpée, la baseplate vient en zip, un fichier par pièce.",
+  stlDescription: "Pour les trancheurs qui ne lisent pas le 3MF. Découpée, la baseplate vient en zip, un fichier par pièce, plus les clips.",
   /** Name of a piece of a cut baseplate in the 3MF; `{n}` is its number, engraved under it. */
   pieceName: "pièce {n}",
+  /** Name of the clips of a cut baseplate in the 3MF; `{n}` is how many. */
+  clipName: "clip × {n}",
   // Errors
   computeFailed: "Le calcul de la baseplate a échoué. Modifiez un réglage pour réessayer.",
   exportFailed: "Le téléchargement a échoué. Réessayez.",
@@ -242,7 +254,9 @@ const en: Strings = {
   statVolume: "Material",
   statScrews: "Screws",
   statPieces: "Pieces",
+  statClips: "Clips",
   none: "none",
+  noClip: "none",
   computing: "computing",
   layers: (count: number, layerHeight: string) => `${count} layers of ${layerHeight} mm`,
   margins: (left: string, right: string, back: string, front: string, unit: string) =>
@@ -303,6 +317,14 @@ const en: Strings = {
   screwShank: "Shank Ø",
   screwHead: "Head Ø",
   screwsHint: "The head sits where the walls between pockets cross, under the slopes of the pockets. The hole gap is set in Advanced.",
+  clips: "Clips",
+  clipsOff: "Off",
+  clipsUncut: "No cut",
+  clipsSummary: (count: string) => `${count} clips to print`,
+  clipsHint:
+    "U-shaped staples that join the pieces: they push up from below into the foot of the walls, astride each cut, and do not show from above. They come in the file with the pieces, lying on their side.",
+  clipsUncutHint: "The baseplate fits on your build plate: no cut, so no clip.",
+  clipsOffHint: "Without clips, the pieces lie end to end, and the drawer holds them.",
   advanced: "Advanced",
   drawerGap: "Drawer gap",
   lessGap: "Less gap",
@@ -349,8 +371,9 @@ const en: Strings = {
   preparing: { "3mf": "Preparing the 3MF…", stl: "Preparing the STL…" },
   otherFormats: "Other formats",
   threeMfDescription: "Recommended: opens in the slicer, with the link to its settings.",
-  stlDescription: "For the slicers that cannot read 3MF. Cut, the baseplate comes as a zip, one file per piece.",
+  stlDescription: "For the slicers that cannot read 3MF. Cut, the baseplate comes as a zip, one file per piece, and the clips.",
   pieceName: "piece {n}",
+  clipName: "clip × {n}",
   // Errors
   computeFailed: "The baseplate could not be computed. Change a setting to try again.",
   exportFailed: "The download failed. Try again.",

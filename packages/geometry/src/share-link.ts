@@ -57,6 +57,8 @@ const V1 = {
   sc: flag(false),
   ss: number(2, 6, 3),
   sh: number(2, 8, 6),
+  /** Clips between the pieces of a baseplate cut for the build plate (#22). */
+  cl: flag(true),
   /** Advanced: cell size, hole tolerance, outer corner radius, bottom chamfer, drawer gap (mm). */
   cs: number(20, 80, 42),
   tol: number(0, 1, 0.5),
@@ -94,6 +96,7 @@ const LINK_KEYS = {
   screwShank: "ss",
   screwHead: "sh",
   holeGap: "tol",
+  clips: "cl",
   cellSize: "cs",
   outerRadius: "or",
   bottomChamfer: "ch",

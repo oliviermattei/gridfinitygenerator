@@ -1,17 +1,18 @@
 import { assembleWithBooleans } from "./boolean-assembly";
 import { assembleWithBricks, canAssembleWithBricks } from "./brick-assembly";
+import { clipLayoutOf, clipSolid, type ClipLayout } from "./clips";
 import { labelsOf } from "./label";
 import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
-import { loadManifold } from "./manifold";
+import { loadManifold, withArena } from "./manifold";
 import { FLUSH_PROFILE, POCKET_PROFILES } from "./pocket-profile";
 import { layerCount, type BuildPlate } from "./print";
 import { screwHolesOf, screwPositions } from "./screws";
 import { clampSettings, type BaseplateSettings } from "./settings";
 import type { TriangleMesh } from "./mesh";
-import type { GridFrame } from "./shapes";
-import { splitPlanOf, type PiecePlan, type SplitPlan } from "./split";
+import { meshOf, type GridFrame } from "./shapes";
+import { latticeOf, splitPlanOf, type PiecePlan, type SplitPlan } from "./split";
 
-export type { BaseplateLayout, Margins, PiecePlan, SplitPlan, TriangleMesh };
+export type { BaseplateLayout, ClipLayout, Margins, PiecePlan, SplitPlan, TriangleMesh };
 
 export type Quality = "preview" | "final";
 
@@ -38,6 +39,8 @@ export interface BaseplateStats {
   pieces: number;
   /** Number of screws that fix the baseplate to the drawer: one per screw hole, none without screws. */
   screws: number;
+  /** Number of clips to print, which hold the pieces together: none for a single piece or without clips. */
+  clips: number;
 }
 
 /**
@@ -85,6 +88,11 @@ export interface Baseplate {
   stats: BaseplateStats;
   /** Its pieces, a single one when it is not cut. */
   pieces: BaseplatePiece[];
+  /**
+   * One clip, as it prints (lying on its side, from the origin up), to print
+   * `stats.clips` times (`printClips`); null without clips. Always checked (`NoError`).
+   */
+  clip: TriangleMesh | null;
 }
 
 /**
@@ -95,7 +103,9 @@ export interface Baseplate {
  * 0008), with a countersunk screw hole on each inner intersection of the grid when the
  * screws are on (screws.ts, ADR 0006). With a build plate it does not fit on
  * (`options.buildPlate`), it is cut on grid lines into pieces that do, each with its number
- * engraved underneath (split.ts, label.ts, ADR 0009). The settings are
+ * engraved underneath (split.ts, label.ts, ADR 0009), and, with the clips on, a slot astride
+ * the cut in the middle of each side of a cell along it, for a clip printed apart (clips.ts,
+ * ADR 0010). The settings are
  * first brought into their ranges, and a missing one takes its default (`clampSettings`):
  * without settings, the baseplate of the default drawer. The mesh of each piece is always
  * closed; the final mesh, the one that gets exported, is also checked by manifold
@@ -162,14 +172,16 @@ async function buildBaseplate(
     segmentsPerHole: SEGMENTS_PER_HOLE[quality],
     screws: screwHolesOf(settings, profile),
     cuts: { columns: [], rows: [] },
+    clips: null,
     layerHeight: settings.layerHeight,
     lineWidth: settings.lineWidth,
   };
   const split = splitPlanOf(uncut, options.buildPlate ?? null);
-  const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts } };
   const labels = labelsOf(split);
+  const clips = clipsOf(settings.clips, uncut, split, labels);
+  const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips };
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
-  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame), split };
+  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame), split, clips };
   const meshes =
     strategy === "bricks"
       ? assembleWithBricks(wasm, frame, quality === "final", split.pieces, labels)
@@ -184,9 +196,21 @@ async function buildBaseplate(
       layers: layerCount(frame.profile.height, settings.layerHeight),
       pieces: pieces.length,
       screws: layout.screws.length,
+      clips: clips?.placements.length ?? 0,
     },
     pieces,
+    clip: clips ? withArena((own) => meshOf(clipSolid(wasm, own, clips.slot))) : null,
   };
+}
+
+/**
+ * The clips of a baseplate cut along `split`, null when it is not cut, when the clips are off
+ * (`on`), or when no side along a cut has room for one.
+ */
+function clipsOf(on: boolean, frame: GridFrame, split: SplitPlan, labels: ReturnType<typeof labelsOf>): ClipLayout | null {
+  if (!on || split.pieces.length <= 1) return null;
+  const layout = clipLayoutOf(frame, latticeOf(frame), split, labels);
+  return layout.placements.length > 0 ? layout : null;
 }
 
 /** The meshes of the pieces as one mesh, each a range of its vertices and triangles, measured. */

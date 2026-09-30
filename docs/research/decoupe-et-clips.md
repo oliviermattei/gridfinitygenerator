@@ -203,6 +203,7 @@ Section du muret au milieu d'un bord de cellule (demi-largeur de chaque côté d
 - **Conflit avec les vis** : une vis (ADR 0006) occupe le centre de l'intersection (tige Ø 3,5, fraisure Ø 6,5 avec le jeu par défaut). Sur une intersection de coupe, il faut choisir : vis ou tenon [I]. Extrabold retire les vis des coupes par défaut ; GridFlock déconseille vis et puzzle sur les bords de segment [V].
 - **Vis sur une coupe** : chaque pièce reçoit une demi-fraisure (un quart à une jonction en croix). La vis plaque alors les deux pièces au fond du tiroir et aligne la coupe ; mais le cône d'une tête fraisée pousse les demi-fraisures l'une loin de l'autre (effet de coin) [I]. À essayer, pas à supposer.
 - **Sous la baseplate, impossible** : les poches sont ouvertes en dessous, et un bac assis descend jusqu'à z = 0 (ADR 0006) ; aucun clip ne peut passer dessous ni dans une poche, contrairement aux clips « underside » d'Akio [I].
+  - *Note (#22, ADR 0010)* : cela vaut pour un clip qui passerait sous les poches. Un clip qui reste dans l'emprise du pied du muret, sur ±1,35 mm autour de la coupe et sous z = 2,80 mm, laisse 0,8 mm de peau côté poche et ne touche aucun bac : c'est le clip retenu, inséré par-dessous (`prototypes/clips/`).
 
 ### 3.6 Exemple : tiroir par défaut, plateau par défaut [I, calcul]
 

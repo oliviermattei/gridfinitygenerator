@@ -118,6 +118,18 @@ _Avoid_: split, partition, tuilage
 Une ligne de la grille, prolongée à travers la marge, où deux pièces se séparent : dans l'axe d'un muret, chaque pièce en garde la moitié. Une coupe est plane, à coins vifs, sans chanfrein ; aucun croisement coupé ne porte de vis.
 _Avoid_: joint, jonction, split line
 
+**Clip**:
+Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au milieu d'un bord de cellule, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus (ADR 0010).
+_Avoid_: agrafe (sauf pour décrire sa forme), connecteur, attache, clip de liaison
+
+**Fente**:
+Le logement d'un clip, creusé par-dessous dans le pied du muret, de part et d'autre d'une coupe : un canal sous la dent pour le pont, et une fente de jambe de chaque côté, sous la pente haute de la poche.
+_Avoid_: rainure, logement (réservé aux aimants), slot
+
+**Dent**:
+La lame de matière de 0,5 mm que chaque pièce garde contre la coupe, dans la fente, entre les jambes du clip.
+_Avoid_: languette, tenon
+
 **Numéro de pièce**:
 Le numéro gravé sous une pièce, dans un demi-muret, en chiffres de 3 mm empilés et en miroir, pour qu'il se lise quand on retourne la pièce (0,4 mm de profondeur, arrondi à la couche). Une baseplate d'une seule pièce n'en a pas.
 _Avoid_: étiquette (réservé aux bacs), label, repère

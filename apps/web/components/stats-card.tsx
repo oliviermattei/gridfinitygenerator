@@ -77,6 +77,9 @@ export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, 
         <Stat label={t.statPieces} id="pieces">
           {stats && String(stats.pieces)}
         </Stat>
+        <Stat label={t.statClips} id="clips">
+          {stats && (stats.clips === 0 ? t.noClip : String(stats.clips))}
+        </Stat>
         <Stat label={t.buildPlate} id="fit">
           {fits !== null && (
             <span className={fits ? undefined : "font-semibold text-accent-strong"}>{fits ? t.fits : t.doesNotFit}</span>

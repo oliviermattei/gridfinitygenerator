@@ -140,7 +140,8 @@ describe("pieces of a cut baseplate", () => {
 
   it("adds up to the whole baseplate, less the numbers engraved under the pieces", async () => {
     const whole = await generateBaseplate({}, "final");
-    const cut = await generateBaseplate({}, "final", { buildPlate: PLATE_256 });
+    // Without the slots of the clips (clips.test.ts), which take their own material.
+    const cut = await generateBaseplate({ clips: false }, "final", { buildPlate: PLATE_256 });
     const engraved = (whole.stats.volume as number) - (cut.stats.volume as number);
     expect(engraved).toBeGreaterThan(0);
     expect(engraved).toBeLessThan(cut.stats.pieces * LABEL_VOLUME_MAX_MM3);

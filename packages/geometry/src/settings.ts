@@ -49,6 +49,11 @@ export interface BaseplateSettings {
   /** Gap added to the diameters of the holes so the screws go in without forcing, in millimetres. */
   holeGap: number;
   /**
+   * Clips that hold the pieces together when the baseplate is cut for the build plate: U-shaped
+   * staples printed apart, pushed up into the foot of the murets on each cut (clips.ts).
+   */
+  clips: boolean;
+  /**
    * Side of a cell, in millimetres: the pitch of the grid, 42 in the Gridfinity standard. The
    * pocket keeps the vertical profile of the standard; only its footprint follows the cell.
    */
@@ -106,6 +111,7 @@ export const BASEPLATE_SETTINGS = {
   screwShank: { min: 2, max: 6, default: 3, integer: false },
   screwHead: { min: 2, max: 8, default: 6, integer: false },
   holeGap: { min: 0, max: 1, default: 0.5, integer: false },
+  clips: { default: true } as FlagSetting,
   cellSize: { min: 20, max: 80, default: STANDARD_CELL_SIZE_MM, integer: false },
   outerRadius: { min: 0, max: 10, default: 4, integer: false },
   bottomChamfer: { min: 0, max: 3, default: 0, integer: false },
@@ -131,6 +137,7 @@ export const DEFAULT_SETTINGS: BaseplateSettings = {
   screwShank: BASEPLATE_SETTINGS.screwShank.default,
   screwHead: BASEPLATE_SETTINGS.screwHead.default,
   holeGap: BASEPLATE_SETTINGS.holeGap.default,
+  clips: BASEPLATE_SETTINGS.clips.default,
   cellSize: BASEPLATE_SETTINGS.cellSize.default,
   outerRadius: BASEPLATE_SETTINGS.outerRadius.default,
   bottomChamfer: BASEPLATE_SETTINGS.bottomChamfer.default,

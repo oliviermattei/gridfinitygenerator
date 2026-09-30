@@ -1,5 +1,6 @@
 // The pieces of a cut baseplate, taken out of its mesh for the preview and the export.
 import type { Baseplate, BaseplatePiece } from "./baseplate";
+import { clipGrid } from "./clips";
 import type { TriangleMesh } from "./mesh";
 
 /** Space between the pieces laid out for the print (3MF, STL), in millimetres. */
@@ -64,4 +65,35 @@ export function printPieces(baseplate: Pick<Baseplate, "mesh" | "layout" | "piec
     }
     return mesh;
   });
+}
+
+/**
+ * The clips of a cut baseplate laid out for the print, as one mesh of `stats.clips` closed
+ * shells, each clip lying on its side as `Baseplate.clip`, in a near-square grid: beside the
+ * meshes of `beside` (the pieces laid out by `printPieces`), `PRINT_GAP_MM` to their right
+ * and from their front, or from the origin without them. Null without clips.
+ */
+export function printClips(baseplate: Pick<Baseplate, "clip" | "layout" | "stats">, beside: readonly TriangleMesh[] = []): TriangleMesh | null {
+  const { clip, layout, stats } = baseplate;
+  if (!clip || !layout.clips || stats.clips === 0) return null;
+  let [right, front] = [beside.length > 0 ? -Infinity : -PRINT_GAP_MM, beside.length > 0 ? Infinity : 0];
+  for (const { positions } of beside)
+    for (let v = 0; v < positions.length; v += 3) {
+      right = Math.max(right, positions[v] as number);
+      front = Math.min(front, positions[v + 1] as number);
+    }
+  const offsets = clipGrid(layout.clips.slot, stats.clips, [right + PRINT_GAP_MM, front]);
+  const vertices = clip.positions.length / 3;
+  const positions = new Float32Array(clip.positions.length * offsets.length);
+  const indices = new Uint32Array(clip.indices.length * offsets.length);
+  offsets.forEach(([dx, dy], k) => {
+    for (let v = 0; v < clip.positions.length; v += 3) {
+      const at = k * clip.positions.length + v;
+      positions[at] = (clip.positions[v] as number) + dx;
+      positions[at + 1] = (clip.positions[v + 1] as number) + dy;
+      positions[at + 2] = clip.positions[v + 2] as number;
+    }
+    for (let t = 0; t < clip.indices.length; t++) indices[k * clip.indices.length + t] = (clip.indices[t] as number) + k * vertices;
+  });
+  return { positions, indices };
 }

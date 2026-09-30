@@ -23,7 +23,7 @@ const DIGIT_WIDTH_MM = 1.8;
 /** Width of the strokes of the seven-segment digits: wider than a line, so that the slicer resolves them. */
 const STROKE_MM = 0.5;
 /** Space between two digits of a number. */
-const DIGIT_GAP_MM = 0.8;
+export const DIGIT_GAP_MM = 0.8;
 /** Depth of the engraving before rounding up to the layer: two layers of 0.2 mm (spec v1.1). */
 const DEPTH_MM = 0.4;
 

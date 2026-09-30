@@ -41,6 +41,8 @@ export type EngineRequest =
        * standing for its number (« pièce {n} »).
        */
       pieceName: string;
+      /** Name of the object of the clips in the 3MF, `{n}` standing for their number (« clip × {n} »). */
+      clipName: string;
     };
 
 /** Loads the WASM ahead of the first request; it gets no response. */
@@ -58,7 +60,7 @@ export type EngineResponse =
       bytes: Uint8Array;
       /** Name of the file without its extension, also the name of the object in a 3MF of a single piece. */
       name: string;
-      /** Extension of the file: a zip holds the STL files of the pieces of a cut baseplate. */
+      /** Extension of the file: a zip holds the STL files of the pieces of a cut baseplate, and of its clips. */
       extension: FileExtension;
       baseplate: BaseplateSummary;
       /** Triangles of the exported mesh (final quality). */

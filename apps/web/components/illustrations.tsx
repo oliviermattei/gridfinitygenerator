@@ -79,6 +79,32 @@ export function ScrewArt({ className }: ArtProps) {
   );
 }
 
+/** Family icon "Clips": the U-shaped staple, bridge down. */
+export function ClipIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <path d="M5 5 V19 H19 V5 H15 V15 H9 V5 Z" />
+    </svg>
+  );
+}
+
+/**
+ * Clips: the muret on a cut in section, a piece on each side of the dashed cut; the clip
+ * (in var(--art)) pushed up from below, flush with the bottom, grips the tooth of each piece
+ * and stays under the slopes of the pockets.
+ */
+export function ClipArt({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 64 44" className={className} aria-hidden fill="none">
+      <path d="M4 40 H60" {...stroke} strokeOpacity={0.35} />
+      <path d="M13 40 V27 L27 13 H31.5 V40 Z" {...stroke} {...material} />
+      <path d="M51 40 V27 L37 13 H32.5 V40 Z" {...stroke} {...material} />
+      <path d="M22 40 V27 H26.5 V35 H37.5 V27 H42 V40 Z" fill={ART} />
+      <path d="M32 8 V43" {...stroke} strokeOpacity={0.5} strokeDasharray="2 2.5" />
+    </svg>
+  );
+}
+
 /** Family icon "Avancé": two sliders. */
 export function AdvancedIcon({ className }: ArtProps) {
   return (

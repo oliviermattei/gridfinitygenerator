@@ -25,13 +25,14 @@ export interface EngineClient {
    * The file of `piece` for `settings` in `format`, computed in final quality and cut for
    * `buildPlate`, its name without extension, and its extension (a zip for the STL files of
    * a cut baseplate). A 3MF carries `link`, the absolute link that generates it again, and
-   * names each piece of a cut baseplate by `pieceName` (`{n}` for its number).
+   * names each piece of a cut baseplate by `pieceName` (`{n}` for its number), and its clips
+   * by `clipName` (`{n}` for how many).
    */
   exportFile(
     piece: ExportPiece,
     settings: BaseplateSettings,
     format: ExportFormat,
-    options: { link: string; buildPlate: BuildPlate; pieceName: string },
+    options: { link: string; buildPlate: BuildPlate; pieceName: string; clipName: string },
   ): Promise<{ bytes: Uint8Array; name: string; extension: FileExtension; baseplate: BaseplateSummary }>;
   dispose(): void;
 }
@@ -227,9 +228,9 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
       cancelStaleFinal();
       void render();
     },
-    async exportFile(piece, settings, format, { link, buildPlate, pieceName }) {
+    async exportFile(piece, settings, format, { link, buildPlate, pieceName, clipName }) {
       const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : (`export-${format}` as const);
-      const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName }, label).response;
+      const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName, clipName }, label).response;
       if (response.type !== "export") throw new Error(`Unexpected engine response: ${response.type}`);
       return { bytes: response.bytes, name: response.name, extension: response.extension, baseplate: response.baseplate };
     },
