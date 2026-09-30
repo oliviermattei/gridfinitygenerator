@@ -189,9 +189,12 @@ test("choosing CLICKbase cuts the lamellas, keeps the clips and warns to print i
   expect(model).toContain("ty=clickbase");
   expect(model).toContain("clip ×");
 
-  // Back to the open grid, the warning goes.
+  // Back to the open grid, the warning goes. The type family may still be open (desktop): a
+  // click would close it, and the next one land in the panel as it collapses.
   await openSettings(page, testInfo);
-  await page.getByRole("button", { name: /^Type/ }).click();
+  const family = page.getByRole("button", { name: /^Type/ });
+  if ((await family.getAttribute("aria-expanded")) !== "true") await family.click();
+  await expect(family).toHaveAttribute("aria-expanded", "true");
   await type(page, "Normal").click();
   await expect(stat(page, "volume")).toHaveText("79,0 cm³");
   await expect(warning).toHaveCount(0);
