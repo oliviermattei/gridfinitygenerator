@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { chooseCells, closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings } from "./support";
 
 /** A value of the statistics frame on screen: on the right on desktop, in the sheet on mobile. */
-function stat(page: Page, id: "dimensions" | "cells" | "margin" | "layers" | "volume" | "screws" | "magnets" | "pieces" | "fit") {
+function stat(page: Page, id: "dimensions" | "cells" | "margin" | "layers" | "material" | "volume" | "screws" | "magnets" | "pieces" | "fit") {
   return page.getByTestId(`stat-${id}`).filter({ visible: true });
 }
 
@@ -26,13 +26,15 @@ test("the statistics frame shows the real numbers of the baseplate, and … whil
   // Larger than the default build plate (256 × 256 mm): cut into 4 pieces that fit on it.
   await expect(stat(page, "pieces")).toHaveText("4");
   await expect(stat(page, "fit")).toHaveText("tient");
-  // Measured on the final meshes of the pieces, in cm³: no grams, no estimate. The grid and
+  // Measured on the final meshes of the pieces, in cm³, never estimated (the grams are its mass,
+  // mass.spec.ts). The grid and
   // its frame of crossbars, as measured by the margin prototype (#3, variant 3), less the
   // numbers engraved under the pieces (about 1 mm³ each), the slots of the clips that join
   // them (27,8 mm³ each) and the magnet holes (72,9 mm³ each), plus the crossbars doubled on the cuts.
   const volume = stat(page, "volume");
+  const material = stat(page, "material");
   await expect(volume).toHaveText("79,2 cm³");
-  await expect(volume).not.toHaveAttribute("aria-busy");
+  await expect(material).not.toHaveAttribute("aria-busy");
 
   await chooseCells(page);
   await expect(stat(page, "cells")).toHaveText("4 × 3");
@@ -44,8 +46,8 @@ test("the statistics frame shows the real numbers of the baseplate, and … whil
   await numberField(page, "Colonnes").fill("20");
   await numberField(page, "Rangées").fill("20");
   await expect(stat(page, "cells")).toHaveText("20 × 20");
-  await expect(volume).toHaveAttribute("aria-busy", "true");
-  await expect(volume).toContainText("…");
+  await expect(material).toHaveAttribute("aria-busy", "true");
+  await expect(material).toContainText("…");
   await expect(stat(page, "dimensions")).toHaveText("840 × 840 × 4,6 mm");
   await expect(volume).toHaveText(/^\d[\d\s]*,\d cm³$/, { timeout: 20_000 });
   const large = parseFloat((await volume.innerText()).replace(/\s/g, "").replace(",", "."));

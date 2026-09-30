@@ -368,4 +368,19 @@ describe("the clip to print", () => {
     // Without clips, nothing to lay out.
     expect(printClips(await generateBaseplate({}, "preview"))).toBeNull();
   });
+
+  it("gives the volume of all the clips, measured on the clip, apart from the volume of the pieces (#31)", async () => {
+    const cut = await generateBaseplate({}, "final", { buildPlate: PLATE_256 });
+    const single = await checkMesh(cut.clip as NonNullable<Baseplate["clip"]>);
+    expect(cut.stats.clips).toBe(8);
+    expect(cut.stats.clipsVolume).toBeCloseTo(8 * single.volume, 6);
+    expect(cut.stats.clipsVolume).toBeCloseTo(8 * 18.2475, 3); // 8 clips of 4.055 mm² × 4.5 mm
+    // The pieces alone: the clips are not in the volume of the baseplate.
+    const pieces = cut.pieces.reduce((sum, piece) => sum + (piece.volume as number), 0);
+    expect(cut.stats.volume).toBeCloseTo(pieces, 6);
+    // Null for the preview, like the volume; 0 without clips.
+    expect((await generateBaseplate({}, "preview", { buildPlate: PLATE_256 })).stats.clipsVolume).toBeNull();
+    expect((await generateBaseplate({}, "final")).stats.clipsVolume).toBe(0);
+    expect((await generateBaseplate({ clips: false }, "final", { buildPlate: PLATE_256 })).stats.clipsVolume).toBe(0);
+  });
 });

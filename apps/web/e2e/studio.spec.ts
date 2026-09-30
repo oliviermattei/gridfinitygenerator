@@ -131,7 +131,8 @@ test.describe("desktop", () => {
     await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
 
     const reached: string[] = [];
-    for (let step = 0; step < 20; step++) {
+    // The info button of the mass in the statistics (#31) is one more stop.
+    for (let step = 0; step < 21; step++) {
       await page.keyboard.press("Tab");
       const name = await page.evaluate(() => {
         const element = document.activeElement as HTMLElement | null;

@@ -23,6 +23,7 @@ import { ChevronDown, Download, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import type { Formats } from "@/lib/format";
+import { gramsText, massOf, type FilamentPreference, type Material } from "@/lib/mass";
 import type { StackPreference } from "@/lib/preferences";
 import { useFormats, useStrings } from "@/lib/locale";
 import type { Strings } from "@/lib/strings";
@@ -151,9 +152,14 @@ export interface FamiliesProps {
    * included), in mm³: the volume of the baseplate with it less that of its grid alone, both
    * measured on final meshes (#29); missing while they are being measured.
    */
-  marginSurpluses: Partial<Record<MarginShape, number>>;
-  /** Volume of the baseplate of each type, the other settings as they are, in mm³, measured on the final mesh; missing while it is being measured. */
-  typeVolumes: Partial<Record<BaseplateType, number>>;
+  marginSurpluses: Partial<Record<MarginShape, Material>>;
+  /**
+   * Material of the baseplate of each type, the other settings as they are, in mm³, measured on
+   * the final mesh; missing while it is being measured.
+   */
+  typeVolumes: Partial<Record<BaseplateType, Material>>;
+  /** Filament of the prints (a preference): the mass of each shape of margin and of each type (#31). */
+  filament: FilamentPreference;
   /** Stacked print of the pieces (#28): a preference of this browser, not a setting. */
   stack: StackPreference;
   onStackChange: (patch: Partial<StackPreference>) => void;
@@ -172,6 +178,7 @@ export function Families({
   downloadBusy,
   marginSurpluses,
   typeVolumes,
+  filament,
   stack,
   onStackChange,
 }: FamiliesProps) {
@@ -200,7 +207,7 @@ export function Families({
         title={t.baseplateType}
         summary={t.baseplateTypeNames[settings.baseplateType]}
       >
-        <TypeFields settings={settings} onSettingsChange={onSettingsChange} volumes={typeVolumes} />
+        <TypeFields settings={settings} onSettingsChange={onSettingsChange} volumes={typeVolumes} filament={filament} />
       </FamilyItem>
       {hasMargin(summary) && (
         <FamilyItem
@@ -218,7 +225,7 @@ export function Families({
         title={t.margin}
         summary={`${t.marginShapeNames[settings.marginShape]}${settings.minimalMargin ? t.minimalMarginShort : ""}`}
       >
-        <MarginFields settings={settings} onSettingsChange={onSettingsChange} summary={summary} surpluses={marginSurpluses} />
+        <MarginFields settings={settings} onSettingsChange={onSettingsChange} summary={summary} surpluses={marginSurpluses} filament={filament} />
       </FamilyItem>
       <FamilyItem
         {...bind("profile")}
@@ -343,23 +350,26 @@ export function Families({
 
 /**
  * The shape of the margin, each with the material it adds to the grid alone, measured on the
- * final meshes ("…" while it is), what the chosen one is, and the minimal margin (#29), which
- * applies to every shape. Without a margin, the shape changes nothing, and no volume is shown.
+ * final meshes ("…" while it is), and its mass in the filament chosen (#31), what the chosen
+ * one is, and the minimal margin (#29), which applies to every shape. Without a margin, the
+ * shape changes nothing, and no volume is shown.
  */
 function MarginFields({
   settings,
   onSettingsChange,
   summary,
   surpluses,
-}: FieldsProps & { summary: BaseplateSummary | null; surpluses: Partial<Record<MarginShape, number>> }) {
+  filament,
+}: FieldsProps & { summary: BaseplateSummary | null; surpluses: Partial<Record<MarginShape, Material>>; filament: FilamentPreference }) {
   const t = useStrings();
   const f = useFormats();
   const withMargin = hasMargin(summary);
   const surplus = (shape: MarginShape) => {
     const measured = surpluses[shape];
     if (measured === undefined) return "…";
-    const volume = f.volumes.format(Math.abs(measured) / 1000);
-    return measured < 0 ? t.marginSaving(volume) : t.marginSurplus(volume);
+    const volume = f.volumes.format(Math.abs(measured.volume) / 1000);
+    const grams = gramsText(massOf(measured, filament).total, f.grams, t.belowOneGram);
+    return measured.volume < 0 ? t.marginSaving(volume, grams) : t.marginSurplus(volume, grams);
   };
   return (
     <>
@@ -391,14 +401,22 @@ function MarginFields({
 
 /**
  * The type of baseplate, each with the volume of the baseplate it gives, measured on its
- * final mesh ("…" while it is), and what the chosen one is.
+ * final mesh ("…" while it is), and its mass in the filament chosen, clips included (#31), and
+ * what the chosen one is.
  */
-function TypeFields({ settings, onSettingsChange, volumes }: FieldsProps & { volumes: Partial<Record<BaseplateType, number>> }) {
+function TypeFields({
+  settings,
+  onSettingsChange,
+  volumes,
+  filament,
+}: FieldsProps & { volumes: Partial<Record<BaseplateType, Material>>; filament: FilamentPreference }) {
   const t = useStrings();
   const f = useFormats();
   const volume = (type: BaseplateType) => {
     const measured = volumes[type];
-    return measured === undefined ? "…" : `${f.volumes.format(measured / 1000)} cm³`;
+    if (measured === undefined) return "…";
+    const mass = t.mass(gramsText(massOf(measured, filament).total, f.grams, t.belowOneGram));
+    return t.typeMaterial(f.volumes.format(measured.volume / 1000), mass);
   };
   const floor = trayFloorOf(settings.layerHeight);
   const { grip } = clickbaseOf(settings.cellSize, POCKET_PROFILES[settings.pocketProfile], settings.layerHeight);

@@ -6,3 +6,4 @@ export { Segmented, type SegmentedOption, type SegmentedProps } from "./segmente
 export { SliderField, type SliderFieldProps } from "./slider-field";
 export { Swatches, type Swatch, type SwatchesProps } from "./swatches";
 export { ToggleSwitch, type ToggleSwitchProps } from "./toggle-switch";
+export { decimalInputProps, numberFieldFormat } from "./decimal-input";

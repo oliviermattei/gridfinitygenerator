@@ -10,6 +10,12 @@ export interface Formats {
   volumes: Intl.NumberFormat;
   /** Nozzle diameters, with at least one decimal ("0,4"). */
   nozzles: Intl.NumberFormat;
+  /** Masses in grams, to the gram ("98", "1 204"). */
+  grams: Intl.NumberFormat;
+  /** Densities in g/cm³, to the hundredth ("1,24"). */
+  densities: Intl.NumberFormat;
+  /** Costs in euros, to the cent, in every language for now ("1,97 €", "€1.97"). */
+  money: Intl.NumberFormat;
   /** "168 × 126 mm". */
   footprint: (size: { width: number; depth: number }) => string;
   /** A length of the drawer or the margins, in millimetres, in the unit chosen ("10,5", "0,41"). */
@@ -33,6 +39,9 @@ export function formatsFor(locale: string): Formats {
     fine,
     volumes: new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
     nozzles: new Intl.NumberFormat(locale, { minimumFractionDigits: 1 }),
+    grams: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+    densities: new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    money: new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }),
     footprint: ({ width, depth }) => `${lengths.format(width)} × ${lengths.format(depth)} mm`,
     length: (mm, unit) => inUnit[unit].format(fromMillimetres(mm, unit)),
   };

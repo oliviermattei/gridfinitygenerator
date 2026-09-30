@@ -1,11 +1,14 @@
 "use client";
 
 import { fitsOnBuildPlate, narrowMargin, type BuildPlate, type Margins } from "@repo/geometry";
-import { TriangleAlert } from "lucide-react";
+import { Popover } from "@base-ui/react/popover";
+import { focusRing } from "@repo/ui";
+import { Info, TriangleAlert } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import type { Formats } from "@/lib/format";
 import { useFormats, useStrings } from "@/lib/locale";
+import { gramsText, massOf, type FilamentPreference } from "@/lib/mass";
 import type { Strings } from "@/lib/strings";
 import type { Unit } from "@/lib/units";
 
@@ -36,15 +39,18 @@ export interface StatsCardProps {
   clickbase: boolean;
   /** Unit of the margins, like the drawer they come from. */
   unit: Unit;
+  /** Filament of the prints (a preference): the mass of the material, and its cost with a price (#31). */
+  filament: FilamentPreference;
   className?: string;
 }
 
 /**
  * Statistics of the baseplate, real numbers only: measured on the mesh or computed
  * exactly, never estimated. The volume of material is measured on the final mesh, "…"
- * until it answers for the current settings.
+ * until it answers for the current settings; its mass, the one exception (ADR 0019), is that
+ * volume, clips included, times the declared density of the filament.
  */
-export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, advancedChanged, clickbase, unit, className = "" }: StatsCardProps) {
+export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, fits, advancedChanged, clickbase, unit, filament, className = "" }: StatsCardProps) {
   const t = useStrings();
   const f = useFormats();
   const stats = summary?.stats;
@@ -70,9 +76,7 @@ export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, 
         <Stat label={t.statHeight} id="layers">
           {stats && t.layers(stats.layers, f.fine.format(layerHeight))}
         </Stat>
-        <Stat label={t.statVolume} id="volume">
-          {volume != null && `${f.volumes.format(volume / 1000)} cm³`}
-        </Stat>
+        <MaterialStat volume={volume} clipsVolume={final ? stats?.clipsVolume : null} clips={stats?.clips ?? 0} filament={filament} />
         <Stat label={t.statScrews} id="screws">
           {stats && (stats.screws === 0 ? t.none : String(stats.screws))}
         </Stat>
@@ -99,6 +103,68 @@ export function StatsCard({ summary, layerHeight, lineWidth, final, buildPlate, 
   );
 }
 
+/**
+ * The material: its volume and its mass, « 79,2 cm³ · ≈ 98 g », then the clips in it and
+ * the cost of the filament when a price is given; « … » until the final mesh answers. The info
+ * button tells how the mass is worked out.
+ */
+function MaterialStat({
+  volume,
+  clipsVolume,
+  clips,
+  filament,
+}: {
+  volume: number | null | undefined;
+  clipsVolume: number | null | undefined;
+  clips: number;
+  filament: FilamentPreference;
+}) {
+  const t = useStrings();
+  const f = useFormats();
+  const material = volume != null && clipsVolume != null ? { volume, clips: clipsVolume } : null;
+  const mass = material ? massOf(material, filament) : null;
+  const grams = (value: number) => gramsText(value, f.grams, t.belowOneGram);
+  const details = mass ? [clips > 0 ? t.clipsMass(grams(mass.clips)) : null, mass.cost === null ? null : t.cost(f.money.format(mass.cost))] : [];
+  return (
+    <Stat
+      label={t.statVolume}
+      id="material"
+      info={
+        <Popover.Root>
+          <Popover.Trigger
+            openOnHover
+            delay={150}
+            aria-label={t.massInfo}
+            className={`-my-1 grid size-6 place-items-center rounded-full text-muted transition-colors hover:text-ink ${focusRing} focus-visible:ring-offset-0`}
+          >
+            <Info className="size-3.5" aria-hidden />
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Positioner sideOffset={6} collisionPadding={12} className="z-50">
+              <Popover.Popup className="popup max-w-[16rem] px-3 py-2.5 text-[12.5px] leading-snug text-ink-soft" data-testid="mass-hint">
+                {t.massHint}
+              </Popover.Popup>
+            </Popover.Positioner>
+          </Popover.Portal>
+        </Popover.Root>
+      }
+    >
+      {material && mass && (
+        <>
+          <span data-testid="stat-volume">{`${f.volumes.format(material.volume / 1000)} cm³`}</span>
+          {" · "}
+          <span data-testid="stat-mass">{t.mass(grams(mass.total))}</span>
+          {details.some(Boolean) && (
+            <span className="block text-[12px] font-normal text-muted" data-testid="stat-mass-details">
+              {details.filter(Boolean).join(" · ")}
+            </span>
+          )}
+        </>
+      )}
+    </Stat>
+  );
+}
+
 /** A non-blocking warning under the statistics. */
 function Warning({ children }: { children: ReactNode }) {
   return (
@@ -117,13 +183,16 @@ function marginText(margins: Margins, unit: Unit, t: Strings, f: Formats): strin
   return t.margins(length(left), length(right), length(back), length(front), unit);
 }
 
-/** One statistic; "…" while its value is being computed. */
-function Stat({ label, id, children }: { label: string; id: string; children: ReactNode }) {
+/** One statistic, with an optional button of information after its label; "…" while its value is being computed. */
+function Stat({ label, id, info, children }: { label: string; id: string; info?: ReactNode; children: ReactNode }) {
   const t = useStrings();
   const pending = children === null || children === undefined || children === false || children === "";
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-line/70 py-[5px] last:border-b-0">
-      <dt className="shrink-0 text-muted">{label}</dt>
+      <dt className="flex shrink-0 items-center gap-1 self-start text-muted">
+        {label}
+        {info}
+      </dt>
       <dd className="min-w-0 text-right font-medium text-ink tabular-nums" data-testid={`stat-${id}`} aria-busy={pending || undefined}>
         {pending ? (
           <>

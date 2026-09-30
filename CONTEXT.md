@@ -218,6 +218,18 @@ _Avoid_: pin (sauf dans le code), tige (réservé à la vis), pilier
 Le plateau d'impression de l'imprimante, uniquement. Sa taille utile est une préférence locale : elle décide de la découpe, mais n'entre pas dans le lien de partage.
 _Avoid_: build plate, lit, bed (et jamais pour désigner la baseplate)
 
+**Filament**:
+La matière d'impression, choisie dans le menu engrenage (PLA par défaut, PETG, ABS, ASA, TPU, ou « Autre » avec sa densité). C'est une préférence de ce navigateur, avec son prix facultatif en €/kg : elle n'entre pas dans le lien de partage, et ne sert qu'à la **masse** et au coût affichés (#31, ADR 0019).
+_Avoid_: matériau (sauf en général), plastique, bobine
+
+**Densité**:
+La masse d'un cm³ de **filament** plein, en g/cm³, telle que la déclare la fiche technique du fabricant (1,24 pour le PLA), ou telle que l'utilisateur la saisit pour « Autre ».
+_Avoid_: masse volumique (sauf pour la définir), poids spécifique
+
+**Masse**:
+Le poids de filament d'une baseplate, en grammes : le volume mesuré sur les maillages finaux, pièces et clips compris, multiplié par la **densité** du filament, la pièce étant comptée imprimée pleine. Elle est affichée arrondie au gramme, précédée de « ≈ », car le trancheur peut varier de quelques %. C'est la seule valeur affichée qui n'est pas mesurée ou exacte (ADR 0019).
+_Avoid_: poids (sauf dans l'interface anglaise), grammage, estimation
+
 **Trancheur**:
 Le logiciel qui découpe le fichier 3MF ou STL en couches pour l'imprimante (PrusaSlicer, Bambu Studio, OrcaSlicer, Cura).
 _Avoid_: slicer, slicer 3D

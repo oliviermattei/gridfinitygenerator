@@ -1,4 +1,5 @@
 import type { Baseplate, BaseplateSettings, BuildPlate, Quality } from "@repo/geometry";
+import type { Material } from "../mass";
 import type { BaseplateSummary, Comparison, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat, ExportPiece, FileExtension } from "./protocol";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
@@ -12,10 +13,11 @@ export interface EngineClientEvents {
   /** Computing the latest settings shown failed. */
   onError(error: Error): void;
   /**
-   * The volume of baseplates to compare with the one shown (`compare`), measured on their
-   * final mesh, each with the settings and the build plate it was computed for.
+   * The material of baseplates to compare with the one shown (`compare`): the volume of their
+   * pieces and of their clips, measured on their final meshes, each with the settings and the
+   * build plate it was computed for.
    */
-  onVolumes?(volumes: { comparison: Comparison; volume: number }[], buildPlate: BuildPlate): void;
+  onVolumes?(volumes: { comparison: Comparison; material: Material }[], buildPlate: BuildPlate): void;
 }
 
 export interface EngineClient {
@@ -232,7 +234,8 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
       const response = await reply;
       if (response.type === "volumes") {
         // True whatever the settings shown since: the page keeps them by their settings.
-        events.onVolumes?.(list.map((comparison, k) => ({ comparison, volume: response.volumes[k] as number })), target.buildPlate);
+        const material = (k: number): Material => ({ volume: response.volumes[k] as number, clips: response.clipsVolumes[k] as number });
+        events.onVolumes?.(list.map((comparison, k) => ({ comparison, material: material(k) })), target.buildPlate);
       }
     } catch {
       // Cancelled, or failed: the comparison is left out.

@@ -105,6 +105,8 @@ export type EngineResponse =
       type: "volumes";
       /** Volume of each baseplate of the request, in mm³, measured on its final mesh. */
       volumes: number[];
+      /** Volume of all the clips of each baseplate of the request, in mm³, measured on the clip (`stats.clipsVolume`). */
+      clipsVolumes: number[];
       /** Triangles of the largest of their meshes (final quality). */
       triangles: number;
     }

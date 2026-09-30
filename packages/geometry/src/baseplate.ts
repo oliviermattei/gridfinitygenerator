@@ -29,9 +29,10 @@ export interface BaseplateStats {
   /** Bounding box of the mesh, in millimetres (width along X, depth along Y). */
   dimensions: { width: number; depth: number; height: number };
   /**
-   * Volume of material, in mm³, measured on the final mesh (the one exported): never an
-   * estimate, and no mass, which would take an assumed density. Null for the preview,
-   * whose coarser mesh is not the one printed.
+   * Volume of material of the pieces, in mm³, measured on the final mesh (the one exported),
+   * never an estimate; the clips are apart (`clipsVolume`). The mass is the app's: it takes the
+   * density of the filament, a preference (#31, ADR 0019). Null for the preview, whose coarser
+   * mesh is not the one printed.
    */
   volume: number | null;
   /**
@@ -47,6 +48,12 @@ export interface BaseplateStats {
   magnets: number;
   /** Number of clips to print, which hold the pieces together: none for a single piece or without clips. */
   clips: number;
+  /**
+   * Volume of material of all the clips to print, in mm³: the volume of one clip measured on
+   * its mesh (`Baseplate.clip`) times their number; 0 without clips. Null for the preview,
+   * like `volume`.
+   */
+  clipsVolume: number | null;
 }
 
 /**
@@ -226,6 +233,7 @@ async function buildBaseplate(
       ? assembleWithBricks(wasm, frame, quality === "final", split.pieces, labels)
       : assembleWithBooleans(wasm, frame, split.pieces, labels);
   const { mesh, pieces } = joinPieces(meshes, split.pieces, quality);
+  const clip = clips ? withArena((own) => meshOf(clipSolid(wasm, own, clips.slot))) : null;
   return {
     mesh,
     layout,
@@ -237,9 +245,10 @@ async function buildBaseplate(
       screws: layout.screws.length,
       magnets: layout.magnets.length,
       clips: clips?.placements.length ?? 0,
+      clipsVolume: quality === "final" ? (clip && clips ? volumeOf(clip) * clips.placements.length : 0) : null,
     },
     pieces,
-    clip: clips ? withArena((own) => meshOf(clipSolid(wasm, own, clips.slot))) : null,
+    clip,
   };
 }
 
