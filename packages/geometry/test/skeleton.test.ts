@@ -140,12 +140,24 @@ describe("a skeleton is the open baseplate with its murets notched between the c
 });
 
 describe("a skeleton cut for the build plate", () => {
-  it("takes no clips, whatever the setting: the middle of the murets is notched", async () => {
-    const skeleton = await generateBaseplate({ ...SKELETON, clips: true }, "final", { buildPlate: PLATE_256 });
+  it("takes its clips in its posts: slots of 4 mm, which end 0.8 mm short of the notch", async () => {
+    const [skeleton, flush] = await Promise.all([
+      generateBaseplate(SKELETON, "final", { buildPlate: PLATE_256 }),
+      generateBaseplate({ ...SKELETON, pocketProfile: "flush" }, "preview", { buildPlate: PLATE_256 }),
+    ]);
     expect(skeleton.stats.pieces).toBe(4);
-    expect(skeleton.stats.clips).toBe(0);
-    expect(skeleton.layout.clips).toBeNull();
-    expect(skeleton.clip).toBeNull();
+    expect(skeleton.stats.clips).toBe(8);
+    // From 1.92 mm off the crossing of the cuts, the post reaches 6.80 mm at the top of the slot
+    // (2.80 mm): 6.80 − 0.8 − 1.92 = 4.08, down to a tenth. 4.13 in the flush profile.
+    expect(skeleton.layout.clips?.slot).toMatchObject({ length: 4, top: 2.8 });
+    expect(flush.layout.clips?.slot).toMatchObject({ length: 4.1, top: 2.4 });
+    expect((await checkMesh(skeleton.clip ?? { positions: new Float32Array(), indices: new Uint32Array() })).bounds.max[2]).toBeCloseTo(3.5, 5);
+    // The clip on the row cut (y = 0), left of the crossing at x = −21: its slot from x = −22.92
+    // to −26.92, then 0.8 mm of post at least up to the notch, along its leg (y = −0.9).
+    const { sections } = await checkMesh(pieceMesh(skeleton, skeleton.pieces[2] as (typeof skeleton.pieces)[number]), [2.75]);
+    const section = sections.get(2.75) ?? [];
+    expect(inSection(section, [-24, -0.9])).toBe(false);
+    for (const x of [-26.95, -27.3, -27.7]) expect(inSection(section, [x, -0.9])).toBe(true);
     for (const piece of skeleton.pieces) {
       const mesh = pieceMesh(skeleton, piece);
       expect((await checkMesh(mesh)).status).toBe("NoError");

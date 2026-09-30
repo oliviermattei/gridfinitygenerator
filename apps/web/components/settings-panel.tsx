@@ -11,7 +11,6 @@ import {
   skeletonOf,
   stackPlanOf,
   stackRuleOf,
-  takesClips,
   trayFloorOf,
   type BaseplateSettings,
   type BaseplateType,
@@ -203,14 +202,16 @@ export function Families({
       >
         <TypeFields settings={settings} onSettingsChange={onSettingsChange} volumes={typeVolumes} />
       </FamilyItem>
-      <FamilyItem
-        {...bind("alignment")}
-        icon={<AlignIcon className="size-[18px]" />}
-        title={t.alignment}
-        summary={t.alignments[settings.alignment]}
-      >
-        <AlignmentPad value={settings.alignment} onChange={(alignment) => onSettingsChange({ alignment })} />
-      </FamilyItem>
+      {hasMargin(summary) && (
+        <FamilyItem
+          {...bind("alignment")}
+          icon={<AlignIcon className="size-[18px]" />}
+          title={t.alignment}
+          summary={t.alignments[settings.alignment]}
+        >
+          <AlignmentPad value={settings.alignment} onChange={(alignment) => onSettingsChange({ alignment })} />
+        </FamilyItem>
+      )}
       <FamilyItem
         {...bind("margin")}
         icon={<MarginIcon className="size-[18px]" />}
@@ -272,28 +273,24 @@ export function Families({
       >
         <ScrewFields settings={settings} onSettingsChange={onSettingsChange} />
       </FamilyItem>
-      <FamilyItem
-        {...bind("clips")}
-        icon={<ClipIcon className="size-[18px]" />}
-        title={t.clips}
-        summary={clipsSummary(settings, summary, t)}
-        on={clipsOn(settings)}
-        control={
-          <ToggleSwitch
-            label={t.clips}
-            checked={clipsOn(settings)}
-            disabled={!takesClips(settings.baseplateType)}
-            onChange={(clips) => onSettingsChange({ clips })}
-          />
-        }
-      >
-        <div className="flex items-center gap-3">
-          <span className={`grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-surface ${clipsOn(settings) ? "text-muted [--art:var(--accent)]" : "text-faint"}`}>
-            <ClipArt className="h-9 w-12" />
-          </span>
-          <p className="text-[12.5px] leading-snug text-muted">{clipsHint(settings, summary, t)}</p>
-        </div>
-      </FamilyItem>
+      {/* Clips only join the pieces of a cut baseplate: with a single piece, nothing to set. */}
+      {summary && summary.stats.pieces > 1 && (
+        <FamilyItem
+          {...bind("clips")}
+          icon={<ClipIcon className="size-[18px]" />}
+          title={t.clips}
+          summary={clipsSummary(settings, summary, t)}
+          on={settings.clips}
+          control={<ToggleSwitch label={t.clips} checked={settings.clips} onChange={(clips) => onSettingsChange({ clips })} />}
+        >
+          <div className="flex items-center gap-3">
+            <span className={`grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-surface ${settings.clips ? "text-muted [--art:var(--accent)]" : "text-faint"}`}>
+              <ClipArt className="h-9 w-12" />
+            </span>
+            <p className="text-[12.5px] leading-snug text-muted">{settings.clips ? t.clipsHint : t.clipsOffHint}</p>
+          </div>
+        </FamilyItem>
+      )}
       {summary && summary.stats.pieces > 1 && (
         <StackFamily
           {...bind("stack")}
@@ -357,8 +354,7 @@ function MarginFields({
 }: FieldsProps & { summary: BaseplateSummary | null; surpluses: Partial<Record<MarginShape, number>> }) {
   const t = useStrings();
   const f = useFormats();
-  const margins = summary?.layout.margins;
-  const hasMargin = !margins || margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0;
+  const withMargin = hasMargin(summary);
   const surplus = (shape: MarginShape) => {
     const measured = surpluses[shape];
     if (measured === undefined) return "…";
@@ -375,11 +371,11 @@ function MarginFields({
         options={MARGIN_SHAPES.map((shape) => ({
           value: shape,
           label: t.marginShapes[shape],
-          description: hasMargin ? surplus(shape) : undefined,
+          description: withMargin ? surplus(shape) : undefined,
           art: <MarginArt kind={shape} className="h-auto w-full max-w-[64px]" />,
         }))}
       />
-      <p className="mt-3 text-[12.5px] leading-snug text-muted">{hasMargin ? t.marginShapeHints[settings.marginShape] : t.noMarginHint}</p>
+      <p className="mt-3 text-[12.5px] leading-snug text-muted">{withMargin ? t.marginShapeHints[settings.marginShape] : t.noMarginHint}</p>
       <div className="mt-3">
         <SwitchOption
           label={t.minimalMargin}
@@ -388,7 +384,7 @@ function MarginFields({
           onChange={(minimalMargin) => onSettingsChange({ minimalMargin })}
         />
       </div>
-      {hasMargin && <p className="mt-2 text-[12px] leading-snug text-muted">{t.marginVolumesHint}</p>}
+      {withMargin && <p className="mt-2 text-[12px] leading-snug text-muted">{t.marginVolumesHint}</p>}
     </>
   );
 }
@@ -512,27 +508,19 @@ function screwsSummary(settings: BaseplateSettings, summary: BaseplateSummary | 
   return t.screwsSummary(count, f.fine.format(settings.screwShank), f.fine.format(settings.screwHead));
 }
 
-/** Whether the baseplate takes clips: they are on, and its type takes them (none in a skeleton). */
-function clipsOn(settings: BaseplateSettings): boolean {
-  return settings.clips && takesClips(settings.baseplateType);
+/** "8 clips à imprimer", as laid out by the engine at the ends of the junctions (a cut baseplate). */
+function clipsSummary(settings: BaseplateSettings, summary: BaseplateSummary, t: Strings): string {
+  return settings.clips ? t.clipsSummary(String(summary.stats.clips)) : t.clipsOff;
 }
 
 /**
- * "15 clips à imprimer", as laid out by the engine along the cuts; "Sans découpe" for a
- * baseplate in a single piece, which needs none; "…" until the engine answers.
+ * Whether the baseplate, as last laid out, has a margin on any side: the alignment only places
+ * the grid in what the margin leaves (#30). Shown until the engine first answers.
  */
-function clipsSummary(settings: BaseplateSettings, summary: BaseplateSummary | null, t: Strings): string {
-  if (!takesClips(settings.baseplateType)) return t.clipsSkeleton;
-  if (!settings.clips) return t.clipsOff;
-  if (!summary) return "…";
-  return summary.stats.pieces <= 1 ? t.clipsUncut : t.clipsSummary(String(summary.stats.clips));
-}
-
-/** What the clips are for, or why there are none. */
-function clipsHint(settings: BaseplateSettings, summary: BaseplateSummary | null, t: Strings): string {
-  if (!takesClips(settings.baseplateType)) return t.clipsSkeletonHint;
-  if (!settings.clips) return t.clipsOffHint;
-  return summary && summary.stats.pieces <= 1 ? t.clipsUncutHint : t.clipsHint;
+function hasMargin(summary: BaseplateSummary | null): boolean {
+  if (!summary) return true;
+  const { left, right, back, front } = summary.layout.margins;
+  return left > 0 || right > 0 || back > 0 || front > 0;
 }
 
 /**

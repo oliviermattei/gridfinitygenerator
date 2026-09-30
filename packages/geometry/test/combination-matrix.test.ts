@@ -60,6 +60,12 @@ const EDGES: [name: string, settings: Partial<BaseplateSettings>][] = [
   // A margin wider than a cell (#29): whole cells, and a muret along the band not built.
   ["margins of 50 mm, a 2 mm chamfer and a radius of 8 mm", { drawerWidth: 350, drawerDepth: 240, bottomChamfer: 2, outerRadius: 8, alignment: "br" }],
 ];
+/** A crossing of two cuts (#30): 4 clips at the most crowded corner, on each type. */
+const CROSSED: Case[] = BASEPLATE_TYPES.map((baseplateType, t) => ({
+  name: `cut in 4 around a crossing of the cuts: ${baseplateType}, ${MARGIN_SHAPES[t % MARGIN_SHAPES.length]}, ${PROFILES[t % 2]}`,
+  settings: { drawerWidth: 150, drawerDepth: 150, baseplateType, marginShape: MARGIN_SHAPES[t % MARGIN_SHAPES.length], pocketProfile: PROFILES[t % 2], screws: true },
+  buildPlate: { width: 100, depth: 100 },
+}));
 const EDGE_CASES: Case[] = EDGES.flatMap(([name, extra], e) =>
   BASEPLATE_TYPES.map((baseplateType, t) => {
     const marginShape = MARGIN_SHAPES[(e + t) % MARGIN_SHAPES.length];
@@ -112,7 +118,8 @@ describe("combinations of the settings of v1.1, in final quality", () => {
     expect(Math.min(margins.left, margins.right, margins.back, margins.front)).toBeGreaterThan(0);
     if (c.buildPlate) {
       expect(baseplate.stats.pieces).toBe(2);
-      expect(baseplate.stats.clips > 0).toBe(c.settings.baseplateType !== "skeleton");
+      // Every type takes its clips (ADR 0018): a junction of 2 cells, a single clip.
+      expect(baseplate.stats.clips).toBe(1);
     }
     if (c.settings.screws) expect(baseplate.stats.screws).toBeGreaterThan(0);
   });
@@ -120,5 +127,13 @@ describe("combinations of the settings of v1.1, in final quality", () => {
   it.each(EDGE_CASES.map((c) => [c.name, c] as const))("%s: NoError, no pinched edge, same volume by bricks and booleans", async (_, c) => {
     const baseplate = await expectSoundAndSame(c);
     expect(baseplate.stats.pieces).toBeGreaterThan(1);
+  });
+
+  it.each(CROSSED.map((c) => [c.name, c] as const))("%s: NoError, no pinched edge, same volume by bricks and booleans", async (_, c) => {
+    const baseplate = await expectSoundAndSame(c);
+    expect(baseplate.stats.pieces).toBe(4);
+    expect(baseplate.layout.split.columnCuts).toHaveLength(1);
+    expect(baseplate.layout.split.rowCuts).toHaveLength(1);
+    expect(baseplate.stats.clips).toBe(4);
   });
 });

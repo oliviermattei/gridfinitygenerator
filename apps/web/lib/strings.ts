@@ -95,7 +95,7 @@ const fr = {
   height: "hauteur",
   size: "Taille",
   sizeMode: "Mode de taille",
-  sizeDrawer: "Tiroir",
+  sizeDrawer: "Dimensions",
   sizeCells: "Nombre de cellules",
   drawerHint: "Cotes intérieures du tiroir : la baseplate le remplit.",
   drawerWidth: "Largeur",
@@ -132,9 +132,9 @@ const fr = {
   trayHint: (floor: string, gap: string) =>
     `La grille sur un fond plein de ${floor} mm : rien ne passe dessous, pour un bureau, une étagère ou de petites pièces. Les poches montent de ${floor} mm, plus ${gap} mm de jeu : le bac reste assis sur ses pentes, sans toucher le fond.`,
   skeletonHint: (band: string) =>
-    `Les murets sont entaillés entre les croisements, jusqu'à une bande de ${band} mm : seuls des poteaux au profil complet restent aux coins des cellules, et le bac n'est guidé que par ses 4 coins. Environ deux fois moins de matière. Le tour de la grille reste entier. Pas de clips.`,
+    `Les murets sont entaillés entre les croisements, jusqu'à une bande de ${band} mm : seuls des poteaux au profil complet restent aux coins des cellules, et le bac n'est guidé que par ses 4 coins. Environ deux fois moins de matière. Le tour de la grille reste entier. Les clips se logent dans les poteaux.`,
   clickbaseHint: (interference: string) =>
-    `Deux lamelles dans la paroi de chaque côté de poche serrent le pied du bac de ${interference} mm : il s'enclenche et tient sans aimant. Le premier bac casse les fines toiles qui portent les lamelles à l'impression. Le milieu des côtés reste plein pour les clips. D'après CLICKbase Refined (ZeroCtrl) et CLICKbase (John Hall), sous licence CC BY-NC-SA : pas d'usage commercial.`,
+    `Deux lamelles dans la paroi de chaque côté de poche serrent le pied du bac de ${interference} mm : il s'enclenche et tient sans aimant. Le premier bac casse les fines toiles qui portent les lamelles à l'impression. À côté d'un clip, la lamelle est raccourcie. D'après CLICKbase Refined (ZeroCtrl) et CLICKbase (John Hall), sous licence CC BY-NC-SA : pas d'usage commercial.`,
   clickbaseWarning: "CLICKbase : imprimez en PETG, pas en PLA, qui flue et ne serre plus les bacs. Générateur de parois Arachne, buse de 0,4 mm.",
   typeVolumesHint: "Matière de la baseplate avec chaque type, mesurée sur le maillage.",
   margin: "Marge",
@@ -164,15 +164,10 @@ const fr = {
   screwsHint: "La tête se loge dans le croisement des murets, sous les pentes des poches. Le jeu des trous se règle dans Avancé.",
   clips: "Clips",
   clipsOff: "Désactivés",
-  clipsUncut: "Sans découpe",
   clipsSummary: (count: string) => `${count} clips à imprimer`,
   clipsHint:
-    "Agrafes en U qui relient les pièces : elles s'enfoncent par-dessous dans le pied des murets, à cheval sur chaque coupe, et ne se voient pas de dessus. Elles sont dans le fichier, avec les pièces, couchées sur le côté.",
-  clipsUncutHint: "La baseplate tient sur votre plateau : pas de découpe, donc pas de clip.",
+    "Agrafes en U qui relient les pièces, deux par jonction, une à chaque bout, collées au coin : elles s'enfoncent par-dessous dans le pied des murets, à cheval sur la coupe, et ne se voient pas de dessus. Elles sont dans le fichier, avec les pièces, couchées sur le côté.",
   clipsOffHint: "Sans clips, les pièces sont posées bout à bout, et le tiroir les tient.",
-  clipsSkeleton: "Sans objet en Skeleton",
-  clipsSkeletonHint:
-    "Pas de clips en Skeleton : le milieu des murets, où ils se logent, est entaillé. Les pièces sont posées bout à bout, et le tiroir les tient.",
   stack: "Empiler les pièces",
   stackOff: "Désactivé",
   stackSummary: (pieces: number, stacks: number) => (stacks === 1 ? `${pieces} pièces en une pile` : `${pieces} pièces en ${stacks} piles`),
@@ -355,7 +350,7 @@ const en: Strings = {
   height: "height",
   size: "Size",
   sizeMode: "Size mode",
-  sizeDrawer: "Drawer",
+  sizeDrawer: "Dimensions",
   sizeCells: "Number of cells",
   drawerHint: "Inside dimensions of the drawer: the baseplate fills it.",
   drawerWidth: "Width",
@@ -392,9 +387,9 @@ const en: Strings = {
   trayHint: (floor: string, gap: string) =>
     `The grid on a solid floor of ${floor} mm: nothing goes through, for a desk, a shelf or small parts. The pockets rise by ${floor} mm, plus ${gap} mm of gap: the bin stays seated on its slopes, clear of the floor.`,
   skeletonHint: (band: string) =>
-    `The walls between pockets are notched between their crossings, down to a band of ${band} mm: only posts of the whole profile stay at the corners of the cells, and the bin is guided by its 4 corners only. About half the material. The rim of the grid stays whole. No clips.`,
+    `The walls between pockets are notched between their crossings, down to a band of ${band} mm: only posts of the whole profile stay at the corners of the cells, and the bin is guided by its 4 corners only. About half the material. The rim of the grid stays whole. The clips sit in the posts.`,
   clickbaseHint: (interference: string) =>
-    `Two lamellas in the wall of each side of a pocket grip the foot of the bin by ${interference} mm: it clicks in and stays, without magnets. The first bin breaks the thin webs that hold the lamellas up in print. The middle of each side stays whole for the clips. After CLICKbase Refined (ZeroCtrl) and CLICKbase (John Hall), under the CC BY-NC-SA license: no commercial use.`,
+    `Two lamellas in the wall of each side of a pocket grip the foot of the bin by ${interference} mm: it clicks in and stays, without magnets. The first bin breaks the thin webs that hold the lamellas up in print. Next to a clip, the lamella is shortened. After CLICKbase Refined (ZeroCtrl) and CLICKbase (John Hall), under the CC BY-NC-SA license: no commercial use.`,
   clickbaseWarning: "CLICKbase: print in PETG, not PLA, which creeps and stops gripping the bins. Arachne wall generator, 0.4 mm nozzle.",
   typeVolumesHint: "Material of the baseplate of each type, measured on the mesh.",
   margin: "Margin",
@@ -423,15 +418,10 @@ const en: Strings = {
   screwsHint: "The head sits where the walls between pockets cross, under the slopes of the pockets. The hole gap is set in Advanced.",
   clips: "Clips",
   clipsOff: "Off",
-  clipsUncut: "No cut",
   clipsSummary: (count: string) => `${count} clips to print`,
   clipsHint:
-    "U-shaped staples that join the pieces: they push up from below into the foot of the walls, astride each cut, and do not show from above. They come in the file with the pieces, lying on their side.",
-  clipsUncutHint: "The baseplate fits on your build plate: no cut, so no clip.",
+    "U-shaped staples that join the pieces, two per junction, one at each end, against the corner: they push up from below into the foot of the walls, astride the cut, and do not show from above. They come in the file with the pieces, lying on their side.",
   clipsOffHint: "Without clips, the pieces lie end to end, and the drawer holds them.",
-  clipsSkeleton: "Not with Skeleton",
-  clipsSkeletonHint:
-    "No clips with Skeleton: the middle of the walls, where they sit, is notched. The pieces lie end to end, and the drawer holds them.",
   stack: "Stack the pieces",
   stackOff: "Off",
   stackSummary: (pieces: number, stacks: number) => (stacks === 1 ? `${pieces} pieces in one stack` : `${pieces} pieces in ${stacks} stacks`),

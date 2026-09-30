@@ -1,6 +1,6 @@
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
-import { clickPocketTool, lamellaSides } from "./clickbase";
+import { clickPocketTool, lamellaKey, cellLamellas, type LamellaSpan } from "./clickbase";
 import { slotTools } from "./clips";
 import { labelTool, type Label } from "./label";
 import { marginOf } from "./margin";
@@ -43,13 +43,13 @@ export function assembleWithBooleans(
       pockets.set(cellProfile, tool);
       return tool;
     };
-    // The pockets of a CLICKbase, with the lamellas of their sides, once per pattern of sides.
+    // The pockets of a CLICKbase, with the lamellas of their sides, once per pattern of lamellas.
     const { clickbase } = frame;
-    const clickPockets = new Map<number, Manifold>();
-    const clickPocketOf = (sides: number) => {
+    const clickPockets = new Map<string, Manifold>();
+    const clickPocketOf = (lamellas: readonly (readonly LamellaSpan[])[], key: string) => {
       if (!clickbase) throw new Error("No lamellas without CLICKbase");
-      const tool = clickPockets.get(sides) ?? clickPocketTool(wasm, own, { ...frame, clickbase }, sides);
-      clickPockets.set(sides, tool);
+      const tool = clickPockets.get(key) ?? clickPocketTool(wasm, own, { ...frame, clickbase }, lamellas);
+      clickPockets.set(key, tool);
       return tool;
     };
     // The pockets and the margin's cut do not overlap, nor do the lamellas, well inside their
@@ -57,8 +57,9 @@ export function assembleWithBooleans(
     const tools: Manifold[] = [];
     for (let i = 0; i < columns; i++)
       for (let j = 0; j < rows; j++) {
-        const lamellas = lamellaSides(frame, labels, i, j);
-        const tool = lamellas !== 0 ? clickPocketOf(lamellas) : pocketOf(lower.get(`${i},${j}`) ?? profile);
+        const lamellas = cellLamellas(frame, labels, i, j);
+        const key = lamellaKey(lamellas);
+        const tool = key !== "" ? clickPocketOf(lamellas, key) : pocketOf(lower.get(`${i},${j}`) ?? profile);
         tools.push(own(tool.translate([...cellCentre(i, j, frame), 0])));
       }
     const cut = margin?.solid();

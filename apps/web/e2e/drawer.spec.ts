@@ -13,13 +13,36 @@ function narrowMarginWarning(page: Page) {
   return page.getByRole("alert").filter({ hasText: "plus étroite que deux largeurs de ligne", visible: true });
 }
 
+test("the alignment family shows only when the baseplate has a margin, in both modes", async ({ page }, testInfo) => {
+  await page.goto("/fr/baseplate");
+  await openSettings(page, testInfo);
+  const alignment = page.getByRole("button", { name: /^Alignement/ });
+  // The default drawer leaves a margin: the alignment places the grid in it.
+  await expect(alignment).toBeVisible();
+  // A drawer of 10 × 7 cells exactly, once the gap of 1 mm is taken: no margin, nothing to align.
+  await numberField(page, "Largeur").fill("421");
+  await numberField(page, "Profondeur").fill("295");
+  await expect(readout(page, "cells")).toHaveText("10 × 7 cellules");
+  await expect(page.getByTestId("size-result").filter({ visible: true })).toHaveText("10 × 7 cellules, sans marge");
+  await expect(alignment).toHaveCount(0);
+  // A millimetre more: a margin again, and the family comes back.
+  await numberField(page, "Largeur").fill("422");
+  await expect(alignment).toBeVisible();
+  // By the number of cells, without margins: hidden; with a margin in width: shown.
+  await chooseCells(page);
+  await expect(page.getByTestId("size-result").filter({ visible: true })).toContainText("sans marge");
+  await expect(alignment).toHaveCount(0);
+  await numberField(page, "Marge en largeur").fill("10");
+  await expect(alignment).toBeVisible();
+});
+
 test("entering a drawer updates the cells, the preview and the statistics", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
   const preview = page.getByTestId("mesh-preview");
 
   // The default drawer, 400 × 280 mm, less the 1 mm gap: 9 × 6 cells, the rest in the margin.
-  await expect(page.getByRole("radio", { name: "Tiroir" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "Dimensions" })).toBeChecked();
   await expect(numberField(page, "Largeur")).toHaveValue("400");
   await expect(numberField(page, "Profondeur")).toHaveValue("280");
   await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
@@ -65,10 +88,10 @@ test("the margin is a frame of crossbars by default, and the statistics count it
 
   // The default drawer: the 9 × 6 grid (77,2 cm³) and its frame of crossbars, 2 mm high
   // (4,1 cm³), as measured by the margin prototype (#3, variant 3), 81,3 cm³ in one piece; for
-  // the default build plate, 4 pieces, less the slots of their 15 clips (0,4 cm³), plus the
+  // the default build plate, 4 pieces, less the slots of their 8 clips (0,2 cm³), plus the
   // crossbars doubled on the cuts (0,1 cm³), and less the holes of their 28 magnets (2,0 cm³).
   await expect(stat(page, "dimensions")).toHaveText("399 × 279 × 4,6 mm");
-  await expect(volume).toHaveText("79,0 cm³");
+  await expect(volume).toHaveText("79,2 cm³");
   const drawerTriangles = await page.getByTestId("mesh-preview").getAttribute("data-triangles");
   expect(drawerTriangles).not.toBeNull();
 
@@ -79,9 +102,9 @@ test("the margin is a frame of crossbars by default, and the statistics count it
   await expect(stat(page, "cells")).toHaveText("11 × 7");
   await expect(stat(page, "margin")).toHaveText("gauche 18,5, droite 18,5, arrière 2,5, avant 2,5 mm");
   await expect(stat(page, "dimensions")).toHaveText("499 × 299 × 4,6 mm");
-  // 114,6 cm³ in one piece; 6 pieces here, less the slots of their 25 clips (0,7 cm³), plus
+  // 114,6 cm³ in one piece; 6 pieces here, less the slots of their 14 clips (0,4 cm³), plus
   // the crossbars doubled on the cuts, and less the holes of their 40 magnets (2,9 cm³).
-  await expect(volume).toHaveText("111,1 cm³");
+  await expect(volume).toHaveText("111,4 cm³");
   await expect(page.getByTestId("mesh-preview")).not.toHaveAttribute("data-triangles", drawerTriangles ?? "");
 });
 

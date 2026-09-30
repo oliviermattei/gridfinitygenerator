@@ -51,28 +51,28 @@ test("the margin comes in three shapes, each with the material it adds, the fram
   await expect(shape(page, "Cadre")).toBeChecked();
 
   // The default drawer cut in 4 pieces for the default build plate, measured on the final
-  // meshes, less its grid alone (74,7 cm³): the current shape, then the other two and the grid
+  // meshes, less its grid alone (74,9 cm³): the current shape, then the other two and the grid
   // alone, measured once it is shown. The truncated cells and the extended grid carry the
   // magnets on to the edge of the grid: 54 holes instead of 28.
-  await expect(volume(page)).toHaveText("79,0 cm³");
+  await expect(volume(page)).toHaveText("79,2 cm³");
   await expect(shape(page, "Cadre")).toContainText("+ 4,2 cm³");
   await expect(shape(page, "Cellules")).toContainText("+ 22,4 cm³");
   await expect(shape(page, "Grille")).toContainText("+ 16,1 cm³");
 
   // Changing the shape changes the volume shown, and the family says which one it is.
   await shape(page, "Grille").click();
-  await expect(volume(page)).toHaveText("90,8 cm³");
+  await expect(volume(page)).toHaveText("91,0 cm³");
   await expect(family).toHaveAccessibleName("Marge Grille prolongée");
   await expect(page.getByText(/Pas de mur extérieur/).filter({ visible: true })).toBeVisible();
   await shape(page, "Cellules").click();
-  await expect(volume(page)).toHaveText("97,2 cm³");
+  await expect(volume(page)).toHaveText("97,4 cm³");
   await expect(family).toHaveAccessibleName("Marge Cellules tronquées");
 
   // Kept on reload, like every setting of the baseplate.
   await page.reload();
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Marge/ })).toHaveAccessibleName("Marge Cellules tronquées");
-  await expect(volume(page)).toHaveText("97,2 cm³");
+  await expect(volume(page)).toHaveText("97,4 cm³");
 });
 
 test("the minimal margin reduces every shape to its supports: the preview and the surpluses change", async ({ page }, testInfo) => {
@@ -90,7 +90,7 @@ test("the minimal margin reduces every shape to its supports: the preview and th
   await expect(minimal).toBeChecked();
   await expect(family).toHaveAccessibleName("Marge Cadre à traverses, minimale");
   await expect(preview).not.toHaveAttribute("data-triangles", triangles ?? "");
-  await expect(volume(page)).toHaveText("75,5 cm³");
+  await expect(volume(page)).toHaveText("75,7 cm³");
   await expect(shape(page, "Cadre")).toContainText("+ 0,7 cm³");
   await expect(shape(page, "Cellules")).toContainText("+ 7,9 cm³");
   await expect(shape(page, "Grille")).toContainText("+ 1,8 cm³");
@@ -99,11 +99,11 @@ test("the minimal margin reduces every shape to its supports: the preview and th
   await page.goto("/fr/baseplate?v=1&mg=brackets");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Marge/ })).toHaveAccessibleName("Marge Cadre à traverses, minimale");
-  await expect(volume(page)).toHaveText("75,5 cm³");
+  await expect(volume(page)).toHaveText("75,7 cm³");
   await page.goto("/fr/baseplate?v=1&mg=extended&min=1");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Marge/ })).toHaveAccessibleName("Marge Grille prolongée, minimale");
-  await expect(volume(page)).toHaveText("76,6 cm³");
+  await expect(volume(page)).toHaveText("76,7 cm³");
 });
 
 test("choosing the extended grid takes the outer wall away: the murets end on heels", async ({ page }, testInfo) => {

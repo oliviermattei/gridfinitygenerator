@@ -4,6 +4,8 @@ status: proposed
 
 # Clips en U insérés par-dessous dans le pied des murets
 
+> **Placement remplacé par l'ADR 0018** (#30) : deux clips par jonction, un à chaque bout, collés au coin, et non plus un au milieu de chaque bord de cellule. L'agrafe, sa fente et ses jeux restent ceux-ci.
+
 Une baseplate découpée pour le plateau (ADR 0009) sort en pièces posées bout à bout. Le tiroir les retient dans son plan, mais une coupe qui s'ouvre fait mal asseoir un bac posé à cheval. La spec v1.1 (#20) demande des **clips** : des agrafes en U, imprimées à part, insérées par-dessous dans le pied des murets, à cheval sur la coupe, invisibles de dessus et qui affleurent le dessous. Depuis #22, c'est un réglage de la baseplate (`clips`, clé `cl` du lien de partage), activé par défaut ; il ne sert que quand il y a découpe.
 
 ## Géométrie (`packages/geometry/src/clips.ts`, banc `prototypes/clips/`)

@@ -31,7 +31,7 @@ test("the statistics frame shows the real numbers of the baseplate, and … whil
   // numbers engraved under the pieces (about 1 mm³ each), the slots of the clips that join
   // them (27,8 mm³ each) and the magnet holes (72,9 mm³ each), plus the crossbars doubled on the cuts.
   const volume = stat(page, "volume");
-  await expect(volume).toHaveText("79,0 cm³");
+  await expect(volume).toHaveText("79,2 cm³");
   await expect(volume).not.toHaveAttribute("aria-busy");
 
   await chooseCells(page);

@@ -126,8 +126,8 @@ export interface Baseplate {
  * (CLICKbase, clickbase.ts). With a build plate it does not fit on
  * (`options.buildPlate`), it is cut on grid lines into pieces that do, each with its number
  * engraved underneath (split.ts, label.ts, ADR 0009), and, with the clips on, a slot astride
- * the cut in the middle of each side of a cell along it, for a clip printed apart (clips.ts,
- * ADR 0010). The settings are
+ * the cut at each end of each junction of two pieces, against the corner, for a clip printed
+ * apart (clips.ts, ADR 0010 and ADR 0018). The settings are
  * first brought into their ranges, and a missing one takes its default (`clampSettings`):
  * without settings, the baseplate of the default drawer. The mesh of each piece is always
  * closed; the final mesh, the one that gets exported, is also checked by manifold
@@ -208,8 +208,10 @@ async function buildBaseplate(
   };
   const split = splitPlanOf(uncut, options.buildPlate ?? null);
   const labels = labelsOf(split);
-  const clips = clipsOf(settings.clips && type.clips, uncut, split, labels);
-  const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips };
+  const clips = clipsOf(settings.clips, uncut, split, labels);
+  // The slots of the clips, under the murets, never show from above: the preview leaves them
+  // out, and the lamellas of a CLICKbase whole, for its 100 ms; the final mesh has them (ADR 0018).
+  const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips: quality === "final" ? clips : null };
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
   const layout: BaseplateLayout = {
     ...cells,

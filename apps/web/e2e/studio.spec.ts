@@ -141,7 +141,7 @@ test.describe("desktop", () => {
       });
       reached.push(name);
     }
-    for (const name of ["Paramètres", "Tiroir", "Largeur", "Profondeur", "Vis", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
+    for (const name of ["Paramètres", "Dimensions", "Largeur", "Profondeur", "Vis", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
       expect(reached, `${name} is reached with Tab`).toContain(name);
     }
     expect(reached.some((name) => name.startsWith("Taille"))).toBe(true);

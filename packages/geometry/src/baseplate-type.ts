@@ -22,8 +22,6 @@ export const BASEPLATE_TYPES: readonly BaseplateType[] = ["normal", "tray", "ske
 export interface BaseplateTypeVariant {
   /** The pocket profile of the cells, from the profile of the settings, at a layer height. */
   profile(profile: PocketProfile, layerHeight: number): PocketProfile;
-  /** Whether a baseplate of this type, cut for the build plate, takes clips (clips.ts). */
-  clips: boolean;
   /** The notches of the murets at a layer height (skeleton.ts), null for a type without. */
   skeleton(layerHeight: number): Skeleton | null;
   /** The lamellas of the pocket walls (clickbase.ts), null for a type without. */
@@ -71,22 +69,16 @@ export function trayProfile(profile: PocketProfile, { thickness, gap }: TrayFloo
   return { height: at(profile.height + lift), topRadius: profile.topRadius, floor: thickness, points: [[thickness, foot[1]], ...wall] };
 }
 
-/** Whether a baseplate of a type takes clips when it is cut (none in a skeleton: ADR 0014). */
-export function takesClips(type: BaseplateType): boolean {
-  return BASEPLATE_TYPE_VARIANTS[type].clips;
-}
-
 /** The variant of each type of baseplate (`BaseplateSettings.baseplateType`). */
 export const BASEPLATE_TYPE_VARIANTS: Record<BaseplateType, BaseplateTypeVariant> = {
-  normal: { profile: (profile) => profile, clips: true, skeleton: () => null, clickbase: () => null },
+  normal: { profile: (profile) => profile, skeleton: () => null, clickbase: () => null },
   tray: {
     profile: (profile, layerHeight) => trayProfile(profile, trayFloorOf(layerHeight)),
-    clips: true,
     skeleton: () => null,
     clickbase: () => null,
   },
-  // The middle of the murets, where the slots of the clips go, is notched away: no clips.
-  skeleton: { profile: (profile) => profile, clips: false, skeleton: skeletonOf, clickbase: () => null },
-  // The lamellas keep the middle of each side whole: the clips go there, between them.
-  clickbase: { profile: (profile) => profile, clips: true, skeleton: () => null, clickbase: clickbaseOf },
+  // The slots of the clips lie against the corners, under the posts (ADR 0018).
+  skeleton: { profile: (profile) => profile, skeleton: skeletonOf, clickbase: () => null },
+  // The lamellas next to the slot of a clip start past it (clickbase.ts).
+  clickbase: { profile: (profile) => profile, skeleton: () => null, clickbase: clickbaseOf },
 };

@@ -31,7 +31,7 @@ test("a cut baseplate downloads as one 3MF with a named object per piece and its
   const [threeMf] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Télécharger le 3MF" }).click()]);
   expect(threeMf.suggestedFilename()).toBe("baseplate-9x6-399x279mm.3mf");
   const model = strFromU8(unzipSync(await readFile(await threeMf.path()))["3D/3dmodel.model"] ?? new Uint8Array());
-  expect([...model.matchAll(/<object\b[^>]*\bname="([^"]*)"/g)].map(([, name]) => name)).toEqual(["pièce 1", "pièce 2", "pièce 3", "pièce 4", "clip × 15"]);
+  expect([...model.matchAll(/<object\b[^>]*\bname="([^"]*)"/g)].map(([, name]) => name)).toEqual(["pièce 1", "pièce 2", "pièce 3", "pièce 4", "clip × 8"]);
   expect(model.match(/<item /g)).toHaveLength(5);
   expect(model).toContain('<metadata name="Title">baseplate-9x6-399x279mm</metadata>');
 
@@ -39,7 +39,7 @@ test("a cut baseplate downloads as one 3MF with a named object per piece and its
   const [zip] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: /STL/ }).click()]);
   expect(zip.suggestedFilename()).toBe("baseplate-9x6-399x279mm.zip");
   const files = unzipSync(await readFile(await zip.path()));
-  expect(Object.keys(files)).toEqual([...[1, 2, 3, 4].map((n) => `baseplate-9x6-399x279mm-piece-${n}.stl`), "baseplate-9x6-399x279mm-clip-x15.stl"]);
+  expect(Object.keys(files)).toEqual([...[1, 2, 3, 4].map((n) => `baseplate-9x6-399x279mm-piece-${n}.stl`), "baseplate-9x6-399x279mm-clip-x8.stl"]);
   for (const bytes of Object.values(files)) {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const triangles = view.getUint32(80, true);

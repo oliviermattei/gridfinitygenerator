@@ -39,7 +39,7 @@ Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arr
 _Avoid_: échantillon, sample, test print
 
 **Type de baseplate**:
-Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bac guidé par ses 4 coins, pas de clips ; #26, ADR 0014) ou **CLICKbase** (la grille ajourée, des lamelles dans la paroi des poches qui serrent le pied des bacs, qui s'enclenchent et tiennent sans aimant ; d'après CLICKbase Refined, sous licence CC BY-NC-SA ; #27, ADR 0015).
+Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bac guidé par ses 4 coins, les clips logés dans les poteaux ; #26, ADR 0014, ADR 0018) ou **CLICKbase** (la grille ajourée, des lamelles dans la paroi des poches qui serrent le pied des bacs, qui s'enclenchent et tiennent sans aimant ; d'après CLICKbase Refined, sous licence CC BY-NC-SA ; #27, ADR 0015).
 _Avoid_: style, variante, plateau (réservé au plateau d'impression)
 
 **Fond**:
@@ -47,7 +47,7 @@ La dalle pleine d'un Tray sous chaque poche (0,6 mm, arrondis à la couche), cel
 _Avoid_: plancher, socle, floor (sauf dans le code)
 
 **Poteau**:
-Dans un Skeleton, le croisement des murets et le départ de ses quatre murets, qui gardent tout le profil de poche : 5 mm le long de chaque muret en haut (l'arc de coin de la poche et 1 mm de côté), 45° plus large par millimètre vers le bas. Il porte l'aimant ou la vis, et guide le bac par son coin (ADR 0014).
+Dans un Skeleton, le croisement des murets et le départ de ses quatre murets, qui gardent tout le profil de poche : 5 mm le long de chaque muret en haut (l'arc de coin de la poche et 1 mm de côté), 45° plus large par millimètre vers le bas. Il porte l'aimant ou la vis, guide le bac par son coin (ADR 0014), et loge la fente d'un clip au bout d'une jonction, plus courte (4 mm) pour finir à 0,8 mm de l'entaille (ADR 0018).
 _Avoid_: pilier, plot (réservé à la vis), post (sauf dans le code)
 
 **Bande**:
@@ -55,7 +55,7 @@ Dans un Skeleton, ce qui reste d'un muret entre deux poteaux : son pied, de 0,35
 _Avoid_: bande basse (sauf pour la décrire), semelle, band (sauf dans le code)
 
 **Lamelle**:
-Dans un CLICKbase, un morceau de 0,8 mm de la paroi verticale d'une poche, long de 12 mm au plus, libéré du muret par une saignée et tenu à ses deux bouts ; deux par côté de cellule (une seule, au milieu, sous 34 mm), aucune dans la marge. Elle fléchit quand le bac entre, et le serre (ADR 0015).
+Dans un CLICKbase, un morceau de 0,8 mm de la paroi verticale d'une poche, long de 12 mm au plus, libéré du muret par une saignée et tenu à ses deux bouts ; deux par côté de cellule (une seule, au milieu, sous 34 mm), aucune dans la marge. À côté de la fente d'un clip, elle commence 0,5 mm après elle, ou disparaît s'il en reste moins de 8 mm. Elle fléchit quand le bac entre, et le serre (ADR 0015, ADR 0018).
 _Avoid_: lame, languette (réservé à la dent du clip), ressort, clip (réservé aux pièces)
 
 **Saignée**:
@@ -187,11 +187,11 @@ Le bord commun à deux pièces voisines, le long d'une coupe. Une jonction reço
 _Avoid_: joint, raccord, liaison
 
 **Clip**:
-Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au milieu d'un bord de cellule, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus (ADR 0010).
+Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au bout d'une jonction, collée au coin, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus. Tous les types en prennent (ADR 0010, ADR 0018).
 _Avoid_: agrafe (sauf pour décrire sa forme), connecteur, attache, clip de liaison
 
 **Fente**:
-Le logement d'un clip, creusé par-dessous dans le pied du muret, de part et d'autre d'une coupe : un canal sous la dent pour le pont, et une fente de jambe de chaque côté, sous la pente haute de la poche.
+Le logement d'un clip, creusé par-dessous dans le pied du muret, de part et d'autre d'une coupe : un canal sous la dent pour le pont, et une fente de jambe de chaque côté, sous la pente haute de la poche. Elle part du croisement au bout de la jonction : à 1,92 mm de l'axe d'un croisement de deux coupes (pour laisser la place à la fente de l'autre coupe), à 0,8 mm du bord de la grille (pour ne pas percer la marge).
 _Avoid_: rainure, logement (réservé aux aimants), slot
 
 **Dent**:

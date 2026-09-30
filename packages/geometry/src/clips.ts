@@ -1,11 +1,10 @@
-// Clips that hold the pieces of a cut baseplate together (#22, ADR 0010).
+// Clips that hold the pieces of a cut baseplate together (#22, ADR 0010), at the corners (#30, ADR 0018).
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
-import { lamellaSides, lamellaStretches } from "./clickbase";
 import { DIGIT_HEIGHT_MM, DIGIT_GAP_MM, type Label } from "./label";
 import type { Own } from "./manifold";
-import type { PocketProfile } from "./pocket-profile";
 import { roundDownToLayer, roundUpToLayer } from "./print";
-import { TOOL_OVERSHOOT_MM, gridRect, type GridFrame } from "./shapes";
+import { postReach } from "./skeleton";
+import { TOOL_OVERSHOOT_MM, gridRect, insideOutline, loft, type GridFrame } from "./shapes";
 import type { Lattice, SplitPlan } from "./split";
 
 /**
@@ -15,8 +14,15 @@ import type { Lattice, SplitPlan } from "./split";
  * foot of the muret, where the pocket wall is vertical (2.15 mm off the cut, from 1.05 to
  * 2.85 mm in the hybrid profile), with 0.8 mm of skin on the pocket side: nothing shows from
  * above, and a seated bin, which reaches the bottom of the baseplate in its pocket (ADR
- * 0006), never meets it. One clip lies in the middle of each side of a cell along a cut; the
- * crossings of the murets (screws, magnets) stay clear.
+ * 0006), never meets it.
+ *
+ * Each junction, the side two neighbouring pieces share along a cut, takes two clips, one at
+ * each end, or a single one when it is one or two cells long (ADR 0018). A clip lies against
+ * the corner: its slot starts at the crossing that ends the junction, which holds no screw nor
+ * magnet, and runs along the first (or last) cell of the junction. From a crossing of two
+ * cuts, it starts past the slots along the other cut, which share the corner of each piece;
+ * from the edge of the lattice, it starts inwards, past a skin towards the margin, which may
+ * be empty there (the holes of a frame of crossbars 2 mm high).
  *
  * The slot is fixed; the gaps are the clip's own: another gap only takes other clips, never
  * another baseplate.
@@ -40,6 +46,19 @@ const LEAD_MM = 0.15;
 const LABEL_CLEARANCE_MM = 0.5;
 /** Space between the clips laid out for the print. */
 const PRINT_SPACING_MM = 3;
+/**
+ * Least material left around a slot where it could open onto something else: the margin, the
+ * outline, the slot along the other cut at a crossing, the notch of a skeleton. Two lines of
+ * 0.4 mm, as the skin on the pocket side (spec v1.1).
+ */
+const SKIN_MM = 0.8;
+/**
+ * Start of a slot from the axis of a crossing of two cuts. There, each piece holds in its
+ * corner a slot along each cut: two slots starting nearer the axis than their half width would
+ * meet. Starting here, their corners keep two lines of skin between them, across the diagonal
+ * (√2 · (1.92 − 1.35) = 0.81 mm).
+ */
+export const CROSSING_START_MM = Math.ceil((SLOT_HALF_WIDTH_MM + SKIN_MM / Math.SQRT2) * 100) / 100;
 
 /** The slot a clip goes in, as the settings shape it; also the size of the clip, less its gaps. */
 export interface ClipSlot {
@@ -47,7 +66,10 @@ export interface ClipSlot {
   halfWidth: number;
   /** Half the width of the tooth each piece keeps against the cut, between the legs of the clip. */
   tooth: number;
-  /** Length of the slot along the cut. */
+  /**
+   * Length of the slot along the cut: 5 mm, less in a skeleton, where the slot must end under
+   * the post of its crossing, two lines of skin short of the notch of the muret (ADR 0018).
+   */
   length: number;
   /** Height of the channel of the bridge under the tooth, on a whole number of layers. */
   bridge: number;
@@ -59,7 +81,7 @@ export interface ClipSlot {
   top: number;
 }
 
-/** Where a clip lies: on a cut, in the middle of the side of a cell, or moved along it. */
+/** Where a clip lies: on a cut, at one end of a junction, against the corner. */
 export interface ClipPlacement {
   /** The cut it straddles: a column cut (a plane x = constant) or a row cut (y = constant). */
   cut: "column" | "row";
@@ -69,10 +91,16 @@ export interface ClipPlacement {
   cell: number;
   /**
    * Shift of the clip along the cut from the middle of the side of the cell, in millimetres,
-   * towards +Y on a column cut and +X on a row cut: 0 unless something else lies there (the
-   * number engraved under a piece of a single cell).
+   * towards +Y on a column cut and +X on a row cut: towards the end of the junction the clip
+   * lies at.
    */
   offset: number;
+  /**
+   * Distance of the slot from the axis of the crossing at that end of the junction:
+   * `CROSSING_START_MM` from a crossing of two cuts, and 0.8 mm from the edge of the lattice, or
+   * more to keep 0.8 mm of material inside the outline over a bottom chamfer.
+   */
+  start: number;
   /** Centre of the clip seen from above, in the coordinates of the mesh. */
   centre: [x: number, y: number];
 }
@@ -84,84 +112,158 @@ export interface ClipLayout {
   placements: ClipPlacement[];
 }
 
-/** The slot of the clips for a pocket profile and a layer height. */
-export function clipSlotOf(profile: PocketProfile, layerHeight: number): ClipSlot {
+/**
+ * The slot of the clips of a baseplate: for its pocket profile and layer height, and, in a
+ * skeleton, short enough to end under the post of its crossing (skeleton.ts), two lines of
+ * skin short of the notch at the top of the slot, when it starts from a crossing of two cuts.
+ */
+export function clipSlotOf(frame: Pick<GridFrame, "profile" | "layerHeight" | "cellSize" | "skeleton">): ClipSlot {
+  const { profile, layerHeight } = frame;
   const foot = profile.points[profile.points.length - 2];
   if (!foot) throw new Error("A pocket profile needs an upper slope");
+  const top = roundDownToLayer(foot[0], layerHeight);
+  const reach = frame.skeleton ? postReach({ ...frame, skeleton: frame.skeleton }, top) : null;
+  // A tenth of a millimetre, down: 4.0 mm in the hybrid profile, 4.1 mm in the flush one.
+  const room = reach === null ? SLOT_LENGTH_MM : Math.floor((reach - SKIN_MM - CROSSING_START_MM) * 10 + 1e-6) / 10;
   return {
     halfWidth: SLOT_HALF_WIDTH_MM,
     tooth: TOOTH_HALF_WIDTH_MM,
-    length: SLOT_LENGTH_MM,
+    length: Math.min(SLOT_LENGTH_MM, room),
     bridge: roundUpToLayer(BRIDGE_MM, layerHeight),
-    top: roundDownToLayer(foot[0], layerHeight),
+    top,
   };
 }
 
 /** A stretch of the side of a cell, from its middle along the cut, that a clip must not overlap. */
 export type KeepOut = readonly [from: number, to: number];
 
-/**
- * The clips of a baseplate cut along `plan`: one in the middle of each side of a cell of the
- * lattice along each cut, moved along the side when a label is engraved there (only a piece
- * of a single cell has its number on a cut) or a lamella of a CLICKbase lies there (a cell
- * with a single lamella, in its middle), and left out when the side has no room for it.
- * Each clip keeps clear of the crossings: within the side, less the widest half muret at
- * each end.
- */
-export function clipLayoutOf(frame: GridFrame, lattice: Lattice, plan: Pick<SplitPlan, "columnCuts" | "rowCuts">, labels: readonly Label[]): ClipLayout {
-  const slot = clipSlotOf(frame.profile, frame.layerHeight);
-  const { cellSize } = frame;
-  const [x0, y0] = gridRect(frame);
-  const reach = cellSize / 2 - (frame.profile.points[0]?.[1] ?? 0);
-  // The lamellas of a CLICKbase on either side of the cut, and their clearance (clickbase.ts).
-  const lamellas = frame.clickbase ? lamellaStretches(frame.clickbase) : [];
-  const keepOuts = (cells: readonly (readonly [i: number, j: number, side: Label["side"]])[]): KeepOut[] => [
-    ...labels
-      .filter(({ cell: [i, j], side }) => cells.some(([a, b, s]) => a === i && b === j && s === side))
-      .map(({ text }) => {
-        const half = (text.length * DIGIT_HEIGHT_MM + (text.length - 1) * DIGIT_GAP_MM) / 2 + LABEL_CLEARANCE_MM;
-        return [-half, half] as const;
-      }),
-    ...(cells.some(([i, j, side]) => lamellaSides(frame, labels, i, j) & (1 << side)) ? lamellas : []),
-  ];
-  const placements: ClipPlacement[] = [];
-  for (const line of plan.columnCuts)
-    for (let j = lattice.rows[0]; j < lattice.rows[1]; j++) {
-      const offset = placeAlong(keepOuts([[line - 1, j, 0], [line, j, 2]]), reach, slot.length);
-      if (offset === null) continue;
-      placements.push({ cut: "column", line, cell: j, offset, centre: [x0 + line * cellSize, y0 + (j + 0.5) * cellSize + offset] });
-    }
-  for (const line of plan.rowCuts)
-    for (let i = lattice.columns[0]; i < lattice.columns[1]; i++) {
-      const offset = placeAlong(keepOuts([[i, line - 1, 1], [i, line, 3]]), reach, slot.length);
-      if (offset === null) continue;
-      placements.push({ cut: "row", line, cell: i, offset, centre: [x0 + (i + 0.5) * cellSize + offset, y0 + line * cellSize] });
-    }
-  return { slot, placements };
+/** An end of a junction, where a clip may go: the cell of the junction there, and its side of the crossing. */
+interface JunctionEnd {
+  /** Cell of the lattice along the cut at that end: its row for a column cut, its column for a row cut. */
+  cell: number;
+  /** −1 at the first end (front or left), 1 at the last one (back or right): where the crossing lies along the side. */
+  towards: -1 | 1;
+  /** Whether the crossing at that end is a crossing of two cuts, otherwise the edge of the lattice. */
+  crossed: boolean;
 }
 
 /**
- * Where a clip of `length` goes along the side of a cell, from its middle: the middle when it
- * is free, otherwise the nearest place past a keep-out (towards + first), within `reach` of
- * the middle; null when there is none.
+ * The clips of a baseplate cut along `plan` (ADR 0018). Each junction, a run of cells of the
+ * lattice along a cut between two crossings of cuts or the edges of the lattice, takes a clip at
+ * each end, against the corner; a junction of one or two cells takes a single one, at its end
+ * on a crossing of two cuts if it has one (where four pieces meet, the joint gives the most),
+ * otherwise at its first end, and at its other end when the first has no room. A clip keeps
+ * clear of the number engraved under a piece of a single cell, in the middle of a side on the
+ * cut, and a slot never reaches past the middle of the side; an end without room takes no clip.
  */
-export function placeAlong(keepOuts: readonly KeepOut[], reach: number, length: number): number | null {
-  const half = length / 2;
-  const free = (at: number) =>
-    at - half >= -reach - 1e-9 && at + half <= reach + 1e-9 && keepOuts.every(([from, to]) => at + half <= from || at - half >= to);
-  const candidates = [0, ...keepOuts.flatMap(([from, to]) => [to + half, from - half])];
-  const fitting = candidates.filter(free).sort((a, b) => Math.abs(a) - Math.abs(b) || b - a);
-  return fitting[0] ?? null;
+export function clipLayoutOf(frame: GridFrame, lattice: Lattice, plan: Pick<SplitPlan, "columnCuts" | "rowCuts">, labels: readonly Label[]): ClipLayout {
+  const slot = clipSlotOf(frame);
+  const { cellSize } = frame;
+  const half = cellSize / 2;
+  const [x0, y0] = gridRect(frame);
+  // The top of a skeleton's post over the slot, less the skin: where a slot must end.
+  const post = frame.skeleton ? postReach({ ...frame, skeleton: frame.skeleton }, slot.top) : null;
+  const limit = Math.min(half, post === null ? Infinity : post - SKIN_MM);
+  const labelled = (cells: readonly (readonly [i: number, j: number, side: Label["side"]])[]): KeepOut[] =>
+    labels
+      .filter(({ cell: [i, j], side }) => cells.some(([a, b, s]) => a === i && b === j && s === side))
+      .map(({ text }) => {
+        const extent = (text.length * DIGIT_HEIGHT_MM + (text.length - 1) * DIGIT_GAP_MM) / 2 + LABEL_CLEARANCE_MM;
+        return [-extent, extent] as const;
+      });
+  // The start of the slot at an end: past the slots along the other cut at a crossing of two
+  // cuts; at the edge of the lattice, past the skin, and far enough inside the outline for the
+  // skin to stand over a bottom chamfer (`corners`, the corners of the slot on the edge).
+  const startAt = (end: JunctionEnd, corners: readonly (readonly [x: number, y: number])[]) =>
+    end.crossed
+      ? CROSSING_START_MM
+      : Math.max(SKIN_MM, SKIN_MM + frame.bottomChamfer - Math.min(...corners.map(([x, y]) => insideOutline(frame, x, y))));
+  const placements: ClipPlacement[] = [];
+  const along = (
+    cut: ClipPlacement["cut"],
+    line: number,
+    [first, end]: readonly [number, number],
+    crossings: readonly number[],
+    sides: (cell: number) => readonly (readonly [i: number, j: number, side: Label["side"]])[],
+    centre: (cell: number, offset: number) => [number, number],
+  ) => {
+    const bounds = [first, ...crossings.filter((c) => c > first && c < end), end];
+    for (let k = 0; k + 1 < bounds.length; k++) {
+      const [a, b] = [bounds[k] as number, bounds[k + 1] as number];
+      const ends: JunctionEnd[] = [
+        { cell: a, towards: -1, crossed: crossings.includes(a) },
+        { cell: b - 1, towards: 1, crossed: crossings.includes(b) },
+      ];
+      const place = (junctionEnd: JunctionEnd): ClipPlacement | null => {
+        // The crossing at that end, from the middle of the side of its cell, along the cut.
+        const axis = junctionEnd.towards * half;
+        const [cx, cy] = centre(junctionEnd.cell, axis);
+        const across = (u: number) => (cut === "column" ? [cx + u, cy] : [cx, cy + u]) as [number, number];
+        const start = startAt(junctionEnd, [across(-slot.halfWidth), across(slot.halfWidth)]);
+        if (start + slot.length > limit + 1e-9) return null;
+        const offset = junctionEnd.towards * (half - start - slot.length / 2);
+        const [from, to] = [offset - slot.length / 2, offset + slot.length / 2];
+        if (labelled(sides(junctionEnd.cell)).some(([p, q]) => to > p && from < q)) return null;
+        return { cut, line, cell: junctionEnd.cell, offset, start, centre: centre(junctionEnd.cell, offset) };
+      };
+      if (b - a >= 3) {
+        for (const junctionEnd of ends) {
+          const placement = place(junctionEnd);
+          if (placement) placements.push(placement);
+        }
+        continue;
+      }
+      // A single clip: on a crossing of two cuts first, then the first end.
+      const [preferred, other] = !ends[0]?.crossed && ends[1]?.crossed ? [ends[1], ends[0]] : [ends[0], ends[1]];
+      const placement = place(preferred as JunctionEnd) ?? place(other as JunctionEnd);
+      if (placement) placements.push(placement);
+    }
+  };
+  for (const line of plan.columnCuts)
+    along(
+      "column",
+      line,
+      lattice.rows,
+      plan.rowCuts,
+      (j) => [
+        [line - 1, j, 0],
+        [line, j, 2],
+      ],
+      (j, offset) => [x0 + line * cellSize, y0 + (j + 0.5) * cellSize + offset],
+    );
+  for (const line of plan.rowCuts)
+    along(
+      "row",
+      line,
+      lattice.columns,
+      plan.columnCuts,
+      (i) => [
+        [i, line - 1, 1],
+        [i, line, 3],
+      ],
+      (i, offset) => [x0 + (i + 0.5) * cellSize + offset, y0 + line * cellSize],
+    );
+  // In the order of the cuts, each along its cut.
+  const order = (p: ClipPlacement) => (p.cut === "column" ? 0 : 1);
+  placements.sort((p, q) => order(p) - order(q) || p.line - q.line || p.cell - q.cell || p.offset - q.offset);
+  return { slot, placements };
 }
 
 /** Side of a cell brick, in quarter turns from +X: 0 +X, 1 +Y, 2 −X, 3 −Y (as `LabelSide`). */
 export type BrickSide = 0 | 1 | 2 | 3;
 
+/** `slotsByCell` of each layout already asked for: the assemblies and the lamellas ask for each cell. */
+const slotsOfLayouts = new WeakMap<ClipLayout, Map<string, (number | undefined)[]>>();
+
 /**
  * The slots of each cell of the lattice with a clip on a side, by `"i,j"`: the shift of the
- * clip along each side (undefined for a side without one), in the order of `BrickSide`.
+ * clip along each side (undefined for a side without one), in the order of `BrickSide`. A side
+ * holds one clip at most: a junction of one or two cells takes a single one.
  */
-export function slotsByCell(layout: ClipLayout | null): Map<string, (number | undefined)[]> {
+export function slotsByCell(layout: ClipLayout | null): ReadonlyMap<string, readonly (number | undefined)[]> {
+  if (!layout) return new Map();
+  const known = slotsOfLayouts.get(layout);
+  if (known) return known;
   const cells = new Map<string, (number | undefined)[]>();
   const add = (i: number, j: number, side: BrickSide, offset: number) => {
     const key = `${i},${j}`;
@@ -169,7 +271,7 @@ export function slotsByCell(layout: ClipLayout | null): Map<string, (number | un
     sides[side] = offset;
     cells.set(key, sides);
   };
-  for (const { cut, line, cell, offset } of layout?.placements ?? []) {
+  for (const { cut, line, cell, offset } of layout.placements) {
     if (cut === "column") {
       add(line - 1, cell, 0, offset);
       add(line, cell, 2, offset);
@@ -178,6 +280,7 @@ export function slotsByCell(layout: ClipLayout | null): Map<string, (number | un
       add(cell, line, 3, offset);
     }
   }
+  slotsOfLayouts.set(layout, cells);
   return cells;
 }
 
@@ -185,24 +288,51 @@ export function slotsByCell(layout: ClipLayout | null): Map<string, (number | un
  * Solid removed from a cell brick, around its centre, for its slot on one side (`BrickSide`),
  * shifted along it by `offset`: the channel of the bridge from below the brick to `bridge`,
  * out past the cut face, and the slot of the leg up to `top`, which leaves the tooth against
- * the cut. The same for every brick with a slot there: the caller computes it once.
+ * the cut. The same for every brick with a slot there: the caller computes it once. Built as
+ * a single mesh, an L-shaped prism, without a boolean: a large baseplate has a few dozen of them.
  */
 export function brickSlotTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame, slot: ClipSlot, side: BrickSide, offset: number): Manifold {
   const half = frame.cellSize / 2;
   const o = TOOL_OVERSHOOT_MM;
-  // Across the cut: from the face inwards (a < 0); along it: the shift, towards +Y or +X.
-  const box = (a0: number, a1: number, z0: number, z1: number) => {
-    const [b0, b1] = [offset - slot.length / 2, offset + slot.length / 2];
-    const [x0, x1, y0, y1] =
-      side === 0 ? [half + a0, half + a1, b0, b1]
-      : side === 2 ? [-half - a1, -half - a0, b0, b1]
-      : side === 1 ? [b0, b1, half + a0, half + a1]
-      : [b0, b1, -half - a1, -half - a0];
-    return own(own(wasm.Manifold.cube([x1 - x0, y1 - y0, z1 - z0])).translate([x0, y0, z0]));
-  };
-  const channel = box(-slot.halfWidth, o, -o, slot.bridge);
-  const leg = box(-slot.halfWidth, -slot.tooth, -o, slot.top);
-  return own(wasm.Manifold.union([channel, leg]));
+  const { halfWidth: w, tooth: t, bridge, top } = slot;
+  // Built on the +X side, then turned a quarter per side: along the side, the shift of a clip
+  // runs towards +Y or +X, the turned +X side towards −X on the +Y side and −Y on the −X side.
+  const along = side === 1 || side === 2 ? -offset : offset;
+  // The L across the cut, counter-clockwise as [z, a]: z up, a from the face inwards (a < 0).
+  const section: [number, number][] = [
+    [-o, -w],
+    [top, -w],
+    [top, -t],
+    [bridge, -t],
+    [bridge, o],
+    [-o, o],
+  ];
+  const { positions, indices } = loft([
+    { z: along - slot.length / 2, points: section },
+    { z: along + slot.length / 2, points: section },
+  ]);
+  // [z, a, along] to the +X side (x = half + a, y = along, z), a rotation, then turned.
+  const placed = new Float32Array(positions.length);
+  for (let v = 0; v < positions.length; v += 3) {
+    const [z, a, u] = [positions[v] as number, positions[v + 1] as number, positions[v + 2] as number];
+    const [x, y] = turn([half + a, u], side);
+    placed.set([x, y, z], v);
+  }
+  return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: placed, triVerts: indices })));
+}
+
+/** A point turned a number of quarter turns counter-clockwise about the origin (sides as `BrickSide`). */
+function turn([x, y]: readonly [number, number], quarters: BrickSide): [number, number] {
+  switch (quarters) {
+    case 1:
+      return [-y, x];
+    case 2:
+      return [-x, -y];
+    case 3:
+      return [y, -x];
+    default:
+      return [x, y];
+  }
 }
 
 /** Solid removed from the whole baseplate for its clips, astride each cut (the boolean assembly). */
