@@ -61,7 +61,7 @@ describe("cell size", () => {
   ])("sets the pitch in drawer mode: $columns × $rows cells of $cellSize mm in the default drawer", async ({ cellSize, columns, rows, x, y }) => {
     // 400 × 280 mm less the 1 mm gap: floor(399 / cs) × floor(279 / cs), the rest in the margins.
     const { layout, stats } = await generateBaseplate({ cellSize }, "preview");
-    expect(layout).toEqual({ columns, rows, cellSize, margins: { left: x, right: x, back: y, front: y }, screws: [] });
+    expect(layout).toMatchObject({ columns, rows, cellSize, margins: { left: x, right: x, back: y, front: y }, screws: [] });
     expectWithin(stats.dimensions.width, 399);
     expectWithin(stats.dimensions.depth, 279);
   });

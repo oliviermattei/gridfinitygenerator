@@ -7,6 +7,9 @@ export {
   type AssemblyStrategy,
   type Baseplate,
   type BaseplateLayout,
+  type BaseplatePiece,
+  type PiecePlan,
+  type SplitPlan,
   type Margins,
   type BaseplateStats,
   type GenerateOptions,
@@ -38,5 +41,7 @@ export {
   type ShareLinkSettings,
 } from "./share-link";
 export { fitsOnBuildPlate, narrowMargin, roundUpToLayer, type BuildPlate } from "./print";
+export { PRINT_GAP_MM, pieceMesh, printPieces, spreadPieces } from "./pieces";
 export { serializeStl } from "./stl";
-export { serialize3mf, type ThreeMfOptions } from "./three-mf";
+export { serialize3mf, type ThreeMfObject, type ThreeMfOptions } from "./three-mf";
+export { zipFiles } from "./zip";

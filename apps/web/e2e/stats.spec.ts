@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { chooseCells, closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings, readout } from "./support";
+import { chooseCells, closeMenu, closeSettings, isMobile, numberField, openMenu, openSettings } from "./support";
 
 /** A value of the statistics frame on screen: on the right on desktop, in the sheet on mobile. */
 function stat(page: Page, id: "dimensions" | "cells" | "margin" | "layers" | "volume" | "screws" | "pieces" | "fit") {
@@ -21,10 +21,12 @@ test("the statistics frame shows the real numbers of the baseplate, and … whil
   await expect(stat(page, "margin")).toHaveText("gauche 10,5, droite 10,5, arrière 13,5, avant 13,5 mm");
   await expect(stat(page, "layers")).toHaveText("23 couches de 0,2 mm");
   await expect(stat(page, "screws")).toHaveText("aucune");
-  await expect(stat(page, "pieces")).toHaveText("1");
-  await expect(stat(page, "fit")).toHaveText("ne tient pas");
-  // Measured on the final mesh, in cm³: no grams, no estimate. The grid carried on into
-  // its margin in truncated cells, as measured by the margin prototype (#3, variant 1 flush).
+  // Larger than the default build plate (256 × 256 mm): cut into 4 pieces that fit on it.
+  await expect(stat(page, "pieces")).toHaveText("4");
+  await expect(stat(page, "fit")).toHaveText("tient");
+  // Measured on the final meshes of the pieces, in cm³: no grams, no estimate. The grid
+  // carried on into its margin in truncated cells, as measured by the margin prototype (#3,
+  // variant 1 flush), less the numbers engraved under the pieces (about 1 mm³ each).
   const volume = stat(page, "volume");
   await expect(volume).toHaveText("101,5 cm³");
   await expect(volume).not.toHaveAttribute("aria-busy");
@@ -73,7 +75,7 @@ test("the print settings live in the gear menu, and the layer height gives the h
   await expect(stat(page, "dimensions")).toHaveText("399 × 279 × 4,6 mm");
 });
 
-test("a baseplate larger than the build plate shows the warning and « ne tient pas »", async ({ page }, testInfo) => {
+test("a baseplate larger than the build plate is cut, and warns when a cell and its margin do not fit on it", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openMenu(page, testInfo);
   // Default build plate: 256 × 256 mm.
@@ -87,28 +89,46 @@ test("a baseplate larger than the build plate shows the warning and « ne tient 
   await openSettings(page, testInfo);
   await chooseCells(page);
   await expect(stat(page, "fit")).toHaveText("tient");
+  await expect(stat(page, "pieces")).toHaveText("1");
+  // 210 × 210 mm on 200 × 200 mm: cut into 2 × 2 pieces, which fit.
   await numberField(page, "Colonnes").fill("5");
   await numberField(page, "Rangées").fill("5");
   await expect(stat(page, "dimensions")).toHaveText("210 × 210 × 4,6 mm");
+  await expect(stat(page, "pieces")).toHaveText("4");
+  await expect(stat(page, "fit")).toHaveText("tient");
+  await expect(plateWarning(page)).toHaveCount(0);
+
+  // A margin of 10 mm on each side on a build plate of 50 mm: a cell fits, not with its margin.
+  await closeSettings(page, testInfo);
+  await openMenu(page, testInfo);
+  await numberField(page, "Largeur du plateau").fill("50");
+  await numberField(page, "Profondeur du plateau").fill("50");
+  await numberField(page, "Profondeur du plateau").blur();
+  await closeMenu(page);
+  await openSettings(page, testInfo);
+  await expect(stat(page, "pieces")).toHaveText("25");
+  await expect(stat(page, "fit")).toHaveText("tient");
+  await numberField(page, "Marge en largeur").fill("20");
+  await numberField(page, "Marge en largeur").blur();
+  await expect(stat(page, "dimensions")).toHaveText("230 × 210 × 4,6 mm");
   await expect(stat(page, "fit")).toHaveText("ne tient pas");
-  await expect(plateWarning(page)).toContainText("La baseplate dépasse votre plateau (200 × 200 mm) dans les deux sens.");
+  await expect(plateWarning(page)).toContainText("Même découpée, une pièce dépasse votre plateau (50 × 50 mm) dans les deux sens");
 
   // Mobile: the dock repeats the warning once the sheet is closed.
   if (isMobile(testInfo)) {
     await closeSettings(page, testInfo);
     await expect(page.getByText("Ne tient pas sur le plateau")).toBeVisible();
+    await openSettings(page, testInfo);
   }
 
-  // Back to a baseplate that fits: the warning goes away.
-  await openSettings(page, testInfo);
-  await numberField(page, "Colonnes").fill("4");
-  await numberField(page, "Rangées").fill("4");
-  await expect(readout(page, "cells")).toHaveText("4 × 4 cellules");
+  // Back to a margin that fits: the warning goes away.
+  await numberField(page, "Marge en largeur").fill("0");
+  await numberField(page, "Marge en largeur").blur();
   await expect(stat(page, "fit")).toHaveText("tient");
   await expect(plateWarning(page)).toHaveCount(0);
 
   // The build plate is a local preference: still there after a reload.
   await page.reload();
   await openMenu(page, testInfo);
-  await expect(numberField(page, "Largeur du plateau")).toHaveValue("200");
+  await expect(numberField(page, "Largeur du plateau")).toHaveValue("50");
 });

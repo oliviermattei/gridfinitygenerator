@@ -58,7 +58,7 @@ function sectionBox(contours: [number, number][][]) {
 describe("drawer mode", () => {
   it("fills the default 400 × 280 mm drawer, less its 1 mm gap, with 9 × 6 cells and the rest in the margins", async () => {
     const { layout, stats } = await generateBaseplate({}, "preview");
-    expect(layout).toEqual({
+    expect(layout).toMatchObject({
       columns: 9,
       rows: 6,
       cellSize: 42,

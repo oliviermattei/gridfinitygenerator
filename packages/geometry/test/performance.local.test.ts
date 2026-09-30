@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { generateBaseplate, serialize3mf, serializeStl } from "../src/index";
-import type { BaseplateSettings } from "../src/index";
+import { generateBaseplate, printPieces, serialize3mf, serializeStl } from "../src/index";
+import type { BaseplateSettings, GenerateOptions } from "../src/index";
 import { cells, medianGenerationMs, medianMs } from "./support/timing";
 
 // LOCAL ONLY (excluded from `pnpm test` and CI): the spec v1 performance targets, measured
@@ -17,8 +17,14 @@ async function measure(size: [number, number], quality: "preview" | "final", tar
   await measureSettings(`${size[0]} × ${size[1]}`, cells(...size), quality, targetMs);
 }
 
-async function measureSettings(name: string, settings: Partial<BaseplateSettings>, quality: "preview" | "final", targetMs: number) {
-  const ms = await medianGenerationMs(settings, quality, RUNS);
+async function measureSettings(
+  name: string,
+  settings: Partial<BaseplateSettings>,
+  quality: "preview" | "final",
+  targetMs: number,
+  options?: GenerateOptions,
+) {
+  const ms = await medianGenerationMs(settings, quality, RUNS, options);
   report.push(`| ${name} ${quality} | ${ms.toFixed(1)} | ${targetMs} |`);
   expect(ms).toBeLessThan(targetMs);
 }
@@ -32,6 +38,15 @@ const DRAWERS: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["20 × 20 with its 361 screws", { sizeMode: "cells", columns: 20, rows: 20, screws: true }],
   ["drawer 1000 × 1000 with its 484 screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
   ["24 × 24 cells of 80 mm, 3 mm chamfer, 529 screws", { sizeMode: "cells", columns: 24, rows: 24, cellSize: 80, bottomChamfer: 3, screws: true }],
+];
+
+/** Baseplates cut for a build plate of 256 × 256 mm (#21): held to the same targets. */
+const PLATE_256 = { buildPlate: { width: 256, depth: 256 } };
+const CUT: [name: string, settings: Partial<BaseplateSettings>][] = [
+  ["default drawer cut in 4 pieces", {}],
+  ["20 × 20 cut in 16 pieces", { sizeMode: "cells", columns: 20, rows: 20 }],
+  ["drawer 1000 × 1000 cut in 16 pieces", { drawerWidth: 1000, drawerDepth: 1000 }],
+  ["drawer 1000 × 1000 cut in 16 pieces, with screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
 ];
 
 /**
@@ -74,6 +89,10 @@ describe("spec v1 performance targets (local)", () => {
 
   it.each(DRAWERS)("computes the final %s in under 3 s", (name, settings) => measureSettings(name, settings, "final", 3_000));
 
+  it.each(CUT)("previews the %s in under 100 ms", (name, settings) => measureSettings(name, settings, "preview", 100, PLATE_256));
+
+  it.each(CUT)("computes the final %s in under 3 s", (name, settings) => measureSettings(name, settings, "final", 3_000, PLATE_256));
+
   it.each(BEYOND_TARGETS)("previews the %s in under 400 ms", (name, settings) => measureSettings(name, settings, "preview", 400));
 
   it.each(BEYOND_TARGETS)("computes the final %s in under 12 s", (name, settings) =>
@@ -110,6 +129,14 @@ describe("spec v1 export targets (local)", () => {
     // Not a spec target: the STL, for comparison.
     const stlMs = await medianMs(() => serializeStl(mesh), RUNS);
     report.push(`| 20 × 20 STL | ${stlMs.toFixed(1)} | — |`);
+    expect(ms).toBeLessThan(1_000);
+  });
+
+  it("writes the 3MF of a final 20 × 20 cut in 16 pieces in under 1 s", async () => {
+    const baseplate = await generateBaseplate(cells(20, 20), "final", PLATE_256);
+    const options = { name: "baseplate", shareLink: "https://example.org/fr/baseplate?v=1&mode=cells&cx=20&cy=20" };
+    const ms = await medianMs(() => serialize3mf(printPieces(baseplate).map((mesh, k) => ({ mesh, name: `piece ${k + 1}` })), options), RUNS);
+    report.push(`| 20 × 20 cut in 16 pieces, 3MF (layout included) | ${ms.toFixed(1)} | 1000 |`);
     expect(ms).toBeLessThan(1_000);
   });
 });

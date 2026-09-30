@@ -35,6 +35,12 @@ describe("generation time (wide CI thresholds)", { timeout: 60_000 }, () => {
     expect(await medianGenerationMs(LARGEST_DRAWER, "final", 1)).toBeLessThan(9_000);
   });
 
+  it("computes the largest drawer cut in 16 pieces for a 256 mm build plate, preview well under a second and final within a few seconds", async () => {
+    const plate = { buildPlate: { width: 256, depth: 256 } };
+    expect(await medianGenerationMs(LARGEST_DRAWER, "preview", 3, plate)).toBeLessThan(500);
+    expect(await medianGenerationMs(LARGEST_DRAWER, "final", 1, plate)).toBeLessThan(9_000);
+  });
+
   // The final mesh of the cell bricks is checked NoError by the engine itself: a broken seam would throw.
   it("computes a 20 × 20 with its 361 screws, preview well under a second and final within a few seconds", async () => {
     const screwed = { ...cells(20, 20), screws: true };

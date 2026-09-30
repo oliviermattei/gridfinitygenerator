@@ -109,7 +109,7 @@ describe.each<Quality>(["preview", "final"])("generateBaseplate, %s quality", (q
 
     it("lays out the grid without any margin", async () => {
       const { layout } = await generateBaseplate({ sizeMode: "cells", columns, rows }, quality);
-      expect(layout).toEqual({
+      expect(layout).toMatchObject({
         columns,
         rows,
         cellSize: STANDARD_CELL_SIZE_MM,

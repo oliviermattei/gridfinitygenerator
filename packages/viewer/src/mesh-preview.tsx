@@ -80,8 +80,9 @@ function usePrefersReducedMotion(): boolean {
  * occlusion and a contact shadow. Damped orbit, bounded zoom, and an animated automatic
  * framing inside the area left visible by the floating panels (`insets`).
  *
- * The container exposes `data-triangles`, `data-color` and `data-view-box` (the model's
- * screen rectangle, "left top right bottom" in CSS pixels) for end-to-end tests.
+ * The container exposes `data-triangles`, `data-color`, `data-extent` (the width and depth
+ * of the mesh, in millimetres) and `data-view-box` (the model's screen rectangle, "left top
+ * right bottom" in CSS pixels) for end-to-end tests.
  */
 export function MeshPreview({ mesh, color, insets, recenter = 0, className, fallback = null }: MeshPreviewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -127,6 +128,7 @@ export function MeshPreview({ mesh, color, insets, recenter = 0, className, fall
       data-testid="mesh-preview"
       data-triangles={mesh ? mesh.indices.length / 3 : 0}
       data-color={color}
+      data-extent={box ? `${(box.max.x - box.min.x).toFixed(1)} ${(box.max.z - box.min.z).toFixed(1)}` : undefined}
     >
       <WebGlBoundary fallback={fallback}>
         <Canvas

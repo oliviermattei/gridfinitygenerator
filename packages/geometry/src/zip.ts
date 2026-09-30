@@ -91,3 +91,8 @@ export function zipParts(parts: readonly [path: string, write: PartWriter][]): U
   u16(0); // comment length
   return bytes;
 }
+
+/** A zip archive of files already built (the STL files of the pieces), each one deflated. */
+export function zipFiles(files: readonly [path: string, bytes: Uint8Array][]): Uint8Array {
+  return zipParts(files.map(([path, bytes]) => [path, (out: DeflateEncoder) => out.bytes(bytes)]));
+}

@@ -35,6 +35,11 @@ export interface GridFrame {
   segmentsPerHole: number;
   /** Countersunk screw holes on the inner intersections of the grid, null without screws. */
   screws: ScrewHoles | null;
+  /**
+   * Grid lines the baseplate is cut on for the build plate (`SplitPlan`), across X and
+   * across Y: no screw sits on an intersection they cut. Empty without a cut.
+   */
+  cuts: { columns: readonly number[]; rows: readonly number[] };
   /** Print settings the thicknesses and widths chosen by the generator follow. */
   layerHeight: number;
   lineWidth: number;

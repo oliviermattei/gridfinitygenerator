@@ -49,10 +49,19 @@ function upperSlopeFoot({ points }: PocketProfile): number {
 
 /**
  * Whether the intersection of grid lines (a, b) holds a screw: a from 0 (left edge of the
- * grid) to `columns`, b from 0 (front edge) to `rows`. Only the inner ones do.
+ * grid) to `columns`, b from 0 (front edge) to `rows`. Only the inner ones do, and none on a
+ * line the baseplate is cut on for the build plate: a crossing cut in two or four holds no screw.
  */
-export function hasScrew({ screws, columns, rows }: GridFrame, a: number, b: number): boolean {
-  return screws !== null && a >= 1 && a <= columns - 1 && b >= 1 && b <= rows - 1;
+export function hasScrew({ screws, columns, rows, cuts }: GridFrame, a: number, b: number): boolean {
+  return (
+    screws !== null &&
+    a >= 1 &&
+    a <= columns - 1 &&
+    b >= 1 &&
+    b <= rows - 1 &&
+    !cuts.columns.includes(a) &&
+    !cuts.rows.includes(b)
+  );
 }
 
 /** Centre of every screw, in the coordinates of the outline, left to right then front to back. */
@@ -61,7 +70,8 @@ export function screwPositions(frame: GridFrame): [x: number, y: number][] {
   const [x0, y0] = gridRect(frame);
   const positions: [number, number][] = [];
   for (let a = 1; a < frame.columns; a++)
-    for (let b = 1; b < frame.rows; b++) positions.push([x0 + a * frame.cellSize, y0 + b * frame.cellSize]);
+    for (let b = 1; b < frame.rows; b++)
+      if (hasScrew(frame, a, b)) positions.push([x0 + a * frame.cellSize, y0 + b * frame.cellSize]);
   return positions;
 }
 

@@ -5,12 +5,19 @@ import { zipParts } from "./zip";
 /**
  * 3MF writer (3MF core specification, 2015/02 namespace): a zip package of three parts,
  * `[Content_Types].xml`, `_rels/.rels` and the model `3D/3dmodel.model`, with one named
- * object in millimetres. The model XML is never built as a string nor as a buffer: it goes
- * straight into the deflate encoder, which is told where the XML repeats itself.
+ * object in millimetres, or several (the pieces of a cut baseplate), each with its build
+ * item. The model XML is never built as a string nor as a buffer: it goes straight into the
+ * deflate encoder, which is told where the XML repeats itself.
  */
 
+/** One object of a 3MF with several: its mesh, where it lies, and its name in the slicer. */
+export interface ThreeMfObject {
+  mesh: TriangleMesh;
+  name: string;
+}
+
 export interface ThreeMfOptions {
-  /** Name of the object, shown by slicers; also the title of the model. */
+  /** Title of the model; also the name of the object when there is a single one. */
   name: string;
   /**
    * Absolute share link of the settings, kept as the model description so the same
@@ -90,6 +97,11 @@ class NumberWriter {
     this.lastIndexAt = new Float64Array(vertexCount).fill(-Infinity);
   }
 
+  /** Starts the triangles of another object: its vertex indices start from 0 again. */
+  nextObject() {
+    this.lastIndexAt.fill(-Infinity);
+  }
+
   /** Writes the digits of a non-negative integer so that they end at `end`; returns where they start. */
   private spell(value: number, end: number): number {
     let start = end;
@@ -154,41 +166,65 @@ class NumberWriter {
 }
 
 /**
- * Placement of the object on the build plate: a translation that brings the mesh, centred
+ * Placement of the objects on the build plate: a translation that brings the meshes, centred
  * on the origin by the engine, into the positive octant, where the build plate of a 3MF
- * starts. It goes in the build item, so the vertices keep their exact coordinates.
+ * starts. It goes in the build items, the same for every object, so the vertices keep their
+ * exact coordinates and the objects where they lie from each other.
  */
-function placement(positions: Float32Array): string {
+function placement(objects: readonly ThreeMfObject[]): string {
   const min = [Infinity, Infinity, Infinity];
-  for (let i = 0; i < positions.length; i++) {
-    const axis = i % 3;
-    if ((positions[i] as number) < (min[axis] as number)) min[axis] = positions[i] as number;
-  }
+  for (const { mesh: { positions } } of objects)
+    for (let i = 0; i < positions.length; i++) {
+      const axis = i % 3;
+      if ((positions[i] as number) < (min[axis] as number)) min[axis] = positions[i] as number;
+    }
   // Fixed-point, never exponent notation, with the precision of the vertices.
   const offset = min.map((value) => (Number.isFinite(value) ? String(Number((-value).toFixed(DECIMALS))) : "0"));
   return `1 0 0 0 1 0 0 0 1 ${offset.join(" ")}`;
 }
 
-/** Writes the model XML of the mesh. */
-function writeModel(mesh: TriangleMesh, { name, shareLink }: ThreeMfOptions, out: DeflateEncoder) {
-  const { positions, indices } = mesh;
-  const numbers = new NumberWriter(out, positions.length / 3);
-  const title = escapeXml(name);
+/** Writes the model XML of the objects. */
+function writeModel(objects: readonly ThreeMfObject[], { name, shareLink }: ThreeMfOptions, out: DeflateEncoder) {
+  const numbers = new NumberWriter(out, Math.max(0, ...objects.map(({ mesh }) => mesh.positions.length / 3)));
+  // Each element but the first opens by closing the previous one: `"/><vertex x="`.
+  const tokens = {
+    nextVertex: new Token('"/><vertex x="'),
+    y: new Token('" y="'),
+    z: new Token('" z="'),
+    nextTriangle: new Token('"/><triangle v1="'),
+    v2: new Token('" v2="'),
+    v3: new Token('" v3="'),
+  };
 
   out.bytes(
     encoder.encode(
       '<?xml version="1.0" encoding="UTF-8"?>\n' +
         '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">' +
-        `<metadata name="Title">${title}</metadata>` +
+        `<metadata name="Title">${escapeXml(name)}</metadata>` +
         `<metadata name="Description">${escapeXml(shareLink)}</metadata>` +
-        `<resources><object id="1" type="model" name="${title}"><mesh><vertices>`,
+        "<resources>",
     ),
   );
+  objects.forEach((object, index) => {
+    // Names may hold any character (« pièce 1 »): UTF-8, not ASCII text.
+    out.bytes(encoder.encode(`<object id="${index + 1}" type="model" name="${escapeXml(object.name)}"><mesh><vertices>`));
+    numbers.nextObject();
+    writeMesh(object.mesh, numbers, tokens, out);
+    out.text("</mesh></object>");
+  });
+  const transform = placement(objects);
+  out.text("</resources><build>");
+  objects.forEach((_, index) => out.text(`<item objectid="${index + 1}" transform="${transform}"/>`));
+  out.text("</build></model>");
+}
 
-  // Each element but the first opens by closing the previous one: `"/><vertex x="`.
-  const nextVertex = new Token('"/><vertex x="');
-  const y = new Token('" y="');
-  const z = new Token('" z="');
+/** Writes the vertices and triangles of a mesh, from `<vertex` to `</triangles>`. */
+function writeMesh(
+  { positions, indices }: TriangleMesh,
+  numbers: NumberWriter,
+  { nextVertex, y, z, nextTriangle, v2, v3 }: Record<"nextVertex" | "y" | "z" | "nextTriangle" | "v2" | "v3", Token>,
+  out: DeflateEncoder,
+) {
   for (let i = 0; i < positions.length; i += 3) {
     if (i === 0) out.text('<vertex x="');
     else nextVertex.write(out);
@@ -200,9 +236,6 @@ function writeModel(mesh: TriangleMesh, { name, shareLink }: ThreeMfOptions, out
   }
   out.text(positions.length > 0 ? '"/></vertices><triangles>' : "</vertices><triangles>");
 
-  const nextTriangle = new Token('"/><triangle v1="');
-  const v2 = new Token('" v2="');
-  const v3 = new Token('" v3="');
   for (let i = 0; i < indices.length; i += 3) {
     if (i === 0) out.text('<triangle v1="');
     else nextTriangle.write(out);
@@ -213,18 +246,20 @@ function writeModel(mesh: TriangleMesh, { name, shareLink }: ThreeMfOptions, out
     numbers.index(indices[i + 2] as number);
   }
   out.text(indices.length > 0 ? '"/></triangles>' : "</triangles>");
-  out.text(`</mesh></object></resources><build><item objectid="1" transform="${placement(positions)}"/></build></model>`);
 }
 
 /**
  * Serialises a mesh as a 3MF package, ready for slicers (PrusaSlicer, Bambu Studio,
  * OrcaSlicer, Cura): one object named `options.name`, in millimetres, lying in the positive
- * octant, with the share link of its settings in the model metadata.
+ * octant, with the share link of its settings in the model metadata. Given several objects
+ * (the pieces of a cut baseplate), it writes each one with its name and its build item, in
+ * the positive octant together, where they lie from each other.
  */
-export function serialize3mf(mesh: TriangleMesh, options: ThreeMfOptions): Uint8Array {
+export function serialize3mf(mesh: TriangleMesh | readonly ThreeMfObject[], options: ThreeMfOptions): Uint8Array {
+  const objects = "positions" in mesh ? [{ mesh, name: options.name }] : mesh;
   return zipParts([
     ["[Content_Types].xml", (out) => out.bytes(encoder.encode(CONTENT_TYPES))],
     ["_rels/.rels", (out) => out.bytes(encoder.encode(RELATIONSHIPS))],
-    [MODEL_PATH, (out) => writeModel(mesh, options, out)],
+    [MODEL_PATH, (out) => writeModel(objects, options, out)],
   ]);
 }

@@ -1,8 +1,8 @@
 import type { BaseplateSettings } from "@repo/geometry";
-import type { BaseplateSummary, ExportFormat, ExportPiece } from "./engine/protocol";
+import type { BaseplateSummary, ExportPiece, FileExtension } from "./engine/protocol";
 
-/** Media type of each download format. */
-export const MEDIA_TYPES: Record<ExportFormat, string> = { "3mf": "model/3mf", stl: "model/stl" };
+/** Media type of each downloaded file. */
+export const MEDIA_TYPES: Record<FileExtension, string> = { "3mf": "model/3mf", stl: "model/stl", zip: "application/zip" };
 
 /**
  * Name of a downloaded file without its extension, which is also the name of the object

@@ -72,7 +72,7 @@ const fr = {
   fits: "tient",
   doesNotFit: "ne tient pas",
   plateTooSmall: (plate: string) =>
-    `La baseplate dépasse votre plateau (${plate}) dans les deux sens. Réduisez-la, ou corrigez la taille du plateau dans les paramètres.`,
+    `Même découpée, une pièce dépasse votre plateau (${plate}) dans les deux sens : une cellule et sa marge n'y tiennent pas. Réduisez la marge ou la taille des cellules, ou corrigez la taille du plateau dans les paramètres.`,
   plateTooSmallShort: "Ne tient pas sur le plateau",
   narrowMargin: (margin: string, lines: string) =>
     `Une marge de ${margin} mm est plus étroite que deux largeurs de ligne (${lines} mm) : elle s'imprimera mal. Élargissez-la ou supprimez-la.`,
@@ -174,7 +174,9 @@ const fr = {
   preparing: { "3mf": "Préparation du 3MF…", stl: "Préparation du STL…" },
   otherFormats: "Autres formats",
   threeMfDescription: "Recommandé : s'ouvre dans le trancheur, avec le lien de ses réglages.",
-  stlDescription: "Pour les trancheurs qui ne lisent pas le 3MF.",
+  stlDescription: "Pour les trancheurs qui ne lisent pas le 3MF. Découpée, la baseplate vient en zip, un fichier par pièce.",
+  /** Name of a piece of a cut baseplate in the 3MF; `{n}` is its number, engraved under it. */
+  pieceName: "pièce {n}",
   // Errors
   computeFailed: "Le calcul de la baseplate a échoué. Modifiez un réglage pour réessayer.",
   exportFailed: "Le téléchargement a échoué. Réessayez.",
@@ -248,7 +250,7 @@ const en: Strings = {
   fits: "fits",
   doesNotFit: "does not fit",
   plateTooSmall: (plate: string) =>
-    `The baseplate is larger than your build plate (${plate}) both ways. Make it smaller, or correct the size of the build plate in the parameters.`,
+    `Even cut, a piece is larger than your build plate (${plate}) both ways: a cell and its margin do not fit on it. Reduce the margin or the cell size, or correct the size of the build plate in the parameters.`,
   plateTooSmallShort: "Does not fit on the build plate",
   narrowMargin: (margin: string, lines: string) =>
     `A margin of ${margin} mm is narrower than two line widths (${lines} mm): it will print poorly. Widen it or remove it.`,
@@ -347,7 +349,8 @@ const en: Strings = {
   preparing: { "3mf": "Preparing the 3MF…", stl: "Preparing the STL…" },
   otherFormats: "Other formats",
   threeMfDescription: "Recommended: opens in the slicer, with the link to its settings.",
-  stlDescription: "For the slicers that cannot read 3MF.",
+  stlDescription: "For the slicers that cannot read 3MF. Cut, the baseplate comes as a zip, one file per piece.",
+  pieceName: "piece {n}",
   // Errors
   computeFailed: "The baseplate could not be computed. Change a setting to try again.",
   exportFailed: "The download failed. Try again.",

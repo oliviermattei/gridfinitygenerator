@@ -26,9 +26,10 @@ test("turning the screws on opens their family and counts them in the statistics
   await expect(size).toHaveAttribute("aria-expanded", "false");
   await expect(numberField(page, "Ø tige")).toHaveValue("3");
   await expect(numberField(page, "Ø tête")).toHaveValue("6");
-  // The default drawer: 9 × 6 cells, a screw on each of the 8 × 5 inner intersections.
-  await expect(screwCount(page)).toHaveText("40");
-  await expect(family).toHaveAccessibleName("Vis 40 vis, tige 3 mm, tête 6 mm");
+  // The default drawer: 9 × 6 cells, a screw on each of the 8 × 5 inner intersections, but
+  // those on the cuts of its 4 pieces for the default build plate (12): 28.
+  await expect(screwCount(page)).toHaveText("28");
+  await expect(family).toHaveAccessibleName("Vis 28 vis, tige 3 mm, tête 6 mm");
 
   // The head follows a shank made wider than it.
   await numberField(page, "Ø tige").fill("6,5");
@@ -39,7 +40,7 @@ test("turning the screws on opens their family and counts them in the statistics
   await expect(numberField(page, "Ø tête")).toHaveValue("6");
   await numberField(page, "Ø tête").fill("7,5");
   await numberField(page, "Ø tête").blur();
-  await expect(family).toHaveAccessibleName("Vis 40 vis, tige 6 mm, tête 7,5 mm");
+  await expect(family).toHaveAccessibleName("Vis 28 vis, tige 6 mm, tête 7,5 mm");
 
   // Fewer cells, fewer screws: 4 × 3 cells, 3 × 2 inner intersections.
   await size.click();

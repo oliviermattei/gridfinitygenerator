@@ -1,10 +1,11 @@
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
-import type { Margins } from "./layout";
 import type { TriangleMesh } from "./mesh";
+import { labelTool, type Label } from "./label";
 import { MARGIN } from "./margin";
 import { withArena, type Own } from "./manifold";
 import { hasScrew, screwTool } from "./screws";
 import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, slabOf, type GridFrame } from "./shapes";
+import { latticeOf, type Lattice, type PiecePlan } from "./split";
 
 /**
  * Cell-brick assembly (ADR 0004, `brickMesh` in prototypes/geometry-perf): one brick per
@@ -23,6 +24,12 @@ import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect,
  * Bricks are laid on the lattice of the grid (`latticeOf`): the grid, and the whole cells
  * the margin carries on beyond it, which are inner cells; the rest of the margin goes to
  * the bricks along the outline.
+ *
+ * A baseplate cut for the build plate (split.ts) is cut on seams between bricks: each piece
+ * joins the bricks of its cells, and keeps their faces on its cuts, which are flat, with
+ * sharp corners and no chamfer. The bricks are those of the whole baseplate, so the pieces
+ * together are exactly the baseplate, less the screws on the cuts and the engraved numbers:
+ * the brick that holds the number of a piece is a brick of its own (label.ts).
  */
 export function canAssembleWithBricks(frame: GridFrame): boolean {
   const { columns, rows } = latticeOf(frame);
@@ -30,48 +37,37 @@ export function canAssembleWithBricks(frame: GridFrame): boolean {
 }
 
 /**
- * Cells the bricks are laid on, in the indices of the grid (i along X, j along Y, negative
- * before the grid): the grid, and the whole cells its margin carries on beyond each side,
- * built exactly as the grid's inner cells (`MarginVariant.wholeCells`).
+ * Joins the cell bricks into the pieces of the baseplate, in the order of `pieces` (a single
+ * one covering the whole lattice when it is not cut), each piece with its label if any. With
+ * `checked`, each joined mesh is rebuilt as a manifold solid to prove it is closed
+ * (`NoError`): that check costs about ten times the assembly itself, so the preview skips
+ * it and only the final mesh pays for it.
  */
-interface Lattice {
-  /** First column, and the column past the last one. */
-  columns: readonly [first: number, end: number];
-  rows: readonly [first: number, end: number];
-  /** Margin left beyond the lattice on each side, carried by the bricks along that side. */
-  rests: Margins;
-}
-
-function latticeOf(frame: GridFrame): Lattice {
-  const { columns, rows, cellSize, margins } = frame;
-  const whole = MARGIN.wholeCells?.(frame) ?? { left: 0, right: 0, back: 0, front: 0 };
-  return {
-    columns: [-whole.left, columns + whole.right],
-    rows: [-whole.front, rows + whole.back],
-    rests: {
-      left: margins.left - whole.left * cellSize,
-      right: margins.right - whole.right * cellSize,
-      back: margins.back - whole.back * cellSize,
-      front: margins.front - whole.front * cellSize,
-    },
-  };
-}
-
-/**
- * Joins the cell bricks into the baseplate. With `checked`, the joined mesh is rebuilt as
- * a manifold solid to prove it is closed (`NoError`): that check costs about ten times the
- * assembly itself, so the preview skips it and only the final mesh pays for it.
- */
-export function assembleWithBricks(wasm: ManifoldToplevel, frame: GridFrame, checked: boolean): TriangleMesh {
+export function assembleWithBricks(
+  wasm: ManifoldToplevel,
+  frame: GridFrame,
+  checked: boolean,
+  pieces: readonly PiecePlan[],
+  labels: readonly Label[] = [],
+): TriangleMesh[] {
   if (!canAssembleWithBricks(frame)) {
     throw new RangeError(
       `Cell bricks need a lattice of at least 2 × 2 cells of a single pocket profile, not ${frame.columns} × ${frame.rows} cells and their margin`,
     );
   }
   const lattice = latticeOf(frame);
-  const mesh = joinBricks(cellBricks(wasm, frame, lattice), frame, lattice);
-  if (checked) assertManifold(wasm, mesh);
-  return mesh;
+  const bricks = cellBricks(wasm, frame, lattice, labels);
+  return pieces.map((piece, index) => {
+    const label = labels[index];
+    const mesh = joinBricks(bricks, frame, lattice, piece, label ? { cell: label.cell, key: labelKey(label, frame, lattice) } : null);
+    if (checked) assertManifold(wasm, mesh);
+    return mesh;
+  });
+}
+
+/** Key of the brick that holds a label: the brick of its cell, less the digits. */
+function labelKey(label: Label, frame: GridFrame, lattice: Lattice): string {
+  return `${brickKey(...label.cell, frame, lattice)},label:${label.text}@${label.side}`;
 }
 
 /** Bit per cut face of a brick: +X, −X, +Y, −Y (the faces a neighbouring brick touches). */
@@ -149,7 +145,7 @@ function inGrid(i: number, j: number, { columns, rows }: GridFrame): boolean {
  * holds the pocket of a cell of the margin, cut by the outline). Then the
  * quarter of a screw hole is removed at each corner of the brick that holds a screw.
  */
-function cellBricks(wasm: ManifoldToplevel, frame: GridFrame, lattice: Lattice): Map<string, Brick> {
+function cellBricks(wasm: ManifoldToplevel, frame: GridFrame, lattice: Lattice, labels: readonly Label[]): Map<string, Brick> {
   const { cellSize, profile } = frame;
   const half = cellSize / 2;
   return withArena((own) => {
@@ -168,9 +164,18 @@ function cellBricks(wasm: ManifoldToplevel, frame: GridFrame, lattice: Lattice):
     // The brick of a kind of cell without its screws, shared by the bricks of that kind whatever
     // their screws: manifold computes it once.
     const bases = new Map<string, Manifold>();
+    // A cut shows the faces of the bricks along it: with a bottom chamfer, the slabs of the
+    // bricks on the outline have a ring of vertices at the top of the chamfer, on their seams
+    // too, so the inner bricks get it as well, for their faces on a cut to meet on the same
+    // vertices. Without a cut, the ring on the seams is dropped with them.
+    const ringed = frame.bottomChamfer > 0 && (frame.cuts.columns.length > 0 || frame.cuts.rows.length > 0);
     const baseOf = (i: number, j: number, sx: Side, sy: Side): Manifold => {
       if (sx === 0 && sy === 0) {
-        const block = own(own(wasm.Manifold.cube([cellSize, cellSize, profile.height])).translate([-half, -half, 0]));
+        const square = rect(-half, -half, half, half);
+        const block =
+          ringed
+            ? slabOf(wasm, own, own(new wasm.CrossSection([square])), frame, cellCentre(i, j, frame))
+            : own(own(wasm.Manifold.cube([cellSize, cellSize, profile.height])).translate([-half, -half, 0]));
         return own(block.subtract(pocket));
       }
       const [cx, cy] = cellCentre(i, j, frame);
@@ -202,6 +207,10 @@ function cellBricks(wasm: ManifoldToplevel, frame: GridFrame, lattice: Lattice):
         bases.set(kind, base);
         solids.set(key, withScrews(base, corners));
       }
+    for (const label of labels) {
+      const solid = solids.get(brickKey(...label.cell, frame, lattice)) as Manifold;
+      solids.set(labelKey(label, frame, lattice), own(solid.subtract(labelTool(wasm, own, frame, label))));
+    }
     return new Map([...solids].map(([key, solid]) => [key, brickOf(meshOf(solid), half)]));
   });
 }
@@ -266,10 +275,21 @@ function brickOf(mesh: TriangleMesh, half: number): Brick {
   return { positions, indices, vertexFaces, triangleFaces };
 }
 
-/** Copies the bricks across the grid, drops the faces between neighbours and welds the seams. */
-function joinBricks(bricks: Map<string, Brick>, frame: GridFrame, lattice: Lattice): TriangleMesh {
-  const [[i0, i1], [j0, j1]] = [lattice.columns, lattice.rows];
-  const brickAt = (i: number, j: number) => bricks.get(brickKey(i, j, frame, lattice)) as Brick;
+/**
+ * Copies the bricks across the cells of a piece, drops the faces between neighbours and
+ * welds the seams; the faces on the sides of the piece stay, on the outline as on a cut.
+ * `label` is the cell whose brick is the piece's own, with its engraved number.
+ */
+function joinBricks(
+  bricks: Map<string, Brick>,
+  frame: GridFrame,
+  lattice: Lattice,
+  piece: PiecePlan,
+  label: { cell: readonly [number, number]; key: string } | null,
+): TriangleMesh {
+  const [[i0, i1], [j0, j1]] = [piece.columns, piece.rows];
+  const brickAt = (i: number, j: number) =>
+    bricks.get(label && label.cell[0] === i && label.cell[1] === j ? label.key : brickKey(i, j, frame, lattice)) as Brick;
   let vertexCount = 0;
   let indexCount = 0;
   for (let i = i0; i < i1; i++)

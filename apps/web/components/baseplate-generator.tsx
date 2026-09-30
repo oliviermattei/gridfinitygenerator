@@ -1,11 +1,11 @@
 "use client";
 
-import { changedAdvancedSettings, type Baseplate, type BaseplateSettings, type Quality } from "@repo/geometry";
+import { changedAdvancedSettings, spreadPieces, type Baseplate, type BaseplateSettings, type BuildPlate, type Quality } from "@repo/geometry";
 import { focusRing, glass } from "@repo/ui";
 import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
 import type { ExportFormat, ExportPiece } from "@/lib/engine/protocol";
 import { MEDIA_TYPES } from "@/lib/export-file";
@@ -31,6 +31,8 @@ const PANEL = { top: 72, edge: 16, width: 380 };
 const MOBILE_TOP_BAR = 64;
 /** Desktop statistics frame, in CSS pixels: under the gear menu, on the right edge. */
 const STATS = { top: PANEL.top, edge: PANEL.edge, width: 272 };
+/** Space between the pieces of a cut baseplate in the preview, in millimetres: the cuts show. */
+const PREVIEW_GAP_MM = 4;
 
 /** A download being prepared: every download waits for it. */
 interface Exporting {
@@ -38,11 +40,12 @@ interface Exporting {
   format: ExportFormat;
 }
 
-/** The baseplate on screen, with the quality and the settings it was computed for. */
+/** The baseplate on screen, with the quality, the settings and the build plate it was computed for. */
 interface OnScreen {
   baseplate: Baseplate;
   quality: Quality;
   settings: BaseplateSettings;
+  buildPlate: BuildPlate;
 }
 
 /** A failure shown to the user, by the key of its message. */
@@ -100,8 +103,8 @@ export function BaseplateGenerator() {
   // settings, then their final quality, and drops whatever a newer setting made stale.
   useEffect(() => {
     const client = createEngineClient({
-      onBaseplate(next, quality, computedFor) {
-        setShown({ baseplate: next, quality, settings: computedFor });
+      onBaseplate(next, quality, computedFor, buildPlate) {
+        setShown({ baseplate: next, quality, settings: computedFor, buildPlate });
         setError(null);
       },
       onError(reason) {
@@ -116,23 +119,28 @@ export function BaseplateGenerator() {
     };
   }, []);
 
+  // The build plate is a local preference: the baseplate is cut for it (and computed again
+  // when it changes), but it stays out of the share link.
+  const { buildPlate } = preferences;
   // Nothing is computed for the server defaults that hydration shows first.
   useEffect(() => {
-    if (hydrated) engine.current?.show(settings);
-  }, [settings, hydrated]);
+    if (hydrated) engine.current?.show(settings, buildPlate);
+  }, [settings, buildPlate, hydrated]);
 
   const baseplate = shown?.baseplate ?? null;
+  // The pieces of a cut baseplate, set apart so that the cuts show.
+  const previewMesh = useMemo(() => (baseplate ? spreadPieces(baseplate, PREVIEW_GAP_MM) : null), [baseplate]);
   // The volume is measured on the final mesh: "…" until it answers for the current settings.
-  const final = shown !== null && shown.quality === "final" && shown.settings === settings;
+  const final = shown !== null && shown.quality === "final" && shown.settings === settings && shown.buildPlate === buildPlate;
   const updateSettings = (patch: Partial<BaseplateSettings>) => setSettings((previous) => ({ ...previous, ...patch }));
-  const fits = fitsOn(baseplate, preferences.buildPlate);
+  const fits = fitsOn(baseplate, buildPlate);
   const renderStats = (className: string) => (
     <StatsCard
       summary={baseplate}
       layerHeight={shown?.settings.layerHeight ?? settings.layerHeight}
       lineWidth={shown?.settings.lineWidth ?? settings.lineWidth}
       final={final}
-      buildPlate={preferences.buildPlate}
+      buildPlate={buildPlate}
       fits={fits}
       advancedChanged={changedAdvancedSettings(settings).length > 0}
       unit={preferences.unit}
@@ -168,7 +176,9 @@ export function BaseplateGenerator() {
   /**
    * Downloads the baseplate of the settings, or the test kit (always a single 3MF). The 3MF
    * carries the share link of the settings: the page that generates it again (the test kit
-   * from its button, since it takes the cell size, the outline and the print settings).
+   * from its button, since it takes the cell size, the outline and the print settings). A
+   * baseplate cut for the build plate comes as one 3MF with a named object per piece, or as
+   * a zip of one STL per piece.
    */
   async function exportPiece(piece: ExportPiece, format: ExportFormat) {
     const client = engine.current;
@@ -176,8 +186,9 @@ export function BaseplateGenerator() {
     setExporting({ piece, format });
     setError(null);
     try {
-      const { bytes, name } = await client.exportFile(piece, settings, format, shareLinkOf(settings));
-      download(bytes as Uint8Array<ArrayBuffer>, `${name}.${format}`, MEDIA_TYPES[format]);
+      const options = { link: shareLinkOf(settings), buildPlate, pieceName: t.pieceName };
+      const { bytes, name, extension } = await client.exportFile(piece, settings, format, options);
+      download(bytes as Uint8Array<ArrayBuffer>, `${name}.${extension}`, MEDIA_TYPES[extension]);
     } catch (reason) {
       console.error(reason);
       setError("exportFailed");
@@ -223,7 +234,7 @@ export function BaseplateGenerator() {
   return (
     <main className="relative h-dvh overflow-hidden bg-bg text-[14px]">
       <MeshPreview
-        mesh={baseplate?.mesh ?? null}
+        mesh={previewMesh}
         color={PREVIEW_COLORS[preferences.previewColor]}
         insets={insets}
         recenter={recenter}

@@ -264,10 +264,14 @@ export interface ThreeMfContent {
   buildItems: string[];
   /** Translation of the first build item (its `transform`), zero without one. */
   placement: [number, number, number];
+  /** Translation of each build item, in order. */
+  placements: [number, number, number][];
   /** Model metadata, by name, with XML entities decoded. */
   metadata: Map<string, string>;
-  /** The mesh of the object, as stored (without the build item transform). */
+  /** The mesh of the first object, as stored (without the build item transform). */
   mesh: TriangleMesh;
+  /** Every object, its name and its mesh as stored, in order. */
+  objects: { name: string; mesh: TriangleMesh }[];
 }
 
 /** Translation of a 3MF transform (`m00 m01 m02 … m30 m31 m32`), which must not rotate nor scale. */
@@ -309,14 +313,21 @@ export function readThreeMf(bytes: Uint8Array): ThreeMfContent {
   for (const [, name, value] of xml.matchAll(/<metadata\b[^>]*\bname="([^"]+)"[^>]*>([^<]*)<\/metadata>/g)) {
     metadata.set(decodeXml(name as string), decodeXml(value as string));
   }
-  const positions: number[] = [];
-  for (const [, x, y, z] of xml.matchAll(/<vertex x="([^"]+)" y="([^"]+)" z="([^"]+)"\s*\/>/g)) {
-    positions.push(Number(x), Number(y), Number(z));
-  }
-  const indices: number[] = [];
-  for (const [, a, b, c] of xml.matchAll(/<triangle v1="(\d+)" v2="(\d+)" v3="(\d+)"\s*\/>/g)) {
-    indices.push(Number(a), Number(b), Number(c));
-  }
+  const meshOf = (objectXml: string): TriangleMesh => {
+    const positions: number[] = [];
+    for (const [, x, y, z] of objectXml.matchAll(/<vertex x="([^"]+)" y="([^"]+)" z="([^"]+)"\s*\/>/g)) {
+      positions.push(Number(x), Number(y), Number(z));
+    }
+    const indices: number[] = [];
+    for (const [, a, b, c] of objectXml.matchAll(/<triangle v1="(\d+)" v2="(\d+)" v3="(\d+)"\s*\/>/g)) {
+      indices.push(Number(a), Number(b), Number(c));
+    }
+    return { positions: new Float32Array(positions), indices: new Uint32Array(indices) };
+  };
+  const objects = [...xml.matchAll(/<object\b[^>]*\bname="([^"]*)"[^>]*>([\s\S]*?)<\/object>/g)].map(([, name, body]) => ({
+    name: decodeXml(name as string),
+    mesh: meshOf(body as string),
+  }));
   return {
     parts: Object.keys(files),
     modelTarget,
@@ -325,7 +336,9 @@ export function readThreeMf(bytes: Uint8Array): ThreeMfContent {
     objectNames: [...xml.matchAll(/<object\b[^>]*\bname="([^"]*)"/g)].map(([, name]) => decodeXml(name as string)),
     buildItems: [...xml.matchAll(/<item\b[^>]*\bobjectid="([^"]+)"/g)].map(([, id]) => id as string),
     placement: placementOf(/<item\b[^>]*\btransform="([^"]+)"/.exec(xml)?.[1]),
+    placements: [...xml.matchAll(/<item\b[^>]*\btransform="([^"]+)"/g)].map(([, transform]) => placementOf(transform)),
     metadata,
-    mesh: { positions: new Float32Array(positions), indices: new Uint32Array(indices) },
+    mesh: objects[0]?.mesh ?? { positions: new Float32Array(0), indices: new Uint32Array(0) },
+    objects,
   };
 }

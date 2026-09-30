@@ -1,4 +1,5 @@
 import { BASEPLATE_SETTINGS, type Alignment, type BaseplateSettings } from "./settings";
+import type { SplitPlan } from "./split";
 
 /** Width of the margin on each side of the grid, in millimetres. */
 export interface Margins {
@@ -21,6 +22,12 @@ export interface BaseplateLayout {
    * centred on the origin): the inner intersections of the grid, none without screws.
    */
   screws: [x: number, y: number][];
+  /**
+   * How the baseplate is cut into pieces that fit the build plate given to the engine: the
+   * grid lines cut, and each piece with its cells and footprint. A single piece without a
+   * build plate, or when the baseplate fits on it.
+   */
+  split: SplitPlan;
 }
 
 /**
@@ -57,7 +64,7 @@ const CELL_EPSILON = 1e-9;
  * - Cells mode: the margins in width and depth are added to the grid.
  * The margin of each axis is then spread by the alignment.
  */
-export function layoutOf(settings: BaseplateSettings): Omit<BaseplateLayout, "screws"> {
+export function layoutOf(settings: BaseplateSettings): Omit<BaseplateLayout, "screws" | "split"> {
   const { cellSize } = settings;
   let columns: number;
   let rows: number;

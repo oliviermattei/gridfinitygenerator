@@ -1,10 +1,12 @@
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
+import { labelTool, type Label } from "./label";
 import { MARGIN } from "./margin";
 import { withArena, type Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
 import { screwPositions, screwTool } from "./screws";
 import { TOOL_OVERSHOOT_MM, cellCentre, gridRect, meshOf, pocketTool, roundedRect, slabOf, type GridFrame } from "./shapes";
+import type { PiecePlan } from "./split";
 
 /**
  * Grouped boolean assembly (ADR 0004 fallback): the slab of the outline (with its bottom
@@ -12,8 +14,17 @@ import { TOOL_OVERSHOOT_MM, cellCentre, gridRect, meshOf, pocketTool, roundedRec
  * tool and the margin's cut at once, then minus the tops of the lower cells, then minus
  * every screw hole. Works for any grid, including single rows and columns and grids of
  * mixed pocket profiles (the test kit).
+ *
+ * A baseplate cut for the build plate is then cut into its pieces, in the order of `pieces`:
+ * each one is the baseplate within its footprint, which reaches past the outline on its
+ * sides on it, less its engraved number (`labels`, in the same order).
  */
-export function assembleWithBooleans(wasm: ManifoldToplevel, frame: GridFrame): TriangleMesh {
+export function assembleWithBooleans(
+  wasm: ManifoldToplevel,
+  frame: GridFrame,
+  pieces: readonly PiecePlan[],
+  labels: readonly Label[] = [],
+): TriangleMesh[] {
   const { columns, rows, profile, width, depth, outerRadius, segmentsPerQuarter } = frame;
   return withArena((own) => {
     const margin = MARGIN.prepare(wasm, own, frame);
@@ -46,7 +57,19 @@ export function assembleWithBooleans(wasm: ManifoldToplevel, frame: GridFrame): 
       const screws = positions.map((position) => own(screw.translate([...position, 0])));
       solid = own(solid.subtract(own(wasm.Manifold.compose(screws))));
     }
-    return meshOf(solid);
+    if (pieces.length <= 1) return [meshOf(solid)];
+    const o = TOOL_OVERSHOOT_MM;
+    const [outerX, outerY] = [frame.width / 2 + o, frame.depth / 2 + o];
+    return pieces.map(({ footprint: [x0, y0, x1, y1] }, index) => {
+      // Past the outline on its sides on it; exactly on the cuts.
+      const [left, front] = [x0 <= -frame.width / 2 ? -outerX : x0, y0 <= -frame.depth / 2 ? -outerY : y0];
+      const [right, back] = [x1 >= frame.width / 2 ? outerX : x1, y1 >= frame.depth / 2 ? outerY : y1];
+      const box = own(own(wasm.Manifold.cube([right - left, back - front, frame.profile.height + 2 * o])).translate([left, front, -o]));
+      let piece = own(solid.intersect(box));
+      const label = labels[index];
+      if (label) piece = own(piece.subtract(own(labelTool(wasm, own, frame, label).translate([...cellCentre(...label.cell, frame), 0]))));
+      return meshOf(piece);
+    });
   });
 }
 

@@ -242,7 +242,7 @@ describe.each<Quality>(["preview", "final"])("test kit, %s quality", (quality) =
 
   it("is a 1 × 2 baseplate, 42 × 84 mm, as high as its hybrid cell, without margin nor screw", async () => {
     const kit = await generateTestKit({}, quality);
-    expect(kit.layout).toEqual({
+    expect(kit.layout).toMatchObject({
       columns: 1,
       rows: 2,
       cellSize: STANDARD_CELL_SIZE_MM,

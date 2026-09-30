@@ -9,9 +9,13 @@ import { useFormats, useStrings } from "@/lib/locale";
 import type { Strings } from "@/lib/strings";
 import type { Unit } from "@/lib/units";
 
-/** Whether the baseplate shown fits on the build plate, in either orientation; null until it is known. */
+/**
+ * Whether every piece of the baseplate shown fits on the build plate, in either orientation,
+ * as measured on its mesh; null until it is known. The engine cuts a baseplate that does not
+ * fit: a piece still too large means a cell and its margin are larger than the build plate.
+ */
 export function fitsOn(summary: BaseplateSummary | null, plate: BuildPlate): boolean | null {
-  return summary ? fitsOnBuildPlate(summary.stats.dimensions, plate) : null;
+  return summary ? summary.pieces.every((piece) => fitsOnBuildPlate(piece.dimensions, plate)) : null;
 }
 
 export interface StatsCardProps {

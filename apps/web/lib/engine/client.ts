@@ -1,33 +1,38 @@
-import type { Baseplate, BaseplateSettings, Quality } from "@repo/geometry";
-import type { BaseplateSummary, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat, ExportPiece } from "./protocol";
+import type { Baseplate, BaseplateSettings, BuildPlate, Quality } from "@repo/geometry";
+import type { BaseplateSummary, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat, ExportPiece, FileExtension } from "./protocol";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 export interface EngineClientEvents {
-  /** A baseplate for the latest settings shown, which it gets with them: the preview first, then the final quality. */
-  onBaseplate(baseplate: Baseplate, quality: Quality, settings: BaseplateSettings): void;
+  /**
+   * A baseplate for the latest settings and build plate shown, which it gets with them: the
+   * preview first, then the final quality.
+   */
+  onBaseplate(baseplate: Baseplate, quality: Quality, settings: BaseplateSettings, buildPlate: BuildPlate): void;
   /** Computing the latest settings shown failed. */
   onError(error: Error): void;
 }
 
 export interface EngineClient {
   /**
-   * Computes `settings` for display: the preview, then the final quality, each reported
-   * through `onBaseplate`. Newer settings supersede older ones: a computation that became
-   * stale is dropped (its result, or its final quality not started yet), so only the
-   * latest settings are rendered.
+   * Computes `settings`, cut for `buildPlate`, for display: the preview, then the final
+   * quality, each reported through `onBaseplate`. Newer settings supersede older ones: a
+   * computation that became stale is dropped (its result, or its final quality not started
+   * yet), so only the latest settings are rendered.
    */
-  show(settings: BaseplateSettings): void;
+  show(settings: BaseplateSettings, buildPlate: BuildPlate): void;
   /**
-   * The file of `piece` for `settings` in `format`, computed in final quality, and its name
-   * without extension. A 3MF carries `link`, the absolute link that generates it again.
+   * The file of `piece` for `settings` in `format`, computed in final quality and cut for
+   * `buildPlate`, its name without extension, and its extension (a zip for the STL files of
+   * a cut baseplate). A 3MF carries `link`, the absolute link that generates it again, and
+   * names each piece of a cut baseplate by `pieceName` (`{n}` for its number).
    */
   exportFile(
     piece: ExportPiece,
     settings: BaseplateSettings,
     format: ExportFormat,
-    link: string,
-  ): Promise<{ bytes: Uint8Array; name: string; baseplate: BaseplateSummary }>;
+    options: { link: string; buildPlate: BuildPlate; pieceName: string },
+  ): Promise<{ bytes: Uint8Array; name: string; extension: FileExtension; baseplate: BaseplateSummary }>;
   dispose(): void;
 }
 
@@ -61,9 +66,10 @@ interface Pending {
   startedAt: number;
 }
 
-/** Latest settings to show, and the quality still to compute for them (null when done). */
+/** Latest settings and build plate to show, and the quality still to compute for them (null when done). */
 interface Shown {
   settings: BaseplateSettings;
+  buildPlate: BuildPlate;
   next: Quality | null;
 }
 
@@ -179,8 +185,8 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
     return { id, response };
   }
 
-  async function generate(settings: BaseplateSettings, quality: Quality): Promise<Baseplate> {
-    const { id, response: reply } = send({ type: "generate", settings, quality }, quality);
+  async function generate(settings: BaseplateSettings, buildPlate: BuildPlate, quality: Quality): Promise<Baseplate> {
+    const { id, response: reply } = send({ type: "generate", settings, quality, buildPlate }, quality);
     if (quality === "final") finalInFlight = id;
     const response = await reply;
     if (response.type !== "baseplate") throw new Error(`Unexpected engine response: ${response.type}`);
@@ -200,10 +206,10 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
           if (shown !== target) continue;
         }
         try {
-          const baseplate = await generate(target.settings, quality);
+          const baseplate = await generate(target.settings, target.buildPlate, quality);
           if (shown !== target) continue; // stale: dropped, the latest settings come next
           target.next = quality === "preview" ? "final" : null;
-          events.onBaseplate(baseplate, quality, target.settings);
+          events.onBaseplate(baseplate, quality, target.settings, target.buildPlate);
         } catch (error) {
           if (shown !== target) continue;
           target.next = null;
@@ -216,16 +222,16 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
   }
 
   return {
-    show(settings) {
-      shown = { settings, next: "preview" };
+    show(settings, buildPlate) {
+      shown = { settings, buildPlate, next: "preview" };
       cancelStaleFinal();
       void render();
     },
-    async exportFile(piece, settings, format, link) {
+    async exportFile(piece, settings, format, { link, buildPlate, pieceName }) {
       const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : (`export-${format}` as const);
-      const response = await send({ type: "export", piece, settings, format, link }, label).response;
+      const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName }, label).response;
       if (response.type !== "export") throw new Error(`Unexpected engine response: ${response.type}`);
-      return { bytes: response.bytes, name: response.name, baseplate: response.baseplate };
+      return { bytes: response.bytes, name: response.name, extension: response.extension, baseplate: response.baseplate };
     },
     dispose() {
       shown = null;

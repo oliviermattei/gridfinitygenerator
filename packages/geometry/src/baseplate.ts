@@ -1,15 +1,17 @@
 import { assembleWithBooleans } from "./boolean-assembly";
 import { assembleWithBricks, canAssembleWithBricks } from "./brick-assembly";
+import { labelsOf } from "./label";
 import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold } from "./manifold";
 import { FLUSH_PROFILE, POCKET_PROFILES } from "./pocket-profile";
-import { layerCount } from "./print";
+import { layerCount, type BuildPlate } from "./print";
 import { screwHolesOf, screwPositions } from "./screws";
 import { clampSettings, type BaseplateSettings } from "./settings";
 import type { TriangleMesh } from "./mesh";
 import type { GridFrame } from "./shapes";
+import { splitPlanOf, type PiecePlan, type SplitPlan } from "./split";
 
-export type { BaseplateLayout, Margins, TriangleMesh };
+export type { BaseplateLayout, Margins, PiecePlan, SplitPlan, TriangleMesh };
 
 export type Quality = "preview" | "final";
 
@@ -32,7 +34,7 @@ export interface BaseplateStats {
    * pocket profile is not rounded to the layer, so the last layer may be partial.
    */
   layers: number;
-  /** Number of pieces to print: always 1 in v1, which does not cut for the build plate. */
+  /** Number of pieces to print: 1 unless the baseplate is cut for the build plate. */
   pieces: number;
   /** Number of screws that fix the baseplate to the drawer: one per screw hole, none without screws. */
   screws: number;
@@ -50,12 +52,39 @@ export type AssemblyStrategy = "bricks" | "boolean";
 export interface GenerateOptions {
   /** Defaults to `"bricks"` when the grid allows it, `"boolean"` otherwise. */
   strategy?: AssemblyStrategy;
+  /**
+   * Usable area of the build plate: a baseplate that does not fit on it, as it is or turned
+   * a quarter, is cut into pieces that do (split.ts, ADR 0009). It is a local preference of
+   * the user, not a baseplate setting, so it is not in the share link. Without it, the
+   * baseplate is never cut.
+   */
+  buildPlate?: BuildPlate | null;
+}
+
+/** One piece of the baseplate, a closed shell of its mesh, in the order of `layout.split.pieces`. */
+export interface BaseplatePiece {
+  /** Number of the piece, engraved under it when the baseplate is cut. */
+  number: number;
+  /** First vertex of the piece in the mesh of the baseplate, and the vertex past its last one. */
+  vertices: [first: number, end: number];
+  /** First triangle of the piece in the mesh of the baseplate, and the triangle past its last one. */
+  triangles: [first: number, end: number];
+  /** Bounding box of the piece, measured on its mesh, in millimetres. */
+  dimensions: BaseplateStats["dimensions"];
+  /** Volume of the piece, in mm³, measured on its final mesh; null for the preview. */
+  volume: number | null;
 }
 
 export interface Baseplate {
+  /**
+   * The whole baseplate, assembled: every piece in its place, each a closed shell of its own
+   * (they touch along the cuts, but share no vertex).
+   */
   mesh: TriangleMesh;
   layout: BaseplateLayout;
   stats: BaseplateStats;
+  /** Its pieces, a single one when it is not cut. */
+  pieces: BaseplatePiece[];
 }
 
 /**
@@ -64,11 +93,13 @@ export interface Baseplate {
  * number of cells, its outline rounded and chamfered at the bottom by the settings, and its
  * margin (the grid carried on up to the outline in truncated cells, see margin.ts and ADR
  * 0008), with a countersunk screw hole on each inner intersection of the grid when the
- * screws are on (screws.ts, ADR 0006). The settings are
+ * screws are on (screws.ts, ADR 0006). With a build plate it does not fit on
+ * (`options.buildPlate`), it is cut on grid lines into pieces that do, each with its number
+ * engraved underneath (split.ts, label.ts, ADR 0009). The settings are
  * first brought into their ranges, and a missing one takes its default (`clampSettings`):
- * without settings, the baseplate of the default drawer. The mesh is always closed; the
- * final mesh, the one that gets exported, is also checked by manifold (`NoError`) before it
- * is returned.
+ * without settings, the baseplate of the default drawer. The mesh of each piece is always
+ * closed; the final mesh, the one that gets exported, is also checked by manifold
+ * (`NoError`), piece by piece, before it is returned.
  */
 export async function generateBaseplate(
   input: Partial<BaseplateSettings>,
@@ -115,7 +146,7 @@ async function buildBaseplate(
   const width = cells.columns * cells.cellSize + margins.left + margins.right;
   const depth = cells.rows * cells.cellSize + margins.back + margins.front;
   const profile = POCKET_PROFILES[settings.pocketProfile];
-  const frame: GridFrame = {
+  const uncut: GridFrame = {
     columns: cells.columns,
     rows: cells.rows,
     cellSize: cells.cellSize,
@@ -130,23 +161,63 @@ async function buildBaseplate(
     segmentsPerQuarter: SEGMENTS_PER_QUARTER[quality],
     segmentsPerHole: SEGMENTS_PER_HOLE[quality],
     screws: screwHolesOf(settings, profile),
+    cuts: { columns: [], rows: [] },
     layerHeight: settings.layerHeight,
     lineWidth: settings.lineWidth,
   };
+  const split = splitPlanOf(uncut, options.buildPlate ?? null);
+  const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts } };
+  const labels = labelsOf(split);
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
-  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame) };
-  const mesh =
-    strategy === "bricks" ? assembleWithBricks(wasm, frame, quality === "final") : assembleWithBooleans(wasm, frame);
+  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame), split };
+  const meshes =
+    strategy === "bricks"
+      ? assembleWithBricks(wasm, frame, quality === "final", split.pieces, labels)
+      : assembleWithBooleans(wasm, frame, split.pieces, labels);
+  const { mesh, pieces } = joinPieces(meshes, split.pieces, quality);
   return {
     mesh,
     layout,
     stats: {
       dimensions: dimensionsOf(mesh),
-      volume: quality === "final" ? volumeOf(mesh) : null,
+      volume: quality === "final" ? pieces.reduce((sum, piece) => sum + (piece.volume as number), 0) : null,
       layers: layerCount(frame.profile.height, settings.layerHeight),
-      pieces: 1,
+      pieces: pieces.length,
       screws: layout.screws.length,
     },
+    pieces,
+  };
+}
+
+/** The meshes of the pieces as one mesh, each a range of its vertices and triangles, measured. */
+function joinPieces(meshes: readonly TriangleMesh[], plans: readonly PiecePlan[], quality: Quality): Pick<Baseplate, "mesh" | "pieces"> {
+  if (meshes.length === 1) {
+    const [mesh] = meshes as [TriangleMesh];
+    return { mesh, pieces: [pieceOf(mesh, plans[0] as PiecePlan, 0, 0, quality)] };
+  }
+  const vertexCount = meshes.reduce((sum, { positions }) => sum + positions.length / 3, 0);
+  const indexCount = meshes.reduce((sum, { indices }) => sum + indices.length, 0);
+  const positions = new Float32Array(vertexCount * 3);
+  const indices = new Uint32Array(indexCount);
+  let [vertices, written] = [0, 0];
+  const pieces = meshes.map((mesh, index) => {
+    positions.set(mesh.positions, vertices * 3);
+    for (let k = 0; k < mesh.indices.length; k++) indices[written + k] = (mesh.indices[k] as number) + vertices;
+    const piece = pieceOf(mesh, plans[index] as PiecePlan, vertices, written / 3, quality);
+    vertices += mesh.positions.length / 3;
+    written += mesh.indices.length;
+    return piece;
+  });
+  return { mesh: { positions, indices }, pieces };
+}
+
+function pieceOf(mesh: TriangleMesh, plan: PiecePlan, firstVertex: number, firstTriangle: number, quality: Quality): BaseplatePiece {
+  return {
+    number: plan.number,
+    vertices: [firstVertex, firstVertex + mesh.positions.length / 3],
+    triangles: [firstTriangle, firstTriangle + mesh.indices.length / 3],
+    dimensions: dimensionsOf(mesh),
+    volume: quality === "final" ? volumeOf(mesh) : null,
   };
 }
 

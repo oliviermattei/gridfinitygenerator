@@ -71,7 +71,7 @@ Le jeu retiré à la largeur et à la profondeur du tiroir pour que la baseplate
 _Avoid_: tolérance, clearance
 
 **Vis**:
-Une vis à tête fraisée qui fixe la baseplate au fond du tiroir, posée à une intersection intérieure de la grille (ni sur le bord de la grille, ni dans la marge) ; on règle le Ø de sa tige et le Ø de sa tête.
+Une vis à tête fraisée qui fixe la baseplate au fond du tiroir, posée à une intersection intérieure de la grille (ni sur le bord de la grille, ni dans la marge, ni sur une coupe) ; on règle le Ø de sa tige et le Ø de sa tête.
 _Avoid_: screw, boulon
 
 **Plot**:
@@ -107,11 +107,23 @@ _Avoid_: outil, configurateur, tool
 ### Impression
 
 **Pièce**:
-Un morceau de baseplate obtenu après découpe, imprimable séparément.
+Un morceau de baseplate obtenu après découpe, imprimable séparément : un rectangle de cellules entières, avec la marge qui le borde sur le contour. Les pièces sont numérotées de 1, de l'arrière gauche à l'avant droit, le tiroir vu de dessus (ADR 0009).
 _Avoid_: part, fragment, tuile
 
+**Découpe**:
+Le partage automatique d'une baseplate qui ne tient pas sur le plateau, dans aucun des deux sens, en pièces qui y tiennent : le moins de pièces, puis le moins de pièces d'une seule cellule, puis les pièces les plus égales (ADR 0009). Le plan de découpe dit quelles lignes sont coupées et où va chaque pièce.
+_Avoid_: split, partition, tuilage
+
+**Coupe**:
+Une ligne de la grille, prolongée à travers la marge, où deux pièces se séparent : dans l'axe d'un muret, chaque pièce en garde la moitié. Une coupe est plane, à coins vifs, sans chanfrein ; aucun croisement coupé ne porte de vis.
+_Avoid_: joint, jonction, split line
+
+**Numéro de pièce**:
+Le numéro gravé sous une pièce, dans un demi-muret, en chiffres de 3 mm empilés et en miroir, pour qu'il se lise quand on retourne la pièce (0,4 mm de profondeur, arrondi à la couche). Une baseplate d'une seule pièce n'en a pas.
+_Avoid_: étiquette (réservé aux bacs), label, repère
+
 **Plateau**:
-Le plateau d'impression de l'imprimante, uniquement.
+Le plateau d'impression de l'imprimante, uniquement. Sa taille utile est une préférence locale : elle décide de la découpe, mais n'entre pas dans le lien de partage.
 _Avoid_: build plate, lit, bed (et jamais pour désigner la baseplate)
 
 **Trancheur**:
