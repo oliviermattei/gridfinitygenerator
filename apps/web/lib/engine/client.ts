@@ -1,5 +1,6 @@
 import type { Baseplate, BaseplateSettings, BuildPlate, Quality } from "@repo/geometry";
-import type { BaseplateSummary, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat, ExportPiece, FileExtension } from "./protocol";
+import type { Material } from "../mass";
+import type { BaseplateSummary, Comparison, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat, ExportPiece, FileExtension } from "./protocol";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
@@ -12,10 +13,11 @@ export interface EngineClientEvents {
   /** Computing the latest settings shown failed. */
   onError(error: Error): void;
   /**
-   * The volume of baseplates to compare with the one shown (`compare`), measured on their
-   * final mesh, each with the settings and the build plate it was computed for.
+   * The material of baseplates to compare with the one shown (`compare`): the volume of their
+   * pieces and of their clips, measured on their final meshes, each with the settings and the
+   * build plate it was computed for.
    */
-  onVolumes?(volumes: { settings: BaseplateSettings; volume: number }[], buildPlate: BuildPlate): void;
+  onVolumes?(volumes: { comparison: Comparison; material: Material }[], buildPlate: BuildPlate): void;
 }
 
 export interface EngineClient {
@@ -28,11 +30,12 @@ export interface EngineClient {
   show(settings: BaseplateSettings, buildPlate: BuildPlate): void;
   /**
    * Baseplates to compare with the settings shown (the same one with another shape of
-   * margin, or of another type): once the final quality of the settings shown is done,
-   * their volumes are measured, all in one request, and reported through `onVolumes`. Newer
-   * settings shown drop the list (they call for their own), and cancel its request.
+   * margin, or of another type, or without its margin): once the final quality of the
+   * settings shown is done, their volumes are measured, all in one request, and reported
+   * through `onVolumes`. Newer settings shown drop the list (they call for their own), and
+   * cancel its request.
    */
-  compare(settings: readonly BaseplateSettings[]): void;
+  compare(comparisons: readonly Comparison[]): void;
   /**
    * The file of `piece` for `settings` in `format`, computed in final quality and cut for
    * `buildPlate`, its name without extension, and its extension (a zip for the STL files of
@@ -95,7 +98,7 @@ interface Shown {
   buildPlate: BuildPlate;
   next: Quality | "volumes" | null;
   /** Baseplates to compare with it (`compare`). */
-  compare: readonly BaseplateSettings[];
+  compare: readonly Comparison[];
   /** Whether its final quality is shown: the volumes to compare come after it. */
   done: boolean;
 }
@@ -206,7 +209,7 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
     worker ??= start();
     const target = worker;
     // The volumes to compare are recorded with the first of their settings.
-    const settings = Array.isArray(request.settings) ? (request.settings[0] as BaseplateSettings) : request.settings;
+    const settings = request.type === "volumes" ? (request.comparisons[0] as Comparison).settings : request.settings;
     const response = new Promise<EngineResponse>((resolve, reject) => {
       pending.set(id, { resolve, reject, label, settings, startedAt: performance.now() });
       target.postMessage({ ...request, id });
@@ -225,13 +228,14 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
   /** Measures the volumes of `settings` in final quality, cut for `buildPlate`: optional, never an error on screen. */
   async function measureVolumes(target: Shown) {
     const list = target.compare;
-    const { id, response: reply } = send({ type: "volumes", settings: [...list], buildPlate: target.buildPlate }, "volumes");
+    const { id, response: reply } = send({ type: "volumes", comparisons: [...list], buildPlate: target.buildPlate }, "volumes");
     finalInFlight = id;
     try {
       const response = await reply;
       if (response.type === "volumes") {
         // True whatever the settings shown since: the page keeps them by their settings.
-        events.onVolumes?.(list.map((settings, k) => ({ settings, volume: response.volumes[k] as number })), target.buildPlate);
+        const material = (k: number): Material => ({ volume: response.volumes[k] as number, clips: response.clipsVolumes[k] as number });
+        events.onVolumes?.(list.map((comparison, k) => ({ comparison, material: material(k) })), target.buildPlate);
       }
     } catch {
       // Cancelled, or failed: the comparison is left out.
@@ -281,11 +285,11 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
       cancelStaleFinal();
       void render();
     },
-    compare(settings) {
+    compare(comparisons) {
       if (!shown) return;
-      shown.compare = settings;
+      shown.compare = comparisons;
       // Done with the settings shown: the volumes are measured now; otherwise after their final.
-      if (shown.next === null && shown.done && settings.length > 0) {
+      if (shown.next === null && shown.done && comparisons.length > 0) {
         shown.next = "volumes";
         void render();
       }

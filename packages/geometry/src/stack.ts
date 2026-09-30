@@ -39,8 +39,9 @@ export interface StackPlan {
 /**
  * Why the pieces cannot be stacked:
  * - `"single-piece"`: the baseplate is not cut;
- * - `"low-margin"`: its margin is a frame or brackets, 2 mm high, which would hang in the air
- *   under a piece upside down (only the truncated cells, full height, are held);
+ * - `"low-margin"`: its margin is a frame, whose walls 2 mm high would hang in the air under a
+ *   piece upside down, and whose supports, reduced (#29), are single crossbars (the truncated
+ *   cells and the extended grid, full height, are held, whole or reduced);
  * - `"tray"`: upside down, the floor of each pocket would bridge the whole pocket, and its
  *   sag would rise towards the foot of the bin, 0.2 mm above it;
  * - `"clickbase"`: the webs that hold the lamellas up in print would print on top of them.
@@ -79,7 +80,7 @@ export function stackRuleOf(
   const blockers: StackBlocker[] = [];
   if (layout.split.pieces.length <= 1) blockers.push("single-piece");
   const { left, right, back, front } = layout.margins;
-  if (settings.marginShape !== "cells" && left + right + back + front > 0) blockers.push("low-margin");
+  if (settings.marginShape === "frame" && left + right + back + front > 0) blockers.push("low-margin");
   if (settings.baseplateType === "tray") blockers.push("tray");
   if (settings.baseplateType === "clickbase") blockers.push("clickbase");
   const warnings: StackWarning[] = [];
@@ -110,7 +111,14 @@ interface Placed {
   phase: [number, number];
   /** Its sides where the outer wall of a margin stands off the lattice: they must stand on a wall. */
   walls: Record<Side, boolean>;
+  /**
+   * What its minimal margin keeps (`BaseplateLayout.supports`), within its footprint: each must
+   * stand on the same of the piece beneath. Empty for a whole margin.
+   */
+  supports: Box[];
 }
+
+type Box = [x0: number, y0: number, x1: number, y1: number];
 
 const mod = (value: number, size: number) => ((value % size) + size) % size;
 /** Whether `value` is a multiple of `size`, to the slack. */
@@ -118,7 +126,14 @@ const onLattice = (value: number, size: number) => Math.min(mod(value, size), si
 const area = ({ box: [x0, y0, x1, y1] }: Placed) => (x1 - x0) * (y1 - y0);
 
 /** The pieces of `layout` as they lie in the baseplate. */
-function piecesOf({ columns, rows, cellSize, margins, split }: Pick<BaseplateLayout, "columns" | "rows" | "cellSize" | "margins" | "split">): Placed[] {
+function piecesOf({
+  columns,
+  rows,
+  cellSize,
+  margins,
+  split,
+  supports,
+}: Pick<BaseplateLayout, "columns" | "rows" | "cellSize" | "margins" | "split"> & Partial<Pick<BaseplateLayout, "supports">>): Placed[] {
   const width = columns * cellSize + margins.left + margins.right;
   const depth = rows * cellSize + margins.back + margins.front;
   const phase: [number, number] = [mod(-width / 2 + margins.left, cellSize), mod(-depth / 2 + margins.front, cellSize)];
@@ -133,14 +148,31 @@ function piecesOf({ columns, rows, cellSize, margins, split }: Pick<BaseplateLay
       front: wall(box[1], -depth / 2, phase[1]),
       back: wall(box[3], depth / 2, phase[1]),
     },
+    supports: (supports ?? []).flatMap(([x0, y0, x1, y1]): Box[] => {
+      const kept: Box = [Math.max(x0, box[0]), Math.max(y0, box[1]), Math.min(x1, box[2]), Math.min(y1, box[3])];
+      return kept[2] - kept[0] > EPSILON_MM && kept[3] - kept[1] > EPSILON_MM ? [kept] : [];
+    }),
   }));
 }
 
+/** Whether every support of `upper` stands on a support of `lower` (`Placed.supports`). */
+function supportsHeld(lower: Placed, upper: Placed): boolean {
+  return upper.supports.every(([x0, y0, x1, y1]) =>
+    lower.supports.some(([a0, b0, a1, b1]) => x0 >= a0 - EPSILON_MM && y0 >= b0 - EPSILON_MM && x1 <= a1 + EPSILON_MM && y1 <= b1 + EPSILON_MM),
+  );
+}
+
 /** A piece turned upside down about an axis, before its translation. */
-function flipped({ box: [x0, y0, x1, y1], phase: [px, py], walls }: Placed, flip: StackFlip, cellSize: number): Placed {
-  if (flip === "x") return { box: [x0, -y1, x1, -y0], phase: [px, mod(-py, cellSize)], walls: { ...walls, front: walls.back, back: walls.front } };
-  if (flip === "y") return { box: [-x1, y0, -x0, y1], phase: [mod(-px, cellSize), py], walls: { ...walls, left: walls.right, right: walls.left } };
-  return { box: [x0, y0, x1, y1], phase: [px, py], walls };
+function flipped({ box: [x0, y0, x1, y1], phase: [px, py], walls, supports }: Placed, flip: StackFlip, cellSize: number): Placed {
+  if (flip === "x") {
+    const mirrored = supports.map(([a0, b0, a1, b1]): Box => [a0, -b1, a1, -b0]);
+    return { box: [x0, -y1, x1, -y0], phase: [px, mod(-py, cellSize)], walls: { ...walls, front: walls.back, back: walls.front }, supports: mirrored };
+  }
+  if (flip === "y") {
+    const mirrored = supports.map(([a0, b0, a1, b1]): Box => [-a1, b0, -a0, b1]);
+    return { box: [-x1, y0, -x0, y1], phase: [mod(-px, cellSize), py], walls: { ...walls, left: walls.right, right: walls.left }, supports: mirrored };
+  }
+  return { box: [x0, y0, x1, y1], phase: [px, py], walls, supports };
 }
 
 /**
@@ -179,8 +211,9 @@ function shiftAlong(lower: Placed, upper: Placed, axis: 0 | 1, cellSize: number)
   return best;
 }
 
-function translated({ box: [x0, y0, x1, y1], phase: [px, py], walls }: Placed, [dx, dy]: [number, number], cellSize: number): Placed {
-  return { box: [x0 + dx, y0 + dy, x1 + dx, y1 + dy], phase: [mod(px + dx, cellSize), mod(py + dy, cellSize)], walls };
+function translated({ box: [x0, y0, x1, y1], phase: [px, py], walls, supports }: Placed, [dx, dy]: [number, number], cellSize: number): Placed {
+  const moved = supports.map(([a0, b0, a1, b1]): Box => [a0 + dx, b0 + dy, a1 + dx, b1 + dy]);
+  return { box: [x0 + dx, y0 + dy, x1 + dx, y1 + dy], phase: [mod(px + dx, cellSize), mod(py + dy, cellSize)], walls, supports: moved };
 }
 
 /**
@@ -188,13 +221,14 @@ function translated({ box: [x0, y0, x1, y1], phase: [px, py], walls }: Placed, [
  * method, the first piece of each stack upright, every other one upside down on the one
  * beneath, one layer of air between them (`stackPitch`). A piece rests on another only where
  * the other holds it: its lattice on the same lines (its flats on the other's flats or feet),
- * within its footprint, and the outer wall of its margin on the other's. The largest pieces go
+ * within its footprint, the outer wall of its margin on the other's, and what a minimal margin
+ * keeps (its supports, #29) on the same of the other. The largest pieces go
  * first; each piece goes on the stack whose top holds it and is the smallest, or starts a new
  * stack. A mirror of a piece about one axis only: the pieces with a margin on two opposite
  * corners of the baseplate cannot all share one stack.
  */
 export function stackPlanOf(
-  layout: Pick<BaseplateLayout, "columns" | "rows" | "cellSize" | "margins" | "split">,
+  layout: Pick<BaseplateLayout, "columns" | "rows" | "cellSize" | "margins" | "split"> & Partial<Pick<BaseplateLayout, "supports">>,
   height: number,
   layerHeight: number,
 ): StackPlan {
@@ -213,7 +247,7 @@ export function stackPlanOf(
         const upside = flipped(piece, flip, cellSize);
         const dx = shiftAlong(stack.top, upside, 0, cellSize);
         const dy = shiftAlong(stack.top, upside, 1, cellSize);
-        if (dx !== null && dy !== null) best = { stack, flip, offset: [dx, dy] };
+        if (dx !== null && dy !== null && supportsHeld(stack.top, translated(upside, [dx, dy], cellSize))) best = { stack, flip, offset: [dx, dy] };
       }
     if (best) {
       const { stack, flip, offset } = best;

@@ -17,7 +17,7 @@ export function isLocale(value: unknown): value is Locale {
   return LOCALES.includes(value as Locale);
 }
 
-/** The index of the generators in a language (ADR 0017). */
+/** The index of the generators in a language (ADR 0020). */
 export function indexPath(locale: Locale): `/${Locale}` {
   return `/${locale}`;
 }

@@ -2,11 +2,11 @@ import { FALLBACK_LOCALE, LOCALES, baseplatePath, indexPath, type Locale } from 
 import { PREFERENCES_STORAGE_KEY } from "@/lib/storage-keys";
 import { STRINGS } from "@/lib/strings";
 
-// The site root is a static page (ADR 0007, 0017): it holds no content, only the choice of a language.
+// The site root is a static page (ADR 0007, 0020): it holds no content, only the choice of a language.
 export const dynamic = "force-static";
 
 /**
- * Leads the site root to the index of the generators in a language (ADR 0017): the one chosen
+ * Leads the site root to the index of the generators in a language (ADR 0020): the one chosen
  * in the menu, kept in the local preferences, or else the first of the browser languages that
  * the site speaks, or else English. An address with a query string or a hash is an older share
  * link of a baseplate: it goes to the baseplate generator instead, keeping them. Runs in the

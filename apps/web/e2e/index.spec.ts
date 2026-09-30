@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readout } from "./support";
 
-// Index of the generators at /{lang} (#33, ADR 0017).
+// Index of the generators at /{lang} (#33, ADR 0020).
 
 test.describe("a French browser", () => {
   test.use({ locale: "fr-FR" });

@@ -83,9 +83,20 @@ export function notchedSides(frame: GridFrame, lattice: Lattice, labels: readonl
  * notches of the four murets of a crossing never meet, and never turn on the top of the frame.
  * Not positive when the cell is too small to leave a notch.
  */
-function notchLength({ cellSize, profile }: GridFrame, z: number): number {
+function notchLength({ cellSize, profile }: Pick<GridFrame, "cellSize" | "profile">, z: number): number {
   const straight = cellSize / 2 - profile.topRadius;
   return Math.min(straight, straight - POST_SIDE_MM - (profile.height - z));
+}
+
+/**
+ * How far the post of a crossing reaches along each of its murets at height `z`, from the axis
+ * of the crossing: 5 mm at the top of the frame, 45° farther per millimetre down (6.80 mm at
+ * 2.80 mm in the hybrid profile). Where a clip's slot must end, under the post (clips.ts, ADR
+ * 0018). Null when the cell is too small to leave a notch: the whole muret is a post.
+ */
+export function postReach(frame: Pick<GridFrame, "cellSize" | "profile"> & { skeleton: Skeleton }, z: number): number | null {
+  if (notchLength(frame, frame.skeleton.band) <= 0) return null;
+  return frame.cellSize / 2 - notchLength(frame, z);
 }
 
 /** Height where the flanks of a notch reach the ends of the corner arcs, above the frame, and turn straight up. */

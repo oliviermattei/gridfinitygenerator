@@ -17,7 +17,7 @@ export {
   type Quality,
   type TriangleMesh,
 } from "./baseplate";
-export { BASEPLATE_TYPES, takesClips, trayFloorOf, type BaseplateType, type TrayFloor } from "./baseplate-type";
+export { BASEPLATE_TYPES, trayFloorOf, type BaseplateType, type TrayFloor } from "./baseplate-type";
 export { skeletonOf, type Skeleton } from "./skeleton";
 export { clickbaseOf, type Clickbase } from "./clickbase";
 export { POCKET_PROFILES, type PocketProfile } from "./pocket-profile";
@@ -49,7 +49,7 @@ export {
 } from "./share-link";
 export { fitsOnBuildPlate, narrowMargin, roundUpToLayer, type BuildPlate } from "./print";
 export { PRINT_GAP_MM, pieceMesh, printClips, printPieces, spreadPieces } from "./pieces";
-export type { ClipPlacement, ClipSlot } from "./clips";
+export { CROSSING_START_MM, type ClipPlacement, type ClipSlot } from "./clips";
 export { serializeStl } from "./stl";
 export { serialize3mf, type ThreeMfObject, type ThreeMfOptions } from "./three-mf";
 export { zipFiles } from "./zip";

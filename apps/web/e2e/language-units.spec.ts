@@ -3,7 +3,7 @@ import { chooseCells, chooseLanguage, closeMenu, closeSettings, numberField, ope
 
 // French and English, millimetres and inches (#14).
 
-/** The browser languages of a first visit, and the index the site root leads to (ADR 0017). */
+/** The browser languages of a first visit, and the index the site root leads to (ADR 0020). */
 const FIRST_VISITS = [
   { browser: "fr-FR", lang: "fr" },
   { browser: "en-US", lang: "en" },

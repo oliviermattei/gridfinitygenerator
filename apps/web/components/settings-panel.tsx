@@ -11,7 +11,6 @@ import {
   skeletonOf,
   stackPlanOf,
   stackRuleOf,
-  takesClips,
   trayFloorOf,
   type BaseplateSettings,
   type BaseplateType,
@@ -24,6 +23,7 @@ import { ChevronDown, Download, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import type { Formats } from "@/lib/format";
+import { gramsText, massOf, type FilamentPreference, type Material } from "@/lib/mass";
 import type { StackPreference } from "@/lib/preferences";
 import { useFormats, useStrings } from "@/lib/locale";
 import type { Strings } from "@/lib/strings";
@@ -148,12 +148,18 @@ export interface FamiliesProps {
   /** Whether a download is being prepared: every download waits for it. */
   downloadBusy: boolean;
   /**
-   * Volume of the baseplate with each shape of margin, the other settings as they are, in
-   * mm³, measured on the final mesh; missing while it is being measured.
+   * Material each shape of margin adds, the other settings as they are (the minimal margin
+   * included), in mm³: the volume of the baseplate with it less that of its grid alone, both
+   * measured on final meshes (#29); missing while they are being measured.
    */
-  marginVolumes: Partial<Record<MarginShape, number>>;
-  /** Volume of the baseplate of each type, the other settings as they are, in mm³, as `marginVolumes`. */
-  typeVolumes: Partial<Record<BaseplateType, number>>;
+  marginSurpluses: Partial<Record<MarginShape, Material>>;
+  /**
+   * Material of the baseplate of each type, the other settings as they are, in mm³, measured on
+   * the final mesh; missing while it is being measured.
+   */
+  typeVolumes: Partial<Record<BaseplateType, Material>>;
+  /** Filament of the prints (a preference): the mass of each shape of margin and of each type (#31). */
+  filament: FilamentPreference;
   /** Stacked print of the pieces (#28): a preference of this browser, not a setting. */
   stack: StackPreference;
   onStackChange: (patch: Partial<StackPreference>) => void;
@@ -170,8 +176,9 @@ export function Families({
   onDownloadTestKit,
   exportingTestKit,
   downloadBusy,
-  marginVolumes,
+  marginSurpluses,
   typeVolumes,
+  filament,
   stack,
   onStackChange,
 }: FamiliesProps) {
@@ -200,23 +207,25 @@ export function Families({
         title={t.baseplateType}
         summary={t.baseplateTypeNames[settings.baseplateType]}
       >
-        <TypeFields settings={settings} onSettingsChange={onSettingsChange} volumes={typeVolumes} />
+        <TypeFields settings={settings} onSettingsChange={onSettingsChange} volumes={typeVolumes} filament={filament} />
       </FamilyItem>
-      <FamilyItem
-        {...bind("alignment")}
-        icon={<AlignIcon className="size-[18px]" />}
-        title={t.alignment}
-        summary={t.alignments[settings.alignment]}
-      >
-        <AlignmentPad value={settings.alignment} onChange={(alignment) => onSettingsChange({ alignment })} />
-      </FamilyItem>
+      {hasMargin(summary) && (
+        <FamilyItem
+          {...bind("alignment")}
+          icon={<AlignIcon className="size-[18px]" />}
+          title={t.alignment}
+          summary={t.alignments[settings.alignment]}
+        >
+          <AlignmentPad value={settings.alignment} onChange={(alignment) => onSettingsChange({ alignment })} />
+        </FamilyItem>
+      )}
       <FamilyItem
         {...bind("margin")}
         icon={<MarginIcon className="size-[18px]" />}
         title={t.margin}
-        summary={t.marginShapeNames[settings.marginShape]}
+        summary={`${t.marginShapeNames[settings.marginShape]}${settings.minimalMargin ? t.minimalMarginShort : ""}`}
       >
-        <MarginFields settings={settings} onSettingsChange={onSettingsChange} summary={summary} volumes={marginVolumes} />
+        <MarginFields settings={settings} onSettingsChange={onSettingsChange} summary={summary} surpluses={marginSurpluses} filament={filament} />
       </FamilyItem>
       <FamilyItem
         {...bind("profile")}
@@ -271,28 +280,24 @@ export function Families({
       >
         <ScrewFields settings={settings} onSettingsChange={onSettingsChange} />
       </FamilyItem>
-      <FamilyItem
-        {...bind("clips")}
-        icon={<ClipIcon className="size-[18px]" />}
-        title={t.clips}
-        summary={clipsSummary(settings, summary, t)}
-        on={clipsOn(settings)}
-        control={
-          <ToggleSwitch
-            label={t.clips}
-            checked={clipsOn(settings)}
-            disabled={!takesClips(settings.baseplateType)}
-            onChange={(clips) => onSettingsChange({ clips })}
-          />
-        }
-      >
-        <div className="flex items-center gap-3">
-          <span className={`grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-surface ${clipsOn(settings) ? "text-muted [--art:var(--accent)]" : "text-faint"}`}>
-            <ClipArt className="h-9 w-12" />
-          </span>
-          <p className="text-[12.5px] leading-snug text-muted">{clipsHint(settings, summary, t)}</p>
-        </div>
-      </FamilyItem>
+      {/* Clips only join the pieces of a cut baseplate: with a single piece, nothing to set. */}
+      {summary && summary.stats.pieces > 1 && (
+        <FamilyItem
+          {...bind("clips")}
+          icon={<ClipIcon className="size-[18px]" />}
+          title={t.clips}
+          summary={clipsSummary(settings, summary, t)}
+          on={settings.clips}
+          control={<ToggleSwitch label={t.clips} checked={settings.clips} onChange={(clips) => onSettingsChange({ clips })} />}
+        >
+          <div className="flex items-center gap-3">
+            <span className={`grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-surface ${settings.clips ? "text-muted [--art:var(--accent)]" : "text-faint"}`}>
+              <ClipArt className="h-9 w-12" />
+            </span>
+            <p className="text-[12.5px] leading-snug text-muted">{settings.clips ? t.clipsHint : t.clipsOffHint}</p>
+          </div>
+        </FamilyItem>
+      )}
       {summary && summary.stats.pieces > 1 && (
         <StackFamily
           {...bind("stack")}
@@ -344,23 +349,27 @@ export function Families({
 }
 
 /**
- * The shape of the margin, each with the volume of the baseplate it gives, measured on its
- * final mesh ("…" while it is), and what the chosen one is. Without a margin, the shape
- * changes nothing, and no volume is shown.
+ * The shape of the margin, each with the material it adds to the grid alone, measured on the
+ * final meshes ("…" while it is), and its mass in the filament chosen (#31), what the chosen
+ * one is, and the minimal margin (#29), which applies to every shape. Without a margin, the
+ * shape changes nothing, and no volume is shown.
  */
 function MarginFields({
   settings,
   onSettingsChange,
   summary,
-  volumes,
-}: FieldsProps & { summary: BaseplateSummary | null; volumes: Partial<Record<MarginShape, number>> }) {
+  surpluses,
+  filament,
+}: FieldsProps & { summary: BaseplateSummary | null; surpluses: Partial<Record<MarginShape, Material>>; filament: FilamentPreference }) {
   const t = useStrings();
   const f = useFormats();
-  const margins = summary?.layout.margins;
-  const hasMargin = !margins || margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0;
-  const volume = (shape: MarginShape) => {
-    const measured = volumes[shape];
-    return measured === undefined ? "…" : `${f.volumes.format(measured / 1000)} cm³`;
+  const withMargin = hasMargin(summary);
+  const surplus = (shape: MarginShape) => {
+    const measured = surpluses[shape];
+    if (measured === undefined) return "…";
+    const volume = f.volumes.format(Math.abs(measured.volume) / 1000);
+    const grams = gramsText(massOf(measured, filament).total, f.grams, t.belowOneGram);
+    return measured.volume < 0 ? t.marginSaving(volume, grams) : t.marginSurplus(volume, grams);
   };
   return (
     <>
@@ -372,26 +381,42 @@ function MarginFields({
         options={MARGIN_SHAPES.map((shape) => ({
           value: shape,
           label: t.marginShapes[shape],
-          description: hasMargin ? volume(shape) : undefined,
+          description: withMargin ? surplus(shape) : undefined,
           art: <MarginArt kind={shape} className="h-auto w-full max-w-[64px]" />,
         }))}
       />
-      <p className="mt-3 text-[12.5px] leading-snug text-muted">{hasMargin ? t.marginShapeHints[settings.marginShape] : t.noMarginHint}</p>
-      {hasMargin && <p className="mt-1 text-[12px] leading-snug text-muted">{t.marginVolumesHint}</p>}
+      <p className="mt-3 text-[12.5px] leading-snug text-muted">{withMargin ? t.marginShapeHints[settings.marginShape] : t.noMarginHint}</p>
+      <div className="mt-3">
+        <SwitchOption
+          label={t.minimalMargin}
+          hint={t.minimalMarginHint}
+          checked={settings.minimalMargin}
+          onChange={(minimalMargin) => onSettingsChange({ minimalMargin })}
+        />
+      </div>
+      {withMargin && <p className="mt-2 text-[12px] leading-snug text-muted">{t.marginVolumesHint}</p>}
     </>
   );
 }
 
 /**
  * The type of baseplate, each with the volume of the baseplate it gives, measured on its
- * final mesh ("…" while it is), and what the chosen one is.
+ * final mesh ("…" while it is), and its mass in the filament chosen, clips included (#31), and
+ * what the chosen one is.
  */
-function TypeFields({ settings, onSettingsChange, volumes }: FieldsProps & { volumes: Partial<Record<BaseplateType, number>> }) {
+function TypeFields({
+  settings,
+  onSettingsChange,
+  volumes,
+  filament,
+}: FieldsProps & { volumes: Partial<Record<BaseplateType, Material>>; filament: FilamentPreference }) {
   const t = useStrings();
   const f = useFormats();
   const volume = (type: BaseplateType) => {
     const measured = volumes[type];
-    return measured === undefined ? "…" : `${f.volumes.format(measured / 1000)} cm³`;
+    if (measured === undefined) return "…";
+    const mass = t.mass(gramsText(massOf(measured, filament).total, f.grams, t.belowOneGram));
+    return t.typeMaterial(f.volumes.format(measured.volume / 1000), mass);
   };
   const floor = trayFloorOf(settings.layerHeight);
   const { grip } = clickbaseOf(settings.cellSize, POCKET_PROFILES[settings.pocketProfile], settings.layerHeight);
@@ -501,27 +526,19 @@ function screwsSummary(settings: BaseplateSettings, summary: BaseplateSummary | 
   return t.screwsSummary(count, f.fine.format(settings.screwShank), f.fine.format(settings.screwHead));
 }
 
-/** Whether the baseplate takes clips: they are on, and its type takes them (none in a skeleton). */
-function clipsOn(settings: BaseplateSettings): boolean {
-  return settings.clips && takesClips(settings.baseplateType);
+/** "8 clips à imprimer", as laid out by the engine at the ends of the junctions (a cut baseplate). */
+function clipsSummary(settings: BaseplateSettings, summary: BaseplateSummary, t: Strings): string {
+  return settings.clips ? t.clipsSummary(String(summary.stats.clips)) : t.clipsOff;
 }
 
 /**
- * "15 clips à imprimer", as laid out by the engine along the cuts; "Sans découpe" for a
- * baseplate in a single piece, which needs none; "…" until the engine answers.
+ * Whether the baseplate, as last laid out, has a margin on any side: the alignment only places
+ * the grid in what the margin leaves (#30). Shown until the engine first answers.
  */
-function clipsSummary(settings: BaseplateSettings, summary: BaseplateSummary | null, t: Strings): string {
-  if (!takesClips(settings.baseplateType)) return t.clipsSkeleton;
-  if (!settings.clips) return t.clipsOff;
-  if (!summary) return "…";
-  return summary.stats.pieces <= 1 ? t.clipsUncut : t.clipsSummary(String(summary.stats.clips));
-}
-
-/** What the clips are for, or why there are none. */
-function clipsHint(settings: BaseplateSettings, summary: BaseplateSummary | null, t: Strings): string {
-  if (!takesClips(settings.baseplateType)) return t.clipsSkeletonHint;
-  if (!settings.clips) return t.clipsOffHint;
-  return summary && summary.stats.pieces <= 1 ? t.clipsUncutHint : t.clipsHint;
+function hasMargin(summary: BaseplateSummary | null): boolean {
+  if (!summary) return true;
+  const { left, right, back, front } = summary.layout.margins;
+  return left > 0 || right > 0 || back > 0 || front > 0;
 }
 
 /**
@@ -607,8 +624,8 @@ function StackFamily({
           {warnings.map((kind) => (kind === "layer-height" ? warning(t.stackLayerWarning(f.fine.format(settings.layerHeight)), kind) : warning(t.stackSkeletonWarning, kind)))}
           {on && (
             <div className="mt-3 flex flex-col gap-2.5">
-              <StackOption label={t.stackEars} hint={t.stackEarsHint} checked={stack.ears || stack.pins} disabled={stack.pins} onChange={(ears) => onStackChange({ ears })} />
-              <StackOption label={t.stackPins} hint={t.stackPinsHint} checked={stack.pins} onChange={(pins) => onStackChange({ pins })} />
+              <SwitchOption label={t.stackEars} hint={t.stackEarsHint} checked={stack.ears || stack.pins} disabled={stack.pins} onChange={(ears) => onStackChange({ ears })} />
+              <SwitchOption label={t.stackPins} hint={t.stackPinsHint} checked={stack.pins} onChange={(pins) => onStackChange({ pins })} />
             </div>
           )}
           <p className="mt-3 text-[12px] leading-snug text-muted">{t.stackTips}</p>
@@ -619,8 +636,8 @@ function StackFamily({
   );
 }
 
-/** An option of the stack: its switch, its name and what it does. */
-function StackOption({ label, hint, checked, disabled = false, onChange }: { label: string; hint: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
+/** An option switched on or off: its switch, its name and what it does. */
+function SwitchOption({ label, hint, checked, disabled = false, onChange }: { label: string; hint: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
   return (
     <div className="flex items-start gap-3">
       <div className="min-w-0 flex-1">

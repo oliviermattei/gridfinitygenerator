@@ -1,6 +1,6 @@
 import { baseplatePath, binPath, type Locale } from "./i18n";
 
-/** The generators of the site, in the order of the index (ADR 0017). */
+/** The generators of the site, in the order of the index (ADR 0020). */
 export const GENERATOR_IDS = ["baseplate", "bin"] as const;
 
 export type GeneratorId = (typeof GENERATOR_IDS)[number];

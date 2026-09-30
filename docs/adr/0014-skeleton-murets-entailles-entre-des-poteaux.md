@@ -4,6 +4,8 @@ status: proposed
 
 # Skeleton : les murets entaillés entre des poteaux au profil complet
 
+> **Clips : remplacé par l'ADR 0018** (#30) : le Skeleton prend les clips, dans ses poteaux, avec une fente de 4,0 mm (4,1 en ras). `takesClips` est retiré.
+
 La spec v1.1 (#20, ticket #26) ajoute le type de baseplate **Skeleton** (ADR 0013) : le profil de poche complet ne reste qu'aux coins des cellules, autour des croisements, et le milieu des murets descend presque à plat, pour économiser de la matière. Les cotes de départ sont celles d'extrabold (`docs/research/types-de-baseplate.md`) : des poteaux pleine hauteur autour des croisements, une bande de 0 à 0,35 mm entre eux, environ × 0,44 de matière, un bac guidé par ses 4 coins. Le prototype `prototypes/skeleton/` a comparé trois formes d'entaille et mesuré l'assise, les aimants, les vis et le numéro de pièce.
 
 ## Décision

@@ -51,8 +51,14 @@ const V1 = {
   my: number(0, 500, 0),
   /** Alignment of the grid: one of 9 positions, back (t) to front (b), left to right. */
   al: choice(["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"], "c"),
-  /** Shape of the margin (#23): frame of crossbars, truncated cells, or corner brackets. */
-  mg: choice(["frame", "cells", "brackets"], "frame"),
+  /**
+   * Shape of the margin (#23, #29): frame of crossbars, truncated cells or extended grid.
+   * `brackets`, the corner brackets of #23, is only read: it gives the frame with a minimal
+   * margin (`decodeSettings`).
+   */
+  mg: choice(["frame", "cells", "extended", "brackets"], "frame"),
+  /** Minimal margin (#29): only the supports of the margin, two on each side. */
+  min: flag(false),
   /** Type of baseplate (#25): the open grid, a tray on a solid floor, a skeleton (#26), or CLICKbase (#27). */
   ty: choice(["normal", "tray", "skeleton", "clickbase"], "normal"),
   /** Pocket profile. */
@@ -96,6 +102,7 @@ const LINK_KEYS = {
   marginDepth: "my",
   alignment: "al",
   marginShape: "mg",
+  minimalMargin: "min",
   baseplateType: "ty",
   pocketProfile: "pr",
   screws: "sc",
@@ -186,6 +193,9 @@ export function decodeSettings(query: string): BaseplateSettings | null {
   for (const field of Object.keys(LINK_KEYS) as (keyof BaseplateSettings)[]) {
     settings[field] = content[LINK_KEYS[field]];
   }
+  // The corner brackets of #23 are no longer a shape: the frame reduced to its supports
+  // holds the drawer at the same places, less the brackets' legs (#29).
+  if (content.mg === "brackets") Object.assign(settings, { marginShape: "frame", minimalMargin: true });
   return clampSettings({ ...DEFAULT_SETTINGS, ...(settings as Partial<BaseplateSettings>) });
 }
 

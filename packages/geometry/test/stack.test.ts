@@ -66,10 +66,11 @@ describe("rule", () => {
     expect(stackRuleOf({ marginShape: "frame", baseplateType: "normal", layerHeight: 0.2 }, await layout(bare))).toEqual({ blockers: [], warnings: [] });
   });
 
-  it("blocks a single piece, a low margin (frame, brackets), a tray and a CLICKbase", async () => {
+  it("blocks a single piece, a frame (low, or reduced to single crossbars), a tray and a CLICKbase", async () => {
     expect(stackRuleOf({ marginShape: "cells", baseplateType: "normal", layerHeight: 0.2 }, await layout({}, null)).blockers).toEqual(["single-piece"]);
-    for (const marginShape of ["frame", "brackets"] as const) {
-      expect(stackRuleOf({ marginShape, baseplateType: "normal", layerHeight: 0.2 }, await layout({ marginShape })).blockers).toEqual(["low-margin"]);
+    for (const minimalMargin of [false, true]) {
+      const settings = { marginShape: "frame", minimalMargin } as const;
+      expect(stackRuleOf({ ...settings, baseplateType: "normal", layerHeight: 0.2 }, await layout(settings)).blockers).toEqual(["low-margin"]);
     }
     const cut = await layout({ marginShape: "cells" });
     expect(stackRuleOf({ marginShape: "cells", baseplateType: "tray", layerHeight: 0.2 }, cut).blockers).toEqual(["tray"]);
@@ -173,7 +174,7 @@ describe("printed stacks", () => {
     const stacks = await printStacks(baseplate, plan, OPTIONS);
     const clips = printClips(baseplate, stacks.map(({ mesh }) => mesh));
     expect(clips).not.toBeNull();
-    const objects = [...stacks.map(({ mesh, pieces }, k) => ({ mesh, name: `pile ${k + 1} (${pieces.join(", ")})` })), { mesh: clips as TriangleMesh, name: "clip × 15" }];
+    const objects = [...stacks.map(({ mesh, pieces }, k) => ({ mesh, name: `pile ${k + 1} (${pieces.join(", ")})` })), { mesh: clips as TriangleMesh, name: "clip × 8" }];
     const boxes = await Promise.all(objects.map(async ({ mesh }) => (await checkMesh(mesh)).bounds));
     // None overlaps another.
     for (let a = 0; a < boxes.length; a++)
@@ -183,7 +184,7 @@ describe("printed stacks", () => {
       }
 
     const content = readThreeMf(serialize3mf(objects, { name: "baseplate-9x6-399x279mm-stack", shareLink: "https://example.org/fr/baseplate?v=1&mg=cells" }));
-    expect(content.objectNames).toEqual(["pile 1 (2, 4, 1)", "pile 2 (3)", "clip × 15"]);
+    expect(content.objectNames).toEqual(["pile 1 (2, 4, 1)", "pile 2 (3)", "clip × 8"]);
     // Every object lies on the build plate, and the stack keeps its heights: its pieces
     // start at 0, 4.8 and 9.6 mm, and end one layer below the next.
     for (const placement of content.placements) expect(placement[2]).toBeCloseTo(0, 5);

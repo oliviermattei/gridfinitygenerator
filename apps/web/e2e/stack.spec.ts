@@ -13,7 +13,7 @@ test("the stack is offered with several pieces, asks for a margin held upside do
   const toggle = page.getByRole("switch", { name: "Empiler les pièces" });
 
   // The default drawer, cut in 4 pieces, has a frame of 2 mm: it would hang in the air.
-  await expect(family).toHaveAccessibleName("Empiler les pièces Marge trop basse");
+  await expect(family).toHaveAccessibleName("Empiler les pièces Marge en cadre");
   await expect(toggle).toBeDisabled();
   await family.click();
   await page.getByRole("button", { name: "Passer aux cellules tronquées" }).click();
@@ -32,7 +32,7 @@ test("the stack is offered with several pieces, asks for a margin held upside do
   expect(download.suggestedFilename()).toBe("baseplate-9x6-399x279mm-stack.3mf");
   const model = strFromU8(unzipSync(await readFile(await download.path()))["3D/3dmodel.model"] ?? new Uint8Array());
   const objects = [...model.matchAll(/<object\b[^>]*\bname="([^"]*)"[^>]*>([\s\S]*?)<\/object>/g)];
-  expect(objects.map(([, name]) => name)).toEqual(["pile 1 : pièces 2, 4, 1", "pile 2 : pièces 3", "clip × 15"]);
+  expect(objects.map(([, name]) => name)).toEqual(["pile 1 : pièces 2, 4, 1", "pile 2 : pièces 3", "clip × 8"]);
   // The first stack keeps its heights: 3 pieces of 4.6 mm, one layer of 0.2 mm between two.
   const heights = [...(objects[0]?.[2] ?? "").matchAll(/ z="([^"]+)"/g)].map(([, z]) => Number(z));
   expect(heights.reduce((low, z) => Math.min(low, z), Infinity)).toBe(0);

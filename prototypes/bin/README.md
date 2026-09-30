@@ -1,7 +1,7 @@
 # Banc jetable : le bin avant son moteur (ticket #34)
 
 > Questions posées (spec v2, #32) :
-> 1. Le pied standard exact du bin (ADR 0018) s'assoit-il dans nos baseplates, de chaque type et des deux profils ? Avec quel jeu ?
+> 1. Le pied standard exact du bin (ADR 0021) s'assoit-il dans nos baseplates, de chaque type et des deux profils ? Avec quel jeu ?
 > 2. Socle plein (standard, fond intérieur à 7 mm) ou creux (fond juste au-dessus des pentes) : combien de matière et de temps au trancheur ?
 > 3. Quel rayon pour le congé du fond ?
 >
@@ -25,7 +25,7 @@ pnpm --filter @repo/geometry exec vitest run --root ../../prototypes/bin
 - Tray : il est porté par ses pentes seules, 0,2 mm au-dessus du fond (ADR 0013).
 - CLICKbase : à la hauteur d'assise, le pied chevauche les ergots de 6,9 mm³. Ce sont les lamelles qui le serrent (ADR 0015) ; sans elles, il serait libre à 1,45 mm.
 
-L'ADR 0018 tient : aucun réglage de pied côté bin.
+L'ADR 0021 tient : aucun réglage de pied côté bin.
 
 **2. Le socle reste plein par défaut, en attendant l'impression.** Le socle creux divise le volume du maillage par deux (−43 à −57 %), mais au trancheur, avec 15 % de remplissage, il ne gagne que **9 à 15 % de filament** et 2 à 4 % de temps. Il gagne aussi 1 mm de hauteur utile. En contrepartie, son fond franchit ~35 mm au-dessus du vide (pont), et une coque de pied de 1,2 mm est moins rigide qu'un pied plein. Le gain est réel mais modeste. Le socle creux ne devient le défaut que si l'impression de `bin-1x1x3-creux.3mf` montre un pont propre et un pied qui ne cède pas (recette #16). En attendant, le moteur garde le socle plein, standard, et l'option `socle: "hollow"` reste réservée au banc.
 

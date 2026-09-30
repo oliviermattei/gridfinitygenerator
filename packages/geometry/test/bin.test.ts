@@ -13,7 +13,7 @@ import {
 } from "../src/index";
 import { checkMesh } from "./support/measure";
 
-// The bin (#32), observed through the public interface only: the standard foot (ADR 0018),
+// The bin (#32), observed through the public interface only: the standard foot (ADR 0021),
 // the heights in U, the stacking lip, the compartments, and the build plate.
 
 const TOLERANCE_MM = 0.01;

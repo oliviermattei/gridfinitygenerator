@@ -17,7 +17,7 @@ import { circle, loft, meshOf, roundedRect } from "./shapes";
 export const UNIT_HEIGHT_MM = 7;
 
 /**
- * The foot (ADR 0018): the exact standard foot, as [z, inset] from the bottom up, the inset
+ * The foot (ADR 0021): the exact standard foot, as [z, inset] from the bottom up, the inset
  * measured from the top outline of the foot, the cell less the 0.5 mm gap between feet. Its
  * corners are concentric with the 3.75 mm radius of that outline.
  */

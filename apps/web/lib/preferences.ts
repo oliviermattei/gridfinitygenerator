@@ -4,6 +4,7 @@ import type { BuildPlate } from "@repo/geometry";
 import { BRAND_ACCENT } from "@repo/ui";
 import { useCallback, useSyncExternalStore } from "react";
 import { isLocale, type Locale } from "./i18n";
+import { DEFAULT_FILAMENT, parseFilament, type FilamentPreference } from "./mass";
 import { PREFERENCES_STORAGE_KEY } from "./storage-keys";
 import { isUnit, type Unit } from "./units";
 
@@ -58,6 +59,8 @@ export interface Preferences {
   /** Usable area of the build plate, in millimetres. */
   buildPlate: BuildPlate;
   stack: StackPreference;
+  /** Filament of the prints, its density and its price: the mass and cost shown (#31, mass.ts). */
+  filament: FilamentPreference;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -67,6 +70,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   nozzle: 0.4,
   buildPlate: { width: 256, depth: 256 },
   stack: { on: false, ears: false, pins: false },
+  filament: DEFAULT_FILAMENT,
 };
 
 function isPreviewColor(value: unknown): value is PreviewColor {
@@ -108,6 +112,7 @@ function parse(raw: string | null): Preferences {
       ears: flag(stack.ears, DEFAULT_PREFERENCES.stack.ears),
       pins: flag(stack.pins, DEFAULT_PREFERENCES.stack.pins),
     },
+    filament: parseFilament(stored.filament),
   };
 }
 

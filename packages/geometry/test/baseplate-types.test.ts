@@ -149,11 +149,17 @@ describe("a tray cut for the build plate, with clips", () => {
     ]);
     expect(tray.stats.pieces).toBe(4);
     expect(tray.stats.clips).toBe(normal.stats.clips);
-    expect(tray.stats.clips).toBe(15);
+    expect(tray.stats.clips).toBe(8);
     expect(normal.layout.clips?.slot.top).toBe(2.8);
     expect(tray.layout.clips?.slot.top).toBe(3.6);
     expect((await checkMesh(tray.clip ?? { positions: new Float32Array(), indices: new Uint32Array() })).status).toBe("NoError");
     for (const piece of tray.pieces) expect((await checkMesh(pieceMesh(tray, piece))).status).toBe("NoError");
+    // The slot goes through the floor: open from below, up to 3.6 mm (the clip below the
+    // crossing of the cuts at (−21, 0), from y = −1.92 to −6.92).
+    const { sections } = await checkMesh(pieceMesh(tray, tray.pieces[2] as (typeof tray.pieces)[number]), [0.1, 3.5, 3.7]);
+    expect(inSection(sections.get(0.1) ?? [], [-21.25, -4.42])).toBe(false);
+    expect(inSection(sections.get(3.5) ?? [], [-21.9, -4.42])).toBe(false);
+    expect(inSection(sections.get(3.7) ?? [], [-21.9, -4.42])).toBe(true);
   });
 });
 

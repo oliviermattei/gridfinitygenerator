@@ -5,7 +5,7 @@ import { indexPath } from "@/lib/i18n";
 import { useLocale, useStrings } from "@/lib/locale";
 import { PocketMark } from "./illustrations";
 
-/** Top left of a generator: its name, and the mark that leads back to the index (ADR 0017). */
+/** Top left of a generator: its name, and the mark that leads back to the index (ADR 0020). */
 export function GeneratorHeader({ title }: { title: string }) {
   const t = useStrings();
   const locale = useLocale();

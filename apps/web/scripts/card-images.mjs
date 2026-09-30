@@ -1,4 +1,4 @@
-// Renders the fixed images of the index cards (ADR 0017) from the real engine and preview:
+// Renders the fixed images of the index cards (ADR 0020) from the real engine and preview:
 // each generator is opened with a share link, its panels hidden, and the framed model is
 // captured. Run against a production server: `pnpm build && pnpm start -p 3217`, then
 // `pnpm card-images` (BASE_URL overrides http://localhost:3217).

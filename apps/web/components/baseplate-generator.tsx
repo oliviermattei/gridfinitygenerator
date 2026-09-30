@@ -2,6 +2,7 @@
 
 import {
   BASEPLATE_TYPES,
+  DEFAULT_SETTINGS,
   MARGIN_SHAPES,
   changedAdvancedSettings,
   encodeSettings,
@@ -19,9 +20,10 @@ import { LocateFixed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
-import type { ExportFormat, ExportPiece } from "@/lib/engine/protocol";
+import type { Comparison, ExportFormat, ExportPiece } from "@/lib/engine/protocol";
 import { MEDIA_TYPES, download } from "@/lib/export-file";
 import { baseplatePath, type Locale } from "@/lib/i18n";
+import { materialLess, type Material } from "@/lib/mass";
 import { useStrings } from "@/lib/locale";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
 import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
@@ -61,20 +63,24 @@ interface OnScreen {
   buildPlate: BuildPlate;
 }
 
-/** Volumes measured this session, at most: enough to go back and forth between a few baseplates. */
+/** Materials measured this session, at most: enough to go back and forth between a few baseplates. */
 const MAX_VOLUMES = 200;
 
-/** Key of the volume of a baseplate: its settings and the build plate it is cut for. */
-function volumeKey(settings: BaseplateSettings, { width, depth }: BuildPlate): string {
-  return `${encodeSettings(settings)}|${width}×${depth}`;
+/**
+ * Key of the material of a baseplate: its settings and the build plate it is cut for; `bare` for
+ * its grid alone, the same whatever the shape of its margin (#29).
+ */
+function volumeKey(settings: BaseplateSettings, { width, depth }: BuildPlate, bare = false): string {
+  const measured = bare ? { ...settings, marginShape: DEFAULT_SETTINGS.marginShape, minimalMargin: DEFAULT_SETTINGS.minimalMargin } : settings;
+  return `${encodeSettings(measured)}|${width}×${depth}${bare ? "|bare" : ""}`;
 }
 
 /** `volumes` with some more, the oldest dropped past MAX_VOLUMES. */
-function withVolumes(volumes: ReadonlyMap<string, number>, added: [key: string, volume: number][]): ReadonlyMap<string, number> {
+function withVolumes(volumes: ReadonlyMap<string, Material>, added: [key: string, material: Material][]): ReadonlyMap<string, Material> {
   const next = new Map(volumes);
-  for (const [key, volume] of added) {
+  for (const [key, material] of added) {
     next.delete(key);
-    next.set(key, volume);
+    next.set(key, material);
   }
   for (const key of next.keys()) {
     if (next.size <= MAX_VOLUMES) break;
@@ -102,8 +108,9 @@ export function BaseplateGenerator() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [recenter, setRecenter] = useState(0);
   const [preferences, setPreferences] = usePreferences();
-  // Volumes measured on final meshes, by settings and build plate: the shapes of the margin and the types compare with them.
-  const [volumes, setVolumes] = useState<ReadonlyMap<string, number>>(() => new Map());
+  // Materials (pieces and clips) measured on final meshes, by settings and build plate: the
+  // shapes of the margin and the types compare with them.
+  const [volumes, setVolumes] = useState<ReadonlyMap<string, Material>>(() => new Map());
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
 
   const [panel, setPanel] = useState<HTMLElement | null>(null);
@@ -120,11 +127,13 @@ export function BaseplateGenerator() {
       onBaseplate(next, quality, computedFor, buildPlate) {
         setShown({ baseplate: next, quality, settings: computedFor, buildPlate });
         setError(null);
-        const volume = next.stats.volume;
-        if (quality === "final" && volume !== null) setVolumes((known) => withVolumes(known, [[volumeKey(computedFor, buildPlate), volume]]));
+        const { volume, clipsVolume } = next.stats;
+        if (quality === "final" && volume !== null && clipsVolume !== null) {
+          setVolumes((known) => withVolumes(known, [[volumeKey(computedFor, buildPlate), { volume, clips: clipsVolume }]]));
+        }
       },
       onVolumes(measured, buildPlate) {
-        setVolumes((known) => withVolumes(known, measured.map(({ settings, volume }) => [volumeKey(settings, buildPlate), volume])));
+        setVolumes((known) => withVolumes(known, measured.map(({ comparison, material }) => [volumeKey(comparison.settings, buildPlate, comparison.bare), material])));
       },
       onError(reason) {
         console.error(reason);
@@ -146,30 +155,48 @@ export function BaseplateGenerator() {
     if (hydrated) engine.current?.show(settings, buildPlate);
   }, [settings, buildPlate, hydrated]);
 
-  // The volume of the baseplate with each shape of margin, and of each type, as far as it is known.
+  // The volume of the baseplate with each shape of margin, of its grid alone, and of each type, as far as it is known.
   const marginVolumes = useMemo(
     () => Object.fromEntries(MARGIN_SHAPES.map((marginShape) => [marginShape, volumes.get(volumeKey({ ...settings, marginShape }, buildPlate))])),
     [volumes, settings, buildPlate],
-  ) as Partial<Record<MarginShape, number>>;
+  ) as Partial<Record<MarginShape, Material>>;
+  const bareVolume = volumes.get(volumeKey(settings, buildPlate, true));
+  // What each shape adds to the grid alone (#29), once both are measured.
+  const marginSurpluses = useMemo(
+    () =>
+      Object.fromEntries(
+        MARGIN_SHAPES.flatMap((shape) => {
+          const volume = marginVolumes[shape];
+          return volume === undefined || bareVolume === undefined ? [] : [[shape, materialLess(volume, bareVolume)]];
+        }),
+      ),
+    [marginVolumes, bareVolume],
+  ) as Partial<Record<MarginShape, Material>>;
   const typeVolumes = useMemo(
     () => Object.fromEntries(BASEPLATE_TYPES.map((baseplateType) => [baseplateType, volumes.get(volumeKey({ ...settings, baseplateType }, buildPlate))])),
     [volumes, settings, buildPlate],
-  ) as Partial<Record<BaseplateType, number>>;
+  ) as Partial<Record<BaseplateType, Material>>;
   // The baseplate of the current settings, once computed: whether it has a margin, whose shape changes its volume.
   const current = shown !== null && shown.settings === settings && shown.buildPlate === buildPlate ? shown.baseplate : null;
   const margins = current?.layout.margins;
   const hasMargin = margins !== undefined && (margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0);
   // While the margin family (with a margin) or the type family is open, the other shapes or
-  // types are measured once the baseplate shown is.
-  const toCompare = useMemo((): BaseplateSettings[] => {
+  // types are measured once the baseplate shown is; and the grid alone, which the surplus of
+  // each shape is measured from.
+  const toCompare = useMemo((): Comparison[] => {
     if (openFamily === "margin" && hasMargin) {
-      return MARGIN_SHAPES.filter((shape) => shape !== settings.marginShape && marginVolumes[shape] === undefined).map((marginShape) => ({ ...settings, marginShape }));
+      const shapes = MARGIN_SHAPES.filter((shape) => shape !== settings.marginShape && marginVolumes[shape] === undefined);
+      const others = shapes.map((marginShape) => ({ settings: { ...settings, marginShape }, bare: false }));
+      return bareVolume === undefined ? [{ settings, bare: true }, ...others] : others;
     }
     if (openFamily === "type") {
-      return BASEPLATE_TYPES.filter((type) => type !== settings.baseplateType && typeVolumes[type] === undefined).map((baseplateType) => ({ ...settings, baseplateType }));
+      return BASEPLATE_TYPES.filter((type) => type !== settings.baseplateType && typeVolumes[type] === undefined).map((baseplateType) => ({
+        settings: { ...settings, baseplateType },
+        bare: false,
+      }));
     }
     return [];
-  }, [openFamily, hasMargin, settings, marginVolumes, typeVolumes]);
+  }, [openFamily, hasMargin, settings, marginVolumes, bareVolume, typeVolumes]);
   // After `show`, which drops the list of the settings shown before.
   useEffect(() => {
     if (hydrated) engine.current?.compare(toCompare);
@@ -193,6 +220,7 @@ export function BaseplateGenerator() {
       advancedChanged={changedAdvancedSettings(settings).length > 0}
       clickbase={settings.baseplateType === "clickbase"}
       unit={preferences.unit}
+      filament={preferences.filament}
       className={className}
     />
   );
@@ -286,8 +314,9 @@ export function BaseplateGenerator() {
       onDownloadTestKit={() => void exportPiece("test-kit", "3mf")}
       exportingTestKit={exporting?.piece === "test-kit"}
       downloadBusy={exporting !== null}
-      marginVolumes={marginVolumes}
+      marginSurpluses={marginSurpluses}
       typeVolumes={typeVolumes}
+      filament={preferences.filament}
       stack={preferences.stack}
       onStackChange={(patch) => setPreferences({ stack: { ...preferences.stack, ...patch } })}
     />

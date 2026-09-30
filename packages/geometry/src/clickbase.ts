@@ -1,5 +1,6 @@
 // CLICKbase baseplate (#27, ADR 0015): lamellas in the pocket walls that hold the bins.
 import type { Manifold, ManifoldToplevel } from "manifold-3d";
+import { slotsByCell } from "./clips";
 import { DIGIT_GAP_MM, DIGIT_HEIGHT_MM, type Label, type LabelSide } from "./label";
 import type { Own } from "./manifold";
 import { insetAt, type PocketProfile } from "./pocket-profile";
@@ -23,9 +24,12 @@ import { TOOL_OVERSHOOT_MM, cellCentre, insideOutline, pocketTool, type GridFram
  * nozzle: the interface says so.
  *
  * Two lamellas per side, at a quarter of the cell from its middle, from 4.5 mm off the middle
- * (the middle stays whole, for a clip of the cut or the number of a piece) to 0.5 mm before
- * the rounded corner of the pocket, 12 mm long at most; a cell under 34 mm has a single one, in
- * the middle. Only the cells of the grid have lamellas, not those of the margin.
+ * (the middle stays whole, for the number of a piece) to 0.5 mm before the rounded corner of
+ * the pocket, 12 mm long at most; a cell under 34 mm has a single one, in the middle. Only the
+ * cells of the grid have lamellas, not those of the margin. A lamella next to the slot of a
+ * clip, which lies against the corner (clips.ts, ADR 0018), starts 0.5 mm past it: 9.08 mm
+ * long at a crossing of two cuts, 10.20 mm at the edge of the grid, in cells of 42 mm; it is
+ * left out when less than 8 mm would remain.
  */
 export interface Clickbase {
   /** Centres of the lamellas along a side, from its middle, in millimetres. */
@@ -63,7 +67,7 @@ const FOOT_GAP_MM = 0.25;
 const LAMELLA_LENGTH_MM = 12;
 /** Shortest lamella: its ergot and the ramps on each side of it, and a little lamella beyond. */
 const MIN_LAMELLA_LENGTH_MM = 8;
-/** Half the middle of a side that stays whole between two lamellas: room for a clip of 8 mm. */
+/** Half the middle of a side that stays whole between two lamellas: room for the number of a piece. */
 const FREE_MIDDLE_MM = 4.5;
 /** Room left between the end of a lamella and the rounded corner of the pocket. */
 const CORNER_CLEARANCE_MM = 0.5;
@@ -87,7 +91,7 @@ const WEB_TOP_MM = 0.1;
  * of the base (after the bottom chamfer): at least two lines. Otherwise the side has none.
  */
 const MIN_SKIN_MM = 0.8;
-/** Room between a lamella and a clip, or the digits of a number engraved under the same side. */
+/** Room between a lamella and the slot of a clip, or the digits of a number engraved under the same side. */
 export const LAMELLA_CLEARANCE_MM = 0.5;
 /** Overlap between the parts of a tool, so that they never meet on a face. */
 const OVERLAP_MM = 0.05;
@@ -175,6 +179,43 @@ export function lamellaSides(frame: GridFrame, labels: readonly Label[], i: numb
   }, 0);
 }
 
+/** A lamella along a side, from its middle along the side (as `strip`: towards +Y on the +X side, turned with it). */
+export type LamellaSpan = readonly [from: number, to: number];
+
+/**
+ * The lamellas of each side of cell (i, j), in the order of `LabelSide`: none on a side without
+ * (`lamellaSides`); on a side that holds the slot of a clip, the lamella next to it starts
+ * `LAMELLA_CLEARANCE_MM` past the slot, or is left out when less than its shortest length
+ * would remain.
+ */
+export function cellLamellas(frame: GridFrame, labels: readonly Label[], i: number, j: number): LamellaSpan[][] {
+  const { clickbase } = frame;
+  const sides = lamellaSides(frame, labels, i, j);
+  if (!clickbase || sides === 0) return [[], [], [], []];
+  const slots = slotsByCell(frame.clips).get(`${i},${j}`);
+  const reach = (frame.clips?.slot.length ?? 0) / 2 + LAMELLA_CLEARANCE_MM;
+  return SIDES.map((_, side) => {
+    if (!(sides & (1 << side))) return [];
+    const offset = slots?.[side];
+    // The shift of a clip runs towards +Y or +X, the lamellas of a side turn with it (`turn`).
+    const u = offset === undefined ? null : side === 1 || side === 2 ? -offset : offset;
+    return clickbase.centres.flatMap((centre): LamellaSpan[] => {
+      const [from, to] = [centre - clickbase.length / 2, centre + clickbase.length / 2];
+      if (u === null || u + reach <= from || u - reach >= to) return [[from, to]];
+      // What is left of the lamella either side of the slot and its clearance: the longer part.
+      const [before, after] = [[from, Math.min(to, u - reach)] as const, [Math.max(from, u + reach), to] as const];
+      const kept = before[1] - before[0] >= after[1] - after[0] ? before : after;
+      return kept[1] - kept[0] >= MIN_LAMELLA_LENGTH_MM - 1e-9 ? [kept] : [];
+    });
+  });
+}
+
+/** Key of the lamellas of a cell (`cellLamellas`), the same for two cells with the same lamellas; empty without any. */
+export function lamellaKey(lamellas: readonly (readonly LamellaSpan[])[]): string {
+  if (lamellas.every((spans) => spans.length === 0)) return "";
+  return lamellas.map((spans) => spans.map(([from, to]) => `${from.toFixed(4)}~${to.toFixed(4)}`).join("+")).join("|");
+}
+
 /** Points turned a number of quarter turns counter-clockwise about the origin (sides as `LabelSide`). */
 function turn([x, y]: readonly [number, number], quarters: number): [number, number] {
   switch (quarters) {
@@ -241,24 +282,30 @@ function strip(
 }
 
 /**
- * The pocket tool of a cell of a CLICKbase baseplate, with the lamellas of its `sides` (bits
- * `1 << side`), centred on the origin: the pocket less the ergots, which stand into it, plus,
- * for each lamella, its slit, and its recess and the slit under it, which leave its web. All
- * of it stays 0.85 mm inside the cell: the seams of the cell bricks are untouched (ADR 0004).
+ * The pocket tool of a cell of a CLICKbase baseplate, with its `lamellas` on each side
+ * (`cellLamellas`), centred on the origin: the pocket less the ergots, which stand into it, plus,
+ * for each lamella, its slit, and its recess and the slit under it, which leave its web; the
+ * ergot in the middle of the lamella. All of it stays 0.85 mm inside the cell: the seams of the
+ * cell bricks are untouched (ADR 0004).
  */
-export function clickPocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame & { clickbase: Clickbase }, sides: number): Manifold {
+export function clickPocketTool(
+  wasm: ManifoldToplevel,
+  own: Own,
+  frame: GridFrame & { clickbase: Clickbase },
+  lamellas: readonly (readonly LamellaSpan[])[],
+): Manifold {
   const pocket = pocketTool(wasm, own, frame);
-  if (sides === 0) return pocket;
+  if (lamellaKey(lamellas) === "") return pocket;
   const { cellSize, profile, clickbase } = frame;
-  const { length, protrusion: d, base, bottom } = clickbase;
+  const { protrusion: d, base, bottom } = clickbase;
   const wall = cellSize / 2 - wallInset(profile);
   const [t, s] = [LAMELLA_THICKNESS_MM, SLIT_WIDTH_MM];
   const top = profile.height + TOOL_OVERSHOOT_MM;
   const ergots: Manifold[] = [];
   const cuts: Manifold[] = [];
   for (let side = 0 as LabelSide; side < 4; side++) {
-    if (!(sides & (1 << side))) continue;
-    for (const c of clickbase.centres) {
+    for (const [u0, u1] of lamellas[side] ?? []) {
+      const [c, length] = [(u0 + u1) / 2, u1 - u0];
       // The ergot: the lamella and all behind it bent into the pocket by d, along the flat of
       // the ergot up to its top, and less along its ramps (45° up, ERGOT_RAMP_MM along).
       const along = (u: number) => Math.min(1, Math.max(0, (ERGOT_HALF_MM + ERGOT_RAMP_MM - Math.abs(u - c)) / ERGOT_RAMP_MM));

@@ -11,6 +11,7 @@ import { useFormats, useLocale, useStrings } from "@/lib/locale";
 import { BUILD_PLATE_RANGE, NOZZLES, PREVIEW_COLORS, type Nozzle, type Preferences, type PreviewColor } from "@/lib/preferences";
 import type { Strings } from "@/lib/strings";
 import { UNITS, type Unit } from "@/lib/units";
+import { FilamentSettings } from "./filament-settings";
 
 interface Action {
   key: string;
@@ -98,7 +99,7 @@ const toThousandths = (value: number) => Math.round(value * 1000) / 1000;
 /**
  * Gear menu. On desktop it holds parameters only; on mobile it also holds the actions.
  * The parameters are the language, the units, the print (nozzle, layer height, line width),
- * the build plate and the preview colour. Layer height and line width are baseplate
+ * the build plate, the filament (#31) and the preview colour. Layer height and line width are baseplate
  * settings, shared in the link; the others are preferences of this browser.
  */
 export function SettingsMenu({ preferences, onPreferencesChange, settings, onSettingsChange, actions, onLanguageChange }: SettingsMenuProps) {
@@ -245,6 +246,8 @@ export function SettingsMenu({ preferences, onPreferencesChange, settings, onSet
                 />
               </div>
             </section>
+
+            <FilamentSettings value={preferences.filament} onChange={(filament) => onPreferencesChange({ filament })} />
 
             <section className="border-t border-line px-4 py-3.5" aria-labelledby="preview-color-title">
               <div className="flex items-center justify-between gap-4">

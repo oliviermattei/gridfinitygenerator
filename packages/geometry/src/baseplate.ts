@@ -8,6 +8,7 @@ import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold, withArena } from "./manifold";
 import { FLUSH_PROFILE, POCKET_PROFILES } from "./pocket-profile";
 import { magnetHolesOf, magnetPositions } from "./magnets";
+import { supportAreas } from "./margin";
 import { layerCount, type BuildPlate } from "./print";
 import { screwHolesOf, screwPositions } from "./screws";
 import { clampSettings, type BaseplateSettings } from "./settings";
@@ -28,9 +29,10 @@ export interface BaseplateStats {
   /** Bounding box of the mesh, in millimetres (width along X, depth along Y). */
   dimensions: { width: number; depth: number; height: number };
   /**
-   * Volume of material, in mm³, measured on the final mesh (the one exported): never an
-   * estimate, and no mass, which would take an assumed density. Null for the preview,
-   * whose coarser mesh is not the one printed.
+   * Volume of material of the pieces, in mm³, measured on the final mesh (the one exported),
+   * never an estimate; the clips are apart (`clipsVolume`). The mass is the app's: it takes the
+   * density of the filament, a preference (#31, ADR 0019). Null for the preview, whose coarser
+   * mesh is not the one printed.
    */
   volume: number | null;
   /**
@@ -46,6 +48,12 @@ export interface BaseplateStats {
   magnets: number;
   /** Number of clips to print, which hold the pieces together: none for a single piece or without clips. */
   clips: number;
+  /**
+   * Volume of material of all the clips to print, in mm³: the volume of one clip measured on
+   * its mesh (`Baseplate.clip`) times their number; 0 without clips. Null for the preview,
+   * like `volume`.
+   */
+  clipsVolume: number | null;
 }
 
 /**
@@ -72,6 +80,13 @@ export interface GenerateOptions {
    * false is for the benches and tests that measure what the holes take away.
    */
   magnets?: boolean;
+  /**
+   * Whether to build the margin, true by default. False builds the same baseplate without it:
+   * the grid alone, its layout, cut, clips and holes unchanged but for the magnets the margin
+   * held. The surplus of a shape of margin, shown under it, is the volume of the baseplate less
+   * that of its grid alone (#29).
+   */
+  margin?: boolean;
 }
 
 /** One piece of the baseplate, a closed shell of its mesh, in the order of `layout.split.pieces`. */
@@ -111,15 +126,15 @@ export interface Baseplate {
  * for a tray (the type of baseplate, baseplate-type.ts, ADR 0013), sized for a drawer or by its
  * number of cells, its outline rounded and chamfered at the bottom by the settings, and its
  * margin in the shape of the settings (a frame of crossbars by default, truncated cells or
- * corner brackets, see margin.ts and ADR 0011), with a countersunk screw hole on each inner intersection of the grid when the
+ * the extended grid, whole or reduced to their supports, see margin.ts, ADR 0011 and ADR 0017), with a countersunk screw hole on each inner intersection of the grid when the
  * screws are on (screws.ts, ADR 0006), and a magnet hole under each other crossing of the
  * murets the material holds, always (magnets.ts, ADR 0012). The type of baseplate may also notch
  * the murets (a skeleton, skeleton.ts) or cut lamellas that hold the bins in the pocket walls
  * (CLICKbase, clickbase.ts). With a build plate it does not fit on
  * (`options.buildPlate`), it is cut on grid lines into pieces that do, each with its number
  * engraved underneath (split.ts, label.ts, ADR 0009), and, with the clips on, a slot astride
- * the cut in the middle of each side of a cell along it, for a clip printed apart (clips.ts,
- * ADR 0010). The settings are
+ * the cut at each end of each junction of two pieces, against the corner, for a clip printed
+ * apart (clips.ts, ADR 0010 and ADR 0018). The settings are
  * first brought into their ranges, and a missing one takes its default (`clampSettings`):
  * without settings, the baseplate of the default drawer. The mesh of each piece is always
  * closed; the final mesh, the one that gets exported, is also checked by manifold
@@ -180,7 +195,8 @@ async function buildBaseplate(
     profile,
     lowerCells,
     margins,
-    marginShape: settings.marginShape,
+    marginShape: options.margin === false ? "none" : settings.marginShape,
+    minimalMargin: settings.minimalMargin,
     width,
     depth,
     // Never more than half the smallest side: a single row of cells gets round ends.
@@ -199,15 +215,25 @@ async function buildBaseplate(
   };
   const split = splitPlanOf(uncut, options.buildPlate ?? null);
   const labels = labelsOf(split);
-  const clips = clipsOf(settings.clips && type.clips, uncut, split, labels);
-  const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips };
+  const clips = clipsOf(settings.clips, uncut, split, labels);
+  // The slots of the clips, under the murets, never show from above: the preview leaves them
+  // out, and the lamellas of a CLICKbase whole, for its 100 ms; the final mesh has them (ADR 0018).
+  const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips: quality === "final" ? clips : null };
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
-  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame), magnets: magnetPositions(frame, latticeOf(frame)), split, clips };
+  const layout: BaseplateLayout = {
+    ...cells,
+    screws: screwPositions(frame),
+    magnets: magnetPositions(frame, latticeOf(frame)),
+    supports: supportAreas(frame),
+    split,
+    clips,
+  };
   const meshes =
     strategy === "bricks"
       ? assembleWithBricks(wasm, frame, quality === "final", split.pieces, labels)
       : assembleWithBooleans(wasm, frame, split.pieces, labels);
   const { mesh, pieces } = joinPieces(meshes, split.pieces, quality);
+  const clip = clips ? withArena((own) => meshOf(clipSolid(wasm, own, clips.slot))) : null;
   return {
     mesh,
     layout,
@@ -219,9 +245,10 @@ async function buildBaseplate(
       screws: layout.screws.length,
       magnets: layout.magnets.length,
       clips: clips?.placements.length ?? 0,
+      clipsVolume: quality === "final" ? (clip && clips ? volumeOf(clip) * clips.placements.length : 0) : null,
     },
     pieces,
-    clip: clips ? withArena((own) => meshOf(clipSolid(wasm, own, clips.slot))) : null,
+    clip,
   };
 }
 

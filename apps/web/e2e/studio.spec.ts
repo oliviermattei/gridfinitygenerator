@@ -131,7 +131,8 @@ test.describe("desktop", () => {
     await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
 
     const reached: string[] = [];
-    for (let step = 0; step < 21; step++) {
+    // The info button of the mass in the statistics (#31) and the link back to the index are two more stops.
+    for (let step = 0; step < 22; step++) {
       await page.keyboard.press("Tab");
       const name = await page.evaluate(() => {
         const element = document.activeElement as HTMLElement | null;
@@ -141,7 +142,7 @@ test.describe("desktop", () => {
       });
       reached.push(name);
     }
-    for (const name of ["Tous les générateurs", "Paramètres", "Tiroir", "Largeur", "Profondeur", "Vis", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
+    for (const name of ["Tous les générateurs", "Paramètres", "Dimensions", "Largeur", "Profondeur", "Vis", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
       expect(reached, `${name} is reached with Tab`).toContain(name);
     }
     expect(reached.some((name) => name.startsWith("Taille"))).toBe(true);

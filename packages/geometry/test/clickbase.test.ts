@@ -161,27 +161,28 @@ describe("a CLICKbase", () => {
 });
 
 describe("a CLICKbase cut for the build plate", () => {
-  /** The stretches of the lamellas along a side, from its middle, for a cell size. */
-  const lamellas = (cellSize: number) => {
-    const { centres, length } = clickbaseOf(cellSize, HYBRID_PROFILE, 0.2);
-    return centres.map((c) => [c - length / 2, c + length / 2] as const);
-  };
-
-  it("keeps its clips in the middle of the sides, between the lamellas, and no slot of a clip meets a slit", async () => {
-    const bare = { magnets: false, buildPlate: PLATE_256 };
-    const [clipped, unclipped, normalClipped, normalUnclipped] = await Promise.all([
-      generateBaseplate(CLICKBASE, "final", bare),
-      generateBaseplate({ ...CLICKBASE, clips: false }, "final", bare),
-      generateBaseplate({}, "final", bare),
-      generateBaseplate({ clips: false }, "final", bare),
+  it("starts the lamella next to a clip 0.5 mm past its slot, which meets no slit", async () => {
+    const [clipped, unclipped] = await Promise.all([
+      generateBaseplate(CLICKBASE, "final", { buildPlate: PLATE_256 }),
+      generateBaseplate({ ...CLICKBASE, clips: false }, "final", { buildPlate: PLATE_256 }),
     ]);
     expect(clipped.stats.pieces).toBe(4);
-    expect(clipped.stats.clips).toBe(15);
-    expect(clipped.layout.clips?.placements.every(({ offset }) => offset === 0)).toBe(true);
-    expect(clipped.layout.clips?.slot.length).toBeLessThanOrEqual(8);
-    // Each slot takes exactly what it takes from the open baseplate: it meets no lamella.
-    const slots = (normalUnclipped.stats.volume as number) - (normalClipped.stats.volume as number);
-    expectWithin((unclipped.stats.volume as number) - (clipped.stats.volume as number), slots, 0.05);
+    expect(clipped.stats.clips).toBe(8);
+    expect(clipped.layout.clips?.slot.length).toBe(5);
+    // The clip below the crossing of the cuts at (−21, 0): its slot from y = −1.92 to −6.92,
+    // astride x = −21. Along the line of its leg and of the slits (1.1 mm off the cut), above
+    // the bend of the ergots: the slot, 0.5 mm of material, then the slit of the lamella, which
+    // now starts at −7.42 (9.08 mm long) and not at −4.5 (12 mm).
+    const [withClips, without] = await Promise.all([checkMesh(clipped.mesh, [2.6]), checkMesh(unclipped.mesh, [2.6])]);
+    const [a, b] = [withClips.sections.get(2.6) ?? [], without.sections.get(2.6) ?? []];
+    for (const x of [-22.1, -19.9]) {
+      expect(inSection(a, [x, -6.8])).toBe(false);
+      expect(inSection(a, [x, -7.17])).toBe(true);
+      expect(inSection(a, [x, -7.5])).toBe(false);
+      expect(inSection(a, [x, -16.4])).toBe(false);
+      expect(inSection(b, [x, -7.17])).toBe(false);
+      expect(inSection(b, [x, -4.6])).toBe(false);
+    }
     for (const piece of clipped.pieces) {
       const mesh = pieceMesh(clipped, piece);
       expect((await checkMesh(mesh)).status).toBe("NoError");
@@ -189,27 +190,42 @@ describe("a CLICKbase cut for the build plate", () => {
     }
   });
 
-  it.each<[number, number]>([
-    [42, 0],
-    [36, 0],
-    [30, 9],
-  ])("in cells of %i mm, moves each clip %i mm off the middle, clear of the lamellas", async (cellSize, offset) => {
+  it.each<[number, string]>([
+    [42, "shortened"],
+    [30, "untouched"],
+    [20, "shortened"],
+  ])("in cells of %i mm, keeps each lamella next to a clip clear of its slot (%s)", async (cellSize) => {
     const clickbase = await generateBaseplate(cells(6, 4, { ...CLICKBASE, cellSize }), "final", { buildPlate: { width: 3 * cellSize + 10, depth: 3 * cellSize + 10 } });
     const placements = clickbase.layout.clips?.placements ?? [];
     expect(placements.length).toBeGreaterThan(0);
-    const length = clickbase.layout.clips?.slot.length ?? 0;
-    for (const placement of placements) {
-      expect(Math.abs(placement.offset)).toBe(offset);
-      const [from, to] = [placement.offset - length / 2, placement.offset + length / 2];
-      for (const [start, end] of lamellas(cellSize)) expect(to <= start || from >= end).toBe(true);
+    const { length, halfWidth } = clickbase.layout.clips?.slot as NonNullable<typeof clickbase.layout.clips>["slot"];
+    const section = (await checkMesh(clickbase.mesh, [2.6])).sections.get(2.6) ?? [];
+    // Past the inner end of each slot, along the line of its legs: 0.5 mm of material at least.
+    for (const { cut, centre, offset } of placements) {
+      const inward = offset > 0 ? -1 : 1;
+      for (const side of [-1, 1])
+        for (const past of [0.05, 0.25, 0.45]) {
+          const along = offset + inward * (length / 2 + past) - offset;
+          const [x, y] = cut === "column" ? [centre[0] + side * (halfWidth - 0.25), centre[1] + along] : [centre[0] + along, centre[1] + side * (halfWidth - 0.25)];
+          expect(inSection(section, [x, y]), `${cut} ${centre} ${past}`).toBe(true);
+        }
     }
     expect((await checkMesh(clickbase.mesh)).status).toBe("NoError");
+    expect(badEdges(clickbase.mesh)).toBe(0);
   });
 
-  it("has no clips in cells of 20 mm: a lamella takes the whole side", async () => {
-    const clickbase = await generateBaseplate(cells(8, 4, { ...CLICKBASE, cellSize: 20 }), "final", { buildPlate: { width: 90, depth: 90 } });
-    expect(clickbase.stats.pieces).toBeGreaterThan(1);
-    expect(clickbase.stats.clips).toBe(0);
+  it("leaves out a lamella that would be shorter than 8 mm past a clip: cells of 38 mm, at a crossing of the cuts", async () => {
+    // Lamellas of 10 mm from 4.5 mm off the corner; past a slot from 1.92 to 6.92 mm and 0.5 mm,
+    // 7.08 mm would remain. At the edge of the grid (slot from 0.8 mm), 8.2 mm remain.
+    const settings = cells(4, 4, { ...CLICKBASE, cellSize: 38, marginWidth: 20, marginDepth: 20 });
+    const clickbase = await generateBaseplate(settings, "final", { buildPlate: { width: 110, depth: 110 } });
+    expect(clickbase.layout.split).toMatchObject({ columnCuts: [2], rowCuts: [2] });
+    const section = (await checkMesh(clickbase.mesh, [2.6])).sections.get(2.6) ?? [];
+    // Left of the column cut (x = 0), below the crossing (y = 0): no slit at 10 mm from the crossing.
+    expect(inSection(section, [-1.1, -10])).toBe(true);
+    // At the front end of the same cut, 11 mm from the edge of the lattice (y = −76): a slit.
+    expect(inSection(section, [-1.1, -76 + 11])).toBe(false);
+    expect((await checkMesh(clickbase.mesh)).status).toBe("NoError");
   });
 
   it("keeps whole the side where a piece has its number, when the digits would reach a lamella", async () => {

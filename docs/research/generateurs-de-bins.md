@@ -1,8 +1,9 @@
 # Recherche : générateurs de bins et pages d'index (gridfinitygenerator.com, perplexinglabs, bouwens, extrabold)
 
+> Voir aussi `generateurs-de-bacs.md` (inventaire parallèle, cotes de la spec des bacs).
 > Date : 2026-09-30. Question du mainteneur : « on a fait les baseplates, on va faire les bins ; il faut une page d'index qui liste les générateurs ; inspecter gridfinitygenerator.com/en/box, gridfinity.perplexinglabs.com et gridfinity.bouwens.co pour en extraire les fonctionnalités ». Puis : « une page un peu comme extrabold », et « un bin plus grand que le plateau sera découpé comme chez Alexandre Chappel ».
 > Légende : **[V]** = vérifié dans une source primaire (HTML, bundle JS, schéma JSON, code source) · **[I]** = inféré, à confirmer.
-> Vocabulaire : `CONTEXT.md`. Décisions tirées de cette recherche : ADR 0017 (index), ADR 0018 (pied standard), spec du générateur de bins (issue GitHub).
+> Vocabulaire : `CONTEXT.md`. Décisions tirées de cette recherche : ADR 0020 (index), ADR 0021 (pied standard), spec du générateur de bins (issue GitHub).
 
 ## Sources primaires
 

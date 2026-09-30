@@ -232,8 +232,23 @@ export function MarginArt({ kind, className }: ArtProps & { kind: MarginShape })
       {kind === "frame" && (
         <path d="M4.5 50 V9 A4.5 4.5 0 0 1 9 4.5 H62 M22 4.5 V16 M40 4.5 V16 M58 4.5 V16 M4.5 16 H22 M4.5 34 H22" stroke={ART} strokeWidth={2.2} strokeLinecap="round" />
       )}
-      {kind === "brackets" && (
-        <path d="M4.5 26 V9 A4.5 4.5 0 0 1 9 4.5 H32 M22 4.5 V16 M4.5 16 H22" stroke={ART} strokeWidth={2.2} strokeLinecap="round" />
+      {kind === "extended" && (
+        <>
+          {/* The murets carried on to the drawer, each ending on a heel; no outer wall. */}
+          <path
+            d="M22 4.5 V16 M40 4.5 V16 M58 4.5 V16 M4.5 16 H22 M4.5 34 H22 M19.5 4.5 H24.5 M37.5 4.5 H42.5 M55.5 4.5 H60.5 M4.5 13.5 V18.5 M4.5 31.5 V36.5"
+            stroke={ART}
+            strokeWidth={2.2}
+            strokeLinecap="round"
+          />
+          {/* The truncated cells, open towards the drawer. */}
+          <path
+            d="M24.5 7 V11 A2.5 2.5 0 0 0 27 13.5 H35 A2.5 2.5 0 0 0 37.5 11 V7 M42.5 7 V11 A2.5 2.5 0 0 0 45 13.5 H53 A2.5 2.5 0 0 0 55.5 11 V7 M7 18.5 H17 A2.5 2.5 0 0 1 19.5 21 V29 A2.5 2.5 0 0 1 17 31.5 H7 M7 36.5 H17 A2.5 2.5 0 0 1 19.5 39 V47 M7 13.5 H17 A2.5 2.5 0 0 0 19.5 11 V7"
+            stroke={ART}
+            strokeWidth={1.4}
+            strokeLinecap="round"
+          />
+        </>
       )}
       {kind === "cells" && (
         <>

@@ -1,6 +1,6 @@
-import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
+import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
-import { clickPocketTool, lamellaSides } from "./clickbase";
+import { clickPocketTool, lamellaKey, cellLamellas } from "./clickbase";
 import { brickSlotTool, slotsByCell, type BrickSide, type ClipLayout } from "./clips";
 import { labelTool, type Label } from "./label";
 import { marginOf, type CutWindow, type MarginCut } from "./margin";
@@ -8,7 +8,7 @@ import { withArena, type Own } from "./manifold";
 import { hasMagnet, magnetTool } from "./magnets";
 import { hasScrew, screwTool } from "./screws";
 import { notchedPocketTool, notchedSides } from "./skeleton";
-import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, slabOf, type GridFrame } from "./shapes";
+import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, sectionKey, slabOf, type GridFrame } from "./shapes";
 import { latticeOf, type Lattice, type PiecePlan } from "./split";
 
 /**
@@ -93,6 +93,22 @@ const MINUS_Y = 8;
 const ON_FACE_MM = 1e-4;
 /** Seam vertices of neighbouring bricks are welded when they match to this grid. */
 const WELD_GRID_MM = 1e-3;
+/** Steps of the weld grid a key packs along X and Y (±524 mm about the centre), and up Z (8.19 mm). */
+const WELD_SPAN_XY = 2 ** 20;
+const WELD_SPAN_Z = 2 ** 13;
+
+/**
+ * Key of a seam vertex on the weld grid: one number, exact below 2⁵³, for every vertex of a
+ * baseplate (the largest drawer reaches ±500 mm, the highest frame 5.40 mm); a string beyond.
+ * Numbers hash far faster than strings, and a large baseplate has hundreds of thousands of
+ * seam vertices.
+ */
+function weldKey(x: number, y: number, z: number): number | string {
+  const [qx, qy, qz] = [Math.round(x / WELD_GRID_MM), Math.round(y / WELD_GRID_MM), Math.round(z / WELD_GRID_MM)];
+  const [ux, uy] = [qx + WELD_SPAN_XY / 2, qy + WELD_SPAN_XY / 2];
+  if (ux >= 0 && ux < WELD_SPAN_XY && uy >= 0 && uy < WELD_SPAN_XY && qz >= 0 && qz < WELD_SPAN_Z) return (ux * WELD_SPAN_XY + uy) * WELD_SPAN_Z + qz;
+  return `${qx},${qy},${qz}`;
+}
 
 interface Brick extends TriangleMesh {
   /** Cut faces each vertex lies on (bit set of PLUS_X…MINUS_Y). */
@@ -111,9 +127,9 @@ type Side = -1 | 0 | 1;
  * it; an inner cell of the margin is an inner cell of the grid), the shape of the margin's
  * holes in it when they reach its seams (`HoleShape`), the sides of a skeleton whose muret
  * is notched (skeleton.ts: not on the edge of the lattice, nor where a piece has its number),
- * and the sides of a cell of a CLICKbase that have lamellas (clickbase.ts: only in the grid).
+ * and the lamellas of a cell of a CLICKbase (clickbase.ts: only in the grid, trimmed next to a clip).
  */
-const kindKey = (sx: Side, sy: Side, corners: number, margin: boolean, holes = "", notches = 0, lamellas = 0) =>
+const kindKey = (sx: Side, sy: Side, corners: number, margin: boolean, holes = "", notches = 0, lamellas = "") =>
   `${sx},${sy},${corners}${margin && (sx !== 0 || sy !== 0) ? ",margin" : ""}${holes ? `,holes:${holes}` : ""}${notches ? `,notches:${notches}` : ""}${lamellas ? `,lamellas:${lamellas}` : ""}`;
 
 /** Corners of a cell, as offsets of the intersection of grid lines from the cell index. */
@@ -162,18 +178,25 @@ function brickKeys(frame: GridFrame, lattice: Lattice, holes: ReadonlyMap<string
       !inGrid(i, j, frame),
       shape?.seams ? shape.key : "",
       notchedSides(frame, lattice, labels, i, j),
-      lamellaSides(frame, labels, i, j),
+      lamellaKey(cellLamellas(frame, labels, i, j)),
     );
   };
+  // The key of each cell, asked for by the bricks and again by each piece that joins them.
+  const known = new Map<string, string>();
   return {
     slots,
     kind,
     holesInSlab: (i, j) => holes.get(`${i},${j}`)?.seams ?? false,
     of(i, j) {
-      const shape = holes.get(`${i},${j}`);
-      const key = `${kind(i, j, holeCorners(i, j, frame, lattice))}${shape && !shape.seams ? `,holes:${shape.key}` : ""}`;
+      const cell = `${i},${j}`;
+      const cached = known.get(cell);
+      if (cached !== undefined) return cached;
+      const shape = holes.get(cell);
+      const base = `${kind(i, j, holeCorners(i, j, frame, lattice))}${shape && !shape.seams ? `,holes:${shape.key}` : ""}`;
       const sides = slots(i, j);
-      return sides ? `${key},clips:${sides.map((offset) => (offset === undefined ? "-" : offset.toFixed(4))).join("|")}` : key;
+      const key = sides ? `${base},clips:${sides.map((offset) => (offset === undefined ? "-" : offset.toFixed(4))).join("|")}` : base;
+      known.set(cell, key);
+      return key;
     },
   };
 }
@@ -207,7 +230,7 @@ function inGrid(i: number, j: number, { columns, rows }: GridFrame): boolean {
 interface HoleShape {
   /** Their outline around the cell centre, to a tenth of a micrometre, the same for two bricks with the same holes. */
   key: string;
-  /** Whether they reach a seam of the brick. */
+  /** Whether they reach a seam of the brick, or open onto the outline (`MarginCut.holesInSlab`): taken off its slab. */
   seams: boolean;
 }
 
@@ -230,7 +253,7 @@ function holeShapes(frame: GridFrame, lattice: Lattice, margin: MarginCut | null
         (sy !== -1 && min[1] <= window[1] + ON_FACE_MM) ||
         (sx !== 1 && max[0] >= window[2] - ON_FACE_MM) ||
         (sy !== 1 && max[1] >= window[3] - ON_FACE_MM);
-      shapes.set(`${i},${j}`, { key: shapeKey(holes, cx, cy), seams });
+      shapes.set(`${i},${j}`, { key: sectionKey(holes, cx, cy), seams: seams || margin.holesInSlab === true });
     }
   return shapes;
 }
@@ -244,20 +267,6 @@ function holeWindow(frame: GridFrame, lattice: Lattice, sx: Side, sy: Side, cx: 
   const [x0, y0, x1, y1] = brickArea(frame, lattice, sx, sy);
   const o = TOOL_OVERSHOOT_MM;
   return [cx + x0 - (sx === -1 ? o : 0), cy + y0 - (sy === -1 ? o : 0), cx + x1 + (sx === 1 ? o : 0), cy + y1 + (sy === 1 ? o : 0)];
-}
-
-/** Outline of a cross-section around (cx, cy), whatever the order of its polygons and of their points. */
-function shapeKey(section: CrossSection, cx: number, cy: number): string {
-  const text = (value: number) => (Math.round(value * 1e4) / 1e4 + 0).toFixed(4);
-  return section
-    .toPolygons()
-    .map((polygon) => {
-      const points = polygon.map(([x, y]) => `${text(x - cx)} ${text(y - cy)}`);
-      const first = points.indexOf(points.reduce((min, point) => (point < min ? point : min)));
-      return [...points.slice(first), ...points.slice(0, first)].join(",");
-    })
-    .sort()
-    .join("|");
 }
 
 /**
@@ -288,10 +297,10 @@ function cellBricks(
   // bricks of a muret notch it the same way, on the same vertices of their faces on the seam.
   // Built once per pattern of notched sides, without a boolean.
   // Likewise, the pocket of a cell of a CLICKbase with the lamellas of its sides, which stay
-  // inside the cell: built once per pattern of sides with lamellas.
+  // inside the cell: built once per pattern of lamellas.
   const { skeleton, clickbase } = frame;
   const notchedPockets = new Map<number, Manifold>();
-  const clickPockets = new Map<number, Manifold>();
+  const clickPockets = new Map<string, Manifold>();
   const pocketOf = (i: number, j: number): Manifold => {
     const notches = notchedSides(frame, lattice, labels, i, j);
     if (skeleton && notches !== 0) {
@@ -299,10 +308,11 @@ function cellBricks(
       notchedPockets.set(notches, tool);
       return tool;
     }
-    const lamellas = lamellaSides(frame, labels, i, j);
-    if (clickbase && lamellas !== 0) {
-      const tool = clickPockets.get(lamellas) ?? clickPocketTool(wasm, own, { ...frame, clickbase }, lamellas);
-      clickPockets.set(lamellas, tool);
+    const lamellas = cellLamellas(frame, labels, i, j);
+    const key = lamellaKey(lamellas);
+    if (clickbase && key !== "") {
+      const tool = clickPockets.get(key) ?? clickPocketTool(wasm, own, { ...frame, clickbase }, lamellas);
+      clickPockets.set(key, tool);
       return tool;
     }
     return pocket;
@@ -495,7 +505,7 @@ function joinBricks(
     }
   const positions = new Float32Array(vertexCount * 3);
   const indices = new Uint32Array(indexCount);
-  const seam = new Map<string, number>();
+  const seam = new Map<number | string, number>();
   let vertices = 0;
   let written = 0;
 
@@ -509,7 +519,7 @@ function joinBricks(
         const y = (brick.positions[3 * v + 1] as number) + cy;
         const z = brick.positions[3 * v + 2] as number;
         if (brick.vertexFaces[v]) {
-          const key = `${Math.round(x / WELD_GRID_MM)},${Math.round(y / WELD_GRID_MM)},${Math.round(z / WELD_GRID_MM)}`;
+          const key = weldKey(x, y, z);
           const welded = seam.get(key);
           if (welded !== undefined) {
             remap[v] = welded;

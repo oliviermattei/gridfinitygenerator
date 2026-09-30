@@ -64,7 +64,7 @@ function GeneratorCard({ generator, locale, t }: { generator: Generator; locale:
   );
 }
 
-// Index of the generators (ADR 0017): each generator by a card, those announced greyed.
+// Index of the generators (ADR 0020): each generator by a card, those announced greyed.
 export default async function IndexPage({ params }: PageProps<"/[lang]">) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();

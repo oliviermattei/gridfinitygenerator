@@ -35,7 +35,7 @@ Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arr
 _Avoid_: échantillon, sample, test print
 
 **Type de baseplate**:
-Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bin guidé par ses 4 coins, pas de clips ; #26, ADR 0014) ou **CLICKbase** (la grille ajourée, des lamelles dans la paroi des poches qui serrent le pied des bins, qui s'enclenchent et tiennent sans aimant ; d'après CLICKbase Refined, sous licence CC BY-NC-SA ; #27, ADR 0015).
+Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bin guidé par ses 4 coins, les clips logés dans les poteaux ; #26, ADR 0014, ADR 0018) ou **CLICKbase** (la grille ajourée, des lamelles dans la paroi des poches qui serrent le pied des bins, qui s'enclenchent et tiennent sans aimant ; d'après CLICKbase Refined, sous licence CC BY-NC-SA ; #27, ADR 0015).
 _Avoid_: style, variante, plateau (réservé au plateau d'impression)
 
 **Fond**:
@@ -43,7 +43,7 @@ La dalle pleine d'un Tray sous chaque poche (0,6 mm, arrondis à la couche), cel
 _Avoid_: plancher, socle, floor (sauf dans le code)
 
 **Poteau**:
-Dans un Skeleton, le croisement des murets et le départ de ses quatre murets, qui gardent tout le profil de poche : 5 mm le long de chaque muret en haut (l'arc de coin de la poche et 1 mm de côté), 45° plus large par millimètre vers le bas. Il porte l'aimant ou la vis, et guide le bin par son coin (ADR 0014).
+Dans un Skeleton, le croisement des murets et le départ de ses quatre murets, qui gardent tout le profil de poche : 5 mm le long de chaque muret en haut (l'arc de coin de la poche et 1 mm de côté), 45° plus large par millimètre vers le bas. Il porte l'aimant ou la vis, guide le bin par son coin (ADR 0014), et loge la fente d'un clip au bout d'une jonction, plus courte (4 mm) pour finir à 0,8 mm de l'entaille (ADR 0018).
 _Avoid_: pilier, plot (réservé à la vis), post (sauf dans le code)
 
 **Bande**:
@@ -51,7 +51,7 @@ Dans un Skeleton, ce qui reste d'un muret entre deux poteaux : son pied, de 0,35
 _Avoid_: bande basse (sauf pour la décrire), semelle, band (sauf dans le code)
 
 **Lamelle**:
-Dans un CLICKbase, un morceau de 0,8 mm de la paroi verticale d'une poche, long de 12 mm au plus, libéré du muret par une saignée et tenu à ses deux bouts ; deux par côté de cellule (une seule, au milieu, sous 34 mm), aucune dans la marge. Elle fléchit quand le bin entre, et le serre (ADR 0015).
+Dans un CLICKbase, un morceau de 0,8 mm de la paroi verticale d'une poche, long de 12 mm au plus, libéré du muret par une saignée et tenu à ses deux bouts ; deux par côté de cellule (une seule, au milieu, sous 34 mm), aucune dans la marge. À côté de la fente d'un clip, elle commence 0,5 mm après elle, ou disparaît s'il en reste moins de 8 mm. Elle fléchit quand le bin entre, et le serre (ADR 0015, ADR 0018).
 _Avoid_: lame, languette (réservé à la dent du clip), ressort, clip (réservé aux pièces)
 
 **Saignée**:
@@ -73,6 +73,10 @@ _Avoid_: appui, contact
 **Marge**:
 La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme se choisit parmi trois : le **cadre à traverses** (par défaut, le plus économe), les **cellules** (la grille prolongée et fermée par un mur extérieur, ADR 0008) ou la **grille prolongée** (ouverte, sans mur extérieur). Chaque forme peut être réduite à ses appuis (**marge minimale**).
 _Avoid_: padding, bordure, remplissage
+
+**Surplus**:
+La matière qu'ajoute une forme de marge à la baseplate, affichée sous chaque forme : le volume de la baseplate avec cette marge (marge minimale comprise, si elle est cochée) moins celui de la même baseplate sans marge, sa **grille seule** (mêmes type, vis, découpe et clips), tous deux mesurés sur les maillages finaux (#29, ADR 0017).
+_Avoid_: coût de la marge, supplément, delta
 
 **Marge minimale**:
 Réglage de la marge, décoché par défaut, applicable à chaque forme : la marge n'est gardée que là où elle est nécessaire pour que la baseplate soit bien placée dans le tiroir, et assez solide pour y rester sans casser. Le reste de la marge est vide. Chaque côté qui a une marge garde deux **appuis**, sur la première et la dernière ligne de la grille de ce côté ; les cellules y gardent aussi la première et la dernière cellule tronquée, fermées. Les coins où deux marges se croisent sont vides.
@@ -135,7 +139,7 @@ Un disque aimanté de 6 × 2 mm, glissé par-dessous dans un logement d'aimant, 
 _Avoid_: magnet (sauf dans le code)
 
 **Logement d'aimant**:
-Le trou borgne, ouvert en dessous, qui reçoit un aimant sous un croisement de murets tenu par la matière : Ø 6 mm plus le jeu des trous, 2,2 mm de profondeur arrondis à la couche. Toujours présent, sans réglage ; aucun là où il y a une vis, ni sur une coupe, ni au bord de la grille, sauf quand la marge prolonge les murets (cellules tronquées) et garde un mur entre le trou et le contour (ADR 0012).
+Le trou borgne, ouvert en dessous, qui reçoit un aimant sous un croisement de murets tenu par la matière : Ø 6 mm plus le jeu des trous, 2,2 mm de profondeur arrondis à la couche. Toujours présent, sans réglage ; aucun là où il y a une vis, ni sur une coupe, ni au bord de la grille, sauf quand les murets de la marge l'entourent (cellules tronquées, grille prolongée) et gardent un mur entre le trou et le contour, et entre le trou et la marge laissée vide (ADR 0012, ADR 0017).
 _Avoid_: trou d'aimant, alvéole, poche (réservé aux bins)
 
 ### Bin
@@ -145,7 +149,7 @@ Le contenant Gridfinity qui se pose dans les poches d'une baseplate, produit par
 _Avoid_: bac, boîte, box, container
 
 **Pied**:
-La partie profilée sous chaque cellule d'un bin, qui s'emboîte dans une poche : le pied standard exact (0,8 / 1,8 / 2,15 mm, 41,5 mm de côté en haut pour une cellule de 42), sans variante ni réglage de profil. C'est le seul contrat entre un bin et une baseplate, de ce site ou d'ailleurs (ADR 0018).
+La partie profilée sous chaque cellule d'un bin, qui s'emboîte dans une poche : le pied standard exact (0,8 / 1,8 / 2,15 mm, 41,5 mm de côté en haut pour une cellule de 42), sans variante ni réglage de profil. C'est le seul contrat entre un bin et une baseplate, de ce site ou d'ailleurs (ADR 0021).
 _Avoid_: base, foot
 
 **U**:
@@ -203,7 +207,7 @@ Un outil du site qui produit un modèle imprimable à partir de réglages (gén�
 _Avoid_: outil, configurateur, tool
 
 **Index**:
-La page d'entrée du site dans une langue (`/fr`, `/en`), qui présente chaque générateur par une carte : disponible, ou « bientôt » (ADR 0017).
+La page d'entrée du site dans une langue (`/fr`, `/en`), qui présente chaque générateur par une carte : disponible, ou « bientôt » (ADR 0020).
 _Avoid_: accueil, home, catalogue, landing
 
 ### Impression
@@ -220,12 +224,16 @@ _Avoid_: split, partition, tuilage
 Une ligne de la grille, prolongée à travers la marge, où deux pièces se séparent : dans l'axe d'un muret, chaque pièce en garde la moitié. Une coupe est plane, à coins vifs, sans chanfrein ; aucun croisement coupé ne porte de vis.
 _Avoid_: joint, jonction, split line
 
+**Jonction**:
+Le bord commun à deux pièces voisines, le long d'une coupe. Une jonction reçoit deux clips, un à chaque bout, ou un seul si elle ne fait qu'une ou deux cellules.
+_Avoid_: joint, raccord, liaison
+
 **Clip**:
-Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au milieu d'un bord de cellule, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus (ADR 0010).
+Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au bout d'une jonction, collée au coin, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus. Tous les types en prennent (ADR 0010, ADR 0018).
 _Avoid_: agrafe (sauf pour décrire sa forme), connecteur, attache, clip de liaison
 
 **Fente**:
-Le logement d'un clip, creusé par-dessous dans le pied du muret, de part et d'autre d'une coupe : un canal sous la dent pour le pont, et une fente de jambe de chaque côté, sous la pente haute de la poche.
+Le logement d'un clip, creusé par-dessous dans le pied du muret, de part et d'autre d'une coupe : un canal sous la dent pour le pont, et une fente de jambe de chaque côté, sous la pente haute de la poche. Elle part du croisement au bout de la jonction : à 1,92 mm de l'axe d'un croisement de deux coupes (pour laisser la place à la fente de l'autre coupe), à 0,8 mm du bord de la grille (pour ne pas percer la marge).
 _Avoid_: rainure, logement (réservé aux aimants), slot
 
 **Dent**:
@@ -251,6 +259,18 @@ _Avoid_: pin (sauf dans le code), tige (réservé à la vis), pilier
 **Plateau**:
 Le plateau d'impression de l'imprimante, uniquement. Sa taille utile est une préférence locale : elle décide de la découpe d'une baseplate et borne la taille d'un bin (contour réel, rebord compris), mais n'entre pas dans le lien de partage.
 _Avoid_: build plate, lit, bed (et jamais pour désigner la baseplate)
+
+**Filament**:
+La matière d'impression, choisie dans le menu engrenage (PLA par défaut, PETG, ABS, ASA, TPU, ou « Autre » avec sa densité). C'est une préférence de ce navigateur, avec son prix facultatif en €/kg : elle n'entre pas dans le lien de partage, et ne sert qu'à la **masse** et au coût affichés (#31, ADR 0019).
+_Avoid_: matériau (sauf en général), plastique, bobine
+
+**Densité**:
+La masse d'un cm³ de **filament** plein, en g/cm³, telle que la déclare la fiche technique du fabricant (1,24 pour le PLA), ou telle que l'utilisateur la saisit pour « Autre ».
+_Avoid_: masse volumique (sauf pour la définir), poids spécifique
+
+**Masse**:
+Le poids de filament d'une baseplate, en grammes : le volume mesuré sur les maillages finaux, pièces et clips compris, multiplié par la **densité** du filament, la pièce étant comptée imprimée pleine. Elle est affichée arrondie au gramme, précédée de « ≈ », car le trancheur peut varier de quelques %. C'est la seule valeur affichée qui n'est pas mesurée ou exacte (ADR 0019).
+_Avoid_: poids (sauf dans l'interface anglaise), grammage, estimation
 
 **Trancheur**:
 Le logiciel qui découpe le fichier 3MF ou STL en couches pour l'imprimante (PrusaSlicer, Bambu Studio, OrcaSlicer, Cura).

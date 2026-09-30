@@ -12,7 +12,7 @@ const fr = {
   generator: "Générateur de baseplates",
   description:
     "Générateur gratuit et open source de baseplates Gridfinity à la mesure de votre tiroir, calculées dans le navigateur.",
-  // Index of the generators (ADR 0017)
+  // Index of the generators (ADR 0020)
   home: {
     /** Name of the site, title of the index. */
     title: "Gridfinity Generator",
@@ -113,7 +113,7 @@ const fr = {
   copyFailed: "Copie impossible : copiez le lien ci-dessous.",
   resetTitle: "Réinitialiser les réglages ?",
   resetDescription:
-    "La baseplate revient aux réglages par défaut. Vos paramètres sont conservés : langue, unités, buse, hauteur de couche, largeur de ligne, plateau et couleur de l'aperçu.",
+    "La baseplate revient aux réglages par défaut. Vos paramètres sont conservés : langue, unités, buse, hauteur de couche, largeur de ligne, plateau, filament et couleur de l'aperçu.",
   cancel: "Annuler",
   language: "Langue",
   units: "Unités",
@@ -144,12 +144,33 @@ const fr = {
   buildPlateDepth: "Profondeur du plateau",
   shallowerPlate: "Plateau moins profond",
   deeperPlate: "Plateau plus profond",
+  filament: "Filament",
+  filamentHint: "Pour la masse et le coût affichés dans les statistiques.",
+  filamentNames: { pla: "PLA", petg: "PETG", abs: "ABS", asa: "ASA", tpu: "TPU", other: "Autre" },
+  density: "Densité",
+  lowerDensity: "Densité plus faible",
+  higherDensity: "Densité plus forte",
+  /** Density of a filament of the list, from its manufacturer's data sheet. */
+  densityOf: (density: string) => `Densité : ${density} g/cm³, d'après la fiche technique du fabricant.`,
+  filamentPrice: "Prix du filament",
+  filamentPriceHint: "Facultatif : une fois rempli, le coût s'affiche à côté de la masse.",
   // Statistics
   statistics: "Statistiques",
   statCells: "Cellules",
   statMargin: "Marge",
   statHeight: "Hauteur",
   statVolume: "Matière",
+  /**
+   * Mass of the filament (#31): rounded to the gram, and never exact, hence the "≈". The
+   * masses and volumes next to each other only break between them (no-break spaces).
+   */
+  mass: (grams: string) => `≈\u00a0${grams}\u00a0g`,
+  /** A mass that rounds to nothing (the clips of a small baseplate). */
+  belowOneGram: "< 1",
+  clipsMass: (grams: string) => `dont ${grams} g de clips`,
+  cost: (amount: string) => `≈ ${amount}`,
+  massInfo: "Comment la masse est calculée",
+  massHint: "Volume mesuré × densité du filament, pièce imprimée pleine ; le trancheur peut varier de quelques %.",
   statScrews: "Vis",
   statMagnets: "Aimants",
   /** Magnets to buy: how many, and their size (the holes take 6 × 2 mm discs). */
@@ -183,7 +204,7 @@ const fr = {
   height: "hauteur",
   size: "Taille",
   sizeMode: "Mode de taille",
-  sizeDrawer: "Tiroir",
+  sizeDrawer: "Dimensions",
   sizeCells: "Nombre de cellules",
   drawerHint: "Cotes intérieures du tiroir : la baseplate le remplit.",
   drawerWidth: "Largeur",
@@ -220,20 +241,29 @@ const fr = {
   trayHint: (floor: string, gap: string) =>
     `La grille sur un fond plein de ${floor} mm : rien ne passe dessous, pour un bureau, une étagère ou de petites pièces. Les poches montent de ${floor} mm, plus ${gap} mm de jeu : le bin reste assis sur ses pentes, sans toucher le fond.`,
   skeletonHint: (band: string) =>
-    `Les murets sont entaillés entre les croisements, jusqu'à une bande de ${band} mm : seuls des poteaux au profil complet restent aux coins des cellules, et le bin n'est guidé que par ses 4 coins. Environ deux fois moins de matière. Le tour de la grille reste entier. Pas de clips.`,
+    `Les murets sont entaillés entre les croisements, jusqu'à une bande de ${band} mm : seuls des poteaux au profil complet restent aux coins des cellules, et le bin n'est guidé que par ses 4 coins. Environ deux fois moins de matière. Le tour de la grille reste entier. Les clips se logent dans les poteaux.`,
   clickbaseHint: (interference: string) =>
-    `Deux lamelles dans la paroi de chaque côté de poche serrent le pied du bin de ${interference} mm : il s'enclenche et tient sans aimant. Le premier bin casse les fines toiles qui portent les lamelles à l'impression. Le milieu des côtés reste plein pour les clips. D'après CLICKbase Refined (ZeroCtrl) et CLICKbase (John Hall), sous licence CC BY-NC-SA : pas d'usage commercial.`,
+    `Deux lamelles dans la paroi de chaque côté de poche serrent le pied du bin de ${interference} mm : il s'enclenche et tient sans aimant. Le premier bin casse les fines toiles qui portent les lamelles à l'impression. À côté d'un clip, la lamelle est raccourcie. D'après CLICKbase Refined (ZeroCtrl) et CLICKbase (John Hall), sous licence CC BY-NC-SA : pas d'usage commercial.`,
   clickbaseWarning: "CLICKbase : imprimez en PETG, pas en PLA, qui flue et ne serre plus les bins. Générateur de parois Arachne, buse de 0,4 mm.",
-  typeVolumesHint: "Matière de la baseplate avec chaque type, mesurée sur le maillage.",
+  typeMaterial: (volume: string, mass: string) => `${volume}\u00a0cm³ · ${mass}`,
+  typeVolumesHint: "Matière de la baseplate avec chaque type, mesurée sur le maillage, et sa masse dans le filament choisi.",
   margin: "Marge",
-  marginShapes: { frame: "Cadre", cells: "Cellules", brackets: "Équerres" },
-  marginShapeNames: { frame: "Cadre à traverses", cells: "Cellules tronquées", brackets: "Équerres de coin" },
+  marginShapes: { frame: "Cadre", cells: "Cellules", extended: "Grille" },
+  marginShapeNames: { frame: "Cadre à traverses", cells: "Cellules tronquées", extended: "Grille prolongée" },
   marginShapeHints: {
     frame: "Un mur de 2 mm le long du tiroir, relié à chaque muret par une traverse. Le plus économe qui s'appuie sur tout le tour du tiroir.",
     cells: "La grille continue jusqu'au bord du tiroir, en cellules coupées par un mur extérieur, à la hauteur de la grille. Le plus beau, mais le plus de matière.",
-    brackets: "Une équerre de 2 mm à chaque coin, et une en T sur les côtés de plus de 4 cellules. Le moins de matière, mais la baseplate ne s'appuie sur le tiroir qu'aux équerres.",
+    extended:
+      "Les murets de la grille continuent jusqu'au bord du tiroir, à la hauteur de la grille, et s'y appuient par un talon plein. Pas de mur extérieur : les cellules restent ouvertes côté tiroir.",
   },
-  marginVolumesHint: "Matière de la baseplate avec chaque forme, mesurée sur le maillage.",
+  /** The minimal margin (#29), in the summary of the family after the name of the shape. */
+  minimalMarginShort: ", minimale",
+  minimalMargin: "Marge minimale",
+  minimalMarginHint:
+    "Ne garde que deux appuis de chaque côté, sur la première et la dernière ligne de la grille ; le reste de la marge, coins compris, est vide. Moins de matière, la baseplate reste calée dans le tiroir.",
+  marginSurplus: (volume: string, grams: string) => `+\u00a0${volume}\u00a0cm³ · +\u00a0${grams}\u00a0g`,
+  marginSaving: (volume: string, grams: string) => `−\u00a0${volume}\u00a0cm³ · −\u00a0${grams}\u00a0g`,
+  marginVolumesHint: "Matière qu'ajoute chaque forme : la baseplate moins sa grille seule, mesurées sur les maillages, et sa masse dans le filament choisi.",
   noMarginHint: "La grille remplit le tiroir : pas de marge, la forme ne change rien.",
   screws: "Vis",
   screwsOff: "Désactivées",
@@ -244,29 +274,24 @@ const fr = {
   screwsHint: "La tête se loge dans le croisement des murets, sous les pentes des poches. Le jeu des trous se règle dans Avancé.",
   clips: "Clips",
   clipsOff: "Désactivés",
-  clipsUncut: "Sans découpe",
   clipsSummary: (count: string) => `${count} clips à imprimer`,
   clipsHint:
-    "Agrafes en U qui relient les pièces : elles s'enfoncent par-dessous dans le pied des murets, à cheval sur chaque coupe, et ne se voient pas de dessus. Elles sont dans le fichier, avec les pièces, couchées sur le côté.",
-  clipsUncutHint: "La baseplate tient sur votre plateau : pas de découpe, donc pas de clip.",
+    "Agrafes en U qui relient les pièces, deux par jonction, une à chaque bout, collées au coin : elles s'enfoncent par-dessous dans le pied des murets, à cheval sur la coupe, et ne se voient pas de dessus. Elles sont dans le fichier, avec les pièces, couchées sur le côté.",
   clipsOffHint: "Sans clips, les pièces sont posées bout à bout, et le tiroir les tient.",
-  clipsSkeleton: "Sans objet en Skeleton",
-  clipsSkeletonHint:
-    "Pas de clips en Skeleton : le milieu des murets, où ils se logent, est entaillé. Les pièces sont posées bout à bout, et le tiroir les tient.",
   stack: "Empiler les pièces",
   stackOff: "Désactivé",
   stackSummary: (pieces: number, stacks: number) => (stacks === 1 ? `${pieces} pièces en une pile` : `${pieces} pièces en ${stacks} piles`),
   /** Why the pieces cannot be stacked, in the summary of the family. */
   stackBlockedShort: {
     "single-piece": "Sans découpe",
-    "low-margin": "Marge trop basse",
+    "low-margin": "Marge en cadre",
     tray: "Sans objet en Tray",
     clickbase: "Sans objet en CLICKbase",
   },
   stackBlocked: {
     "single-piece": "La baseplate tient sur votre plateau : une seule pièce, rien à empiler.",
     "low-margin":
-      "La marge en cadre ou en équerres fait 2 mm de haut : sous une pièce retournée, elle commencerait en l'air, loin au-dessus de la pièce du dessous. Pour empiler, prenez la marge en cellules tronquées, pleine hauteur.",
+      "La marge en cadre fait 2 mm de haut, et réduite à ses appuis, ce ne sont que des traverses : sous une pièce retournée, elle commencerait en l'air, ou mal portée. Pour empiler, prenez la marge en cellules tronquées ou en grille prolongée, pleine hauteur.",
     tray: "Retourné, le fond d'un Tray ponterait toute la poche, et en s'affaissant il remonterait vers le pied du bin, posé 0,2 mm au-dessus.",
     clickbase: "Les toiles d'un CLICKbase portent ses lamelles quand il est imprimé à l'endroit ; retourné, elles s'imprimeraient sur les lamelles et y souderaient.",
   },
@@ -275,7 +300,7 @@ const fr = {
     `Toutes les pièces en une impression, sans multimatériau : la première à l'endroit, les autres retournées sur celle du dessous, une couche d'air entre deux (pas de ${pitch} mm). Les clips restent à part.`,
   stackPlan: (index: number, pieces: string, height: string) => `Pile ${index} : pièces ${pieces}, ${height} mm`,
   stackApart:
-    "Une pièce ne se pose que sur une pièce qui la porte (même grille, murs de marge l'un sur l'autre) : sinon, elle commence une autre pile.",
+    "Une pièce ne se pose que sur une pièce qui la porte (même grille, murs et appuis de marge l'un sur l'autre) : sinon, elle commence une autre pile.",
   stackLayerWarning: (layer: string) =>
     `Couches de ${layer} mm : au-delà de 0,2 mm, PrusaSlicer et OrcaSlicer signalent la couche vide entre deux pièces.`,
   stackSkeletonWarning: "En Skeleton, la bande des murets entaillés est imprimée en pont entre deux poteaux, sur chaque pièce retournée.",
@@ -354,7 +379,7 @@ const en: Strings = {
   generator: "Baseplate generator",
   description:
     "Free and open-source generator of Gridfinity baseplates sized for your drawer, computed in your browser.",
-  // Index of the generators (ADR 0017)
+  // Index of the generators (ADR 0020)
   home: {
     title: "Gridfinity Generator",
     heading: "Storage that fits just right.",
@@ -452,7 +477,7 @@ const en: Strings = {
   copyFailed: "Could not copy: copy the link below.",
   resetTitle: "Reset the settings?",
   resetDescription:
-    "The baseplate goes back to the default settings. Your parameters are kept: language, units, nozzle, layer height, line width, build plate and preview color.",
+    "The baseplate goes back to the default settings. Your parameters are kept: language, units, nozzle, layer height, line width, build plate, filament and preview color.",
   cancel: "Cancel",
   language: "Language",
   units: "Units",
@@ -483,12 +508,27 @@ const en: Strings = {
   buildPlateDepth: "Build plate depth",
   shallowerPlate: "Shallower build plate",
   deeperPlate: "Deeper build plate",
+  filament: "Filament",
+  filamentHint: "For the mass and the cost shown in the statistics.",
+  filamentNames: { pla: "PLA", petg: "PETG", abs: "ABS", asa: "ASA", tpu: "TPU", other: "Other" },
+  density: "Density",
+  lowerDensity: "Lower density",
+  higherDensity: "Higher density",
+  densityOf: (density: string) => `Density: ${density} g/cm³, from the manufacturer's data sheet.`,
+  filamentPrice: "Filament price",
+  filamentPriceHint: "Optional: once filled in, the cost shows next to the mass.",
   // Statistics
   statistics: "Statistics",
   statCells: "Cells",
   statMargin: "Margin",
   statHeight: "Height",
   statVolume: "Material",
+  mass: (grams: string) => `≈\u00a0${grams}\u00a0g`,
+  belowOneGram: "< 1",
+  clipsMass: (grams: string) => `${grams} g of it clips`,
+  cost: (amount: string) => `≈ ${amount}`,
+  massInfo: "How the mass is worked out",
+  massHint: "Measured volume × density of the filament, the piece printed solid; the slicer may differ by a few %.",
   statScrews: "Screws",
   statMagnets: "Magnets",
   magnetCount: (count: string) => `${count} (Ø 6 × 2 mm)`,
@@ -520,7 +560,7 @@ const en: Strings = {
   height: "height",
   size: "Size",
   sizeMode: "Size mode",
-  sizeDrawer: "Drawer",
+  sizeDrawer: "Dimensions",
   sizeCells: "Number of cells",
   drawerHint: "Inside dimensions of the drawer: the baseplate fills it.",
   drawerWidth: "Width",
@@ -557,20 +597,28 @@ const en: Strings = {
   trayHint: (floor: string, gap: string) =>
     `The grid on a solid floor of ${floor} mm: nothing goes through, for a desk, a shelf or small parts. The pockets rise by ${floor} mm, plus ${gap} mm of gap: the bin stays seated on its slopes, clear of the floor.`,
   skeletonHint: (band: string) =>
-    `The walls between pockets are notched between their crossings, down to a band of ${band} mm: only posts of the whole profile stay at the corners of the cells, and the bin is guided by its 4 corners only. About half the material. The rim of the grid stays whole. No clips.`,
+    `The walls between pockets are notched between their crossings, down to a band of ${band} mm: only posts of the whole profile stay at the corners of the cells, and the bin is guided by its 4 corners only. About half the material. The rim of the grid stays whole. The clips sit in the posts.`,
   clickbaseHint: (interference: string) =>
-    `Two lamellas in the wall of each side of a pocket grip the foot of the bin by ${interference} mm: it clicks in and stays, without magnets. The first bin breaks the thin webs that hold the lamellas up in print. The middle of each side stays whole for the clips. After CLICKbase Refined (ZeroCtrl) and CLICKbase (John Hall), under the CC BY-NC-SA license: no commercial use.`,
+    `Two lamellas in the wall of each side of a pocket grip the foot of the bin by ${interference} mm: it clicks in and stays, without magnets. The first bin breaks the thin webs that hold the lamellas up in print. Next to a clip, the lamella is shortened. After CLICKbase Refined (ZeroCtrl) and CLICKbase (John Hall), under the CC BY-NC-SA license: no commercial use.`,
   clickbaseWarning: "CLICKbase: print in PETG, not PLA, which creeps and stops gripping the bins. Arachne wall generator, 0.4 mm nozzle.",
-  typeVolumesHint: "Material of the baseplate of each type, measured on the mesh.",
+  typeMaterial: (volume: string, mass: string) => `${volume}\u00a0cm³ · ${mass}`,
+  typeVolumesHint: "Material of the baseplate of each type, measured on the mesh, and its mass in the filament chosen.",
   margin: "Margin",
-  marginShapes: { frame: "Frame", cells: "Cells", brackets: "Brackets" },
-  marginShapeNames: { frame: "Frame of crossbars", cells: "Truncated cells", brackets: "Corner brackets" },
+  marginShapes: { frame: "Frame", cells: "Cells", extended: "Grid" },
+  marginShapeNames: { frame: "Frame of crossbars", cells: "Truncated cells", extended: "Extended grid" },
   marginShapeHints: {
     frame: "A 2 mm wall along the drawer, tied to the grid by a crossbar in line with each wall between pockets. The cheapest that bears on the whole drawer outline.",
     cells: "The grid goes on up to the edge of the drawer, in cells cut by an outer wall, as high as the grid. The best-looking, but the most material.",
-    brackets: "A 2 mm bracket at each corner, and a T one on the sides longer than 4 cells. The least material, but the baseplate bears on the drawer at the brackets only.",
+    extended:
+      "The walls between pockets go on up to the edge of the drawer, as high as the grid, and bear on it through a solid heel. No outer wall: the cells stay open towards the drawer.",
   },
-  marginVolumesHint: "Material of the baseplate with each shape, measured on the mesh.",
+  minimalMarginShort: ", minimal",
+  minimalMargin: "Minimal margin",
+  minimalMarginHint:
+    "Keeps only two supports on each side, on the first and last lines of the grid; the rest of the margin, corners included, is empty. Less material, and the baseplate still sits tight in the drawer.",
+  marginSurplus: (volume: string, grams: string) => `+\u00a0${volume}\u00a0cm³ · +\u00a0${grams}\u00a0g`,
+  marginSaving: (volume: string, grams: string) => `−\u00a0${volume}\u00a0cm³ · −\u00a0${grams}\u00a0g`,
+  marginVolumesHint: "Material each shape adds: the baseplate less its grid alone, measured on the meshes, and its mass in the filament chosen.",
   noMarginHint: "The grid fills the drawer: no margin, the shape changes nothing.",
   screws: "Screws",
   screwsOff: "Off",
@@ -581,28 +629,23 @@ const en: Strings = {
   screwsHint: "The head sits where the walls between pockets cross, under the slopes of the pockets. The hole gap is set in Advanced.",
   clips: "Clips",
   clipsOff: "Off",
-  clipsUncut: "No cut",
   clipsSummary: (count: string) => `${count} clips to print`,
   clipsHint:
-    "U-shaped staples that join the pieces: they push up from below into the foot of the walls, astride each cut, and do not show from above. They come in the file with the pieces, lying on their side.",
-  clipsUncutHint: "The baseplate fits on your build plate: no cut, so no clip.",
+    "U-shaped staples that join the pieces, two per junction, one at each end, against the corner: they push up from below into the foot of the walls, astride the cut, and do not show from above. They come in the file with the pieces, lying on their side.",
   clipsOffHint: "Without clips, the pieces lie end to end, and the drawer holds them.",
-  clipsSkeleton: "Not with Skeleton",
-  clipsSkeletonHint:
-    "No clips with Skeleton: the middle of the walls, where they sit, is notched. The pieces lie end to end, and the drawer holds them.",
   stack: "Stack the pieces",
   stackOff: "Off",
   stackSummary: (pieces: number, stacks: number) => (stacks === 1 ? `${pieces} pieces in one stack` : `${pieces} pieces in ${stacks} stacks`),
   stackBlockedShort: {
     "single-piece": "No cut",
-    "low-margin": "Margin too low",
+    "low-margin": "Frame margin",
     tray: "Not with Tray",
     clickbase: "Not with CLICKbase",
   },
   stackBlocked: {
     "single-piece": "The baseplate fits on your build plate: a single piece, nothing to stack.",
     "low-margin":
-      "A frame or bracket margin is 2 mm high: under a piece upside down, it would start in the air, well above the piece beneath. To stack, choose the margin in truncated cells, full height.",
+      "A frame margin is 2 mm high, and reduced to its supports it is only crossbars: under a piece upside down, it would start in the air, or rest poorly. To stack, choose the margin in truncated cells or extended grid, full height.",
     tray: "Upside down, the floor of a Tray would bridge the whole pocket, and its sag would rise towards the foot of the bin, which sits 0.2 mm above it.",
     clickbase: "The webs of a CLICKbase hold its lamellas up when it prints right side up; upside down, they would print on the lamellas and weld to them.",
   },
@@ -610,7 +653,7 @@ const en: Strings = {
   stackHint: (pitch: string) =>
     `Every piece in one print, without multi-material: the first right side up, the others upside down on the one beneath, one layer of air between two (pitch of ${pitch} mm). The clips stay apart.`,
   stackPlan: (index: number, pieces: string, height: string) => `Stack ${index}: pieces ${pieces}, ${height} mm`,
-  stackApart: "A piece only goes on a piece that holds it (same grid, margin walls on each other): otherwise it starts another stack.",
+  stackApart: "A piece only goes on a piece that holds it (same grid, margin walls and supports on each other): otherwise it starts another stack.",
   stackLayerWarning: (layer: string) => `Layers of ${layer} mm: above 0.2 mm, PrusaSlicer and OrcaSlicer report the empty layer between two pieces.`,
   stackSkeletonWarning: "With Skeleton, the band of the notched walls prints as a bridge between two posts, on each piece upside down.",
   stackEars: "Corner ears",
