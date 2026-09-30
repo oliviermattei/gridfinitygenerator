@@ -26,3 +26,4 @@ playwright/.cache/
 
 # Local agent settings
 .claude/settings.local.json
+.claude/worktrees/
