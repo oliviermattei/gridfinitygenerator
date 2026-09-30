@@ -37,14 +37,22 @@ export async function loadSam(dtype: Dtype, device: Device): Promise<Sam> {
 
 /** Masque SAM (meilleur des 3 par score IoU) d'une fenêtre RGB, pour un clic dans la fenêtre. */
 async function predict(sam: Sam, rgb: Uint8ClampedArray, width: number, height: number, click: Point): Promise<Uint8Array> {
+  let t = performance.now();
+  const step = (label: string) => {
+    console.log(`[sam] ${label} ${Math.round(performance.now() - t)} ms (${width} × ${height})`);
+    t = performance.now();
+  };
   const image = new RawImage(rgb, width, height, 3);
   const inputs = await sam.processor(image, { input_points: [[[click[0], click[1]]]], input_labels: [[1]] });
+  step("préparation");
   const outputs = (await sam.model(inputs)) as { pred_masks: Tensor; iou_scores: Tensor };
+  step("encodeur + décodeur");
   const [masks] = (await (sam.processor as unknown as { post_process_masks: (...args: unknown[]) => Promise<Tensor[]> }).post_process_masks(
     outputs.pred_masks,
     inputs.original_sizes,
     inputs.reshaped_input_sizes,
   )) as Tensor[];
+  step("masques");
   const scores = outputs.iou_scores.data as Float32Array;
   const best = scores.indexOf(Math.max(...scores));
   const size = width * height;
