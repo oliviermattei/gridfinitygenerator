@@ -72,41 +72,42 @@ test("a shared link carries the type, a link without it gives the open grid", as
   await page.goto("/fr/baseplate?v=1&mode=cells&ty=tray");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type Tray, fond plein");
-  await expect(stat(page, "volume")).toHaveText("30,4 cm³");
+  await expect(stat(page, "volume")).toHaveText("30,3 cm³");
 
   await page.goto("/fr/baseplate?v=1&mode=cells&ty=skeleton");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type Skeleton, allégée");
-  await expect(stat(page, "volume")).toHaveText("9,6 cm³");
+  await expect(stat(page, "volume")).toHaveText("9,5 cm³");
 
   await page.goto("/fr/baseplate?v=1&mode=cells&ty=clickbase");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type CLICKbase, bins clipsés");
-  await expect(stat(page, "volume")).toHaveText("13,9 cm³");
+  await expect(stat(page, "volume")).toHaveText("14,0 cm³");
 
   // A type the engine does not know gives the open grid.
   await page.goto("/fr/baseplate?v=1&mode=cells&ty=hollow");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type Normal, sans fond");
-  await expect(stat(page, "volume")).toHaveText("16,7 cm³");
+  await expect(stat(page, "volume")).toHaveText("16,5 cm³");
 });
 
 test("without a margin, the types still compare their volumes", async ({ page }, testInfo) => {
+  // 4 × 3 cells without margin: the 8 edge slots of the sides are in every volume (#37); the
+  // lamellas of a CLICKbase next to them are shorter, and give back more than they take.
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
   await chooseCells(page);
   await page.getByRole("button", { name: /^Type/ }).click();
-  await expect(type(page, "Normal")).toContainText("16,7 cm³");
-  await expect(type(page, "Tray")).toContainText("30,4 cm³");
-  await expect(type(page, "Skeleton")).toContainText("9,6 cm³");
-  await expect(type(page, "CLICKbase")).toContainText("13,9 cm³");
+  await expect(type(page, "Normal")).toContainText("16,5 cm³");
+  await expect(type(page, "Tray")).toContainText("30,3 cm³");
+  await expect(type(page, "Skeleton")).toContainText("9,5 cm³");
+  await expect(type(page, "CLICKbase")).toContainText("14,0 cm³");
 });
 
 test("choosing the skeleton notches the murets, halves the material and keeps its clips, in its posts", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
   const preview = page.getByTestId("mesh-preview");
-  const clips = page.getByRole("switch", { name: "Clips" });
   await expect(stat(page, "volume")).toHaveText("79,2 cm³");
   await expect(stat(page, "clips")).toHaveText("8");
   const normalTriangles = await preview.getAttribute("data-triangles");
@@ -124,9 +125,6 @@ test("choosing the skeleton notches the murets, halves the material and keeps it
   // The magnets stay under the crossings, in the posts; so do the clips, at the corners (#30).
   await expect(stat(page, "magnets")).toHaveText("28 (Ø 6 × 2 mm)");
   await expect(stat(page, "clips")).toHaveText("8");
-  await expect(clips).toBeChecked();
-  await expect(clips).toBeEnabled();
-  await expect(page.getByRole("button", { name: /^Clips/ })).toHaveAccessibleName("Clips 8 clips à imprimer");
 
   // The file says which type it holds, and holds its clips.
   await closeSettings(page, testInfo);

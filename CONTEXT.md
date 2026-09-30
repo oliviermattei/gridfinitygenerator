@@ -181,12 +181,24 @@ L'arrondi qui raccorde le fond intérieur aux parois et aux séparateurs, et les
 _Avoid_: fond arrondi, fillet, arrondi (seul)
 
 **Pelle**:
-Une rampe arrondie contre la paroi avant de chaque ligne de compartiments, pour faire glisser le contenu hors du bin ; elle prolonge le congé à l'avant.
+Une rampe arrondie au fond de chaque compartiment, contre un côté au choix, le même pour tout le bin (avant par défaut), qui fait glisser le contenu vers la main ; elle prolonge le congé de ce côté et tourne dans ses deux coins.
 _Avoid_: scoop, rampe (seule)
 
 **Onglet d'étiquette**:
-Une étagère en surplomb à 45°, imprimable sans support, contre la paroi arrière de chaque ligne de compartiments, sur toute leur largeur, qui reçoit une étiquette.
-_Avoid_: label tab, languette (réservé à la dent du clip), rebord (réservé à l'empilage)
+Une tablette horizontale en haut de chaque compartiment, sur toute sa largeur, contre le côté opposé à la pelle (l'arrière sans pelle), qui reçoit une étiquette ; elle est tenue par des consoles et bordée d'un liseré, et l'espace dessous reste au compartiment.
+_Avoid_: label tab, languette (réservé à la dent du clip), rebord (réservé à l'empilage), étagère
+
+**Profondeur de l'onglet**:
+Ce que l'onglet d'étiquette avance depuis sa paroi : la hauteur de l'étiquette qu'on y colle (12 mm par défaut, pour un ruban de 12 mm).
+_Avoid_: hauteur de l'onglet, largeur de l'étiquette
+
+**Console**:
+Un support triangulaire à 45° sous l'onglet d'étiquette, qui le relie à sa paroi, au milieu de chaque cellule, comme l'équerre d'une étagère ; aucune là où un séparateur le porte déjà.
+_Avoid_: équerre (ancien nom d'une forme de marge), gousset, nervure (réservé au rejet de « muret »)
+
+**Liseré**:
+Le petit relief qui borde l'avant de l'onglet d'étiquette : il arrête le bord de l'étiquette et raidit la tablette.
+_Avoid_: lèvre (réservé au rejet de « rebord d'empilage »), rebord, butée
 
 **Rebord d'empilage**:
 Le profil en haut des parois d'un bin, qui reçoit le pied du bin posé dessus : **normal** (par défaut), **réduit** ou **aucun**.
@@ -229,12 +241,16 @@ Le bord commun à deux pièces voisines, le long d'une coupe. Une jonction reço
 _Avoid_: joint, raccord, liaison
 
 **Clip**:
-Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au bout d'une jonction, collée au coin, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus. Tous les types en prennent (ADR 0010, ADR 0018).
+Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au bout d'une jonction, collée au coin, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus. Tous les types en prennent. Ce n'est pas un réglage : une baseplate découpée a toujours les siens dans son fichier ; un clip seul se télécharge aussi, pour relier deux baseplates par leurs fentes de bord (ADR 0010, ADR 0018, ADR 0022).
 _Avoid_: agrafe (sauf pour décrire sa forme), connecteur, attache, clip de liaison
 
 **Fente**:
 Le logement d'un clip, creusé par-dessous dans le pied du muret, de part et d'autre d'une coupe : un canal sous la dent pour le pont, et une fente de jambe de chaque côté, sous la pente haute de la poche. Elle part du croisement au bout de la jonction : à 1,92 mm de l'axe d'un croisement de deux coupes (pour laisser la place à la fente de l'autre coupe), à 0,8 mm du bord de la grille (pour ne pas percer la marge).
 _Avoid_: rainure, logement (réservé aux aimants), slot
+
+**Fente de bord**:
+La moitié d'une fente, sa dent et son canal, taillée sur un côté du contour sans marge, là où la grille arrive au bord : un clip y relie la baseplate à une autre, générée à part, posée contre ce côté. Même règle qu'une jonction, sur tout le côté quelle que soit la découpe : deux par côté, collées aux coins, une seule au premier bout si le côté fait une ou deux cellules. Deux baseplates identiques côte à côte ont leurs fentes de bord en vis-à-vis. Pas de fente de bord au-delà de 1,30 mm de chanfrein (ADR 0022).
+_Avoid_: fente de contour, encoche, connecteur de bord
 
 **Dent**:
 La lame de matière de 0,5 mm que chaque pièce garde contre la coupe, dans la fente, entre les jambes du clip.

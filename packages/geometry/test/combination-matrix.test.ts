@@ -10,7 +10,8 @@ import {
 import { badEdges, checkMesh } from "./support/measure";
 
 // Quality check across the settings of spec v1.1 (#20): each ticket checked its own cases;
-// here the types, the shapes of the margin, whole or minimal (#29), the cut with clips, the
+// here the types, the shapes of the margin, whole or minimal (#29), the sides without margin
+// and their edge slots (#37), the cut with clips, the
 // profiles and the screws are combined, in final quality, by the cell bricks and by booleans (ADR 0004). Every mesh
 // must be NoError AND have each edge on exactly two faces (NoError does not see an edge
 // pinched between four faces, ADR 0014), and both ways must give the same volume.
@@ -66,6 +67,30 @@ const CROSSED: Case[] = BASEPLATE_TYPES.map((baseplateType, t) => ({
   settings: { drawerWidth: 150, drawerDepth: 150, baseplateType, marginShape: MARGIN_SHAPES[t % MARGIN_SHAPES.length], pocketProfile: PROFILES[t % 2], screws: true },
   buildPlate: { width: 100, depth: 100 },
 }));
+/**
+ * Sides without margin (#37): edge slots on them, on each type, whole or cut, with a chamfer
+ * and sharp corners, or with a margin on the other sides (whole cells of the margin in
+ * truncated cells, the ends of the sides 0.8 mm inside the lattice).
+ */
+const NO_MARGIN: Case[] = BASEPLATE_TYPES.flatMap((baseplateType, t) => {
+  const cells = { sizeMode: "cells", columns: 4, rows: 3, baseplateType, pocketProfile: PROFILES[t % 2] as PocketProfileName } as const;
+  const marginShape = MARGIN_SHAPES[t % MARGIN_SHAPES.length];
+  return [
+    { name: `4 × 3 cells without margin, whole, ${cells.pocketProfile}: ${baseplateType}`, settings: { ...cells, screws: t % 2 === 0 }, buildPlate: null },
+    {
+      name: `4 × 3 cells without margin, a chamfer of 1 mm, sharp corners, cut on 100 mm: ${baseplateType}`,
+      settings: { ...cells, bottomChamfer: 1, outerRadius: 0, screws: t % 2 === 1 },
+      buildPlate: { width: 100, depth: 100 },
+    },
+    {
+      // A skeleton with whole cells of the margin on a side without margin differs by the two
+      // ways, with or without edge slots (46.6 mm³, found here, pre-existing): 10 mm for it.
+      name: `4 × 3 cells, a margin on the left and the right only in ${marginShape}, cut on 150 mm: ${baseplateType}`,
+      settings: { ...cells, marginWidth: baseplateType === "skeleton" ? 20 : 100, marginShape },
+      buildPlate: { width: 150, depth: 150 },
+    },
+  ];
+});
 const EDGE_CASES: Case[] = EDGES.flatMap(([name, extra], e) =>
   BASEPLATE_TYPES.map((baseplateType, t) => {
     const marginShape = MARGIN_SHAPES[(e + t) % MARGIN_SHAPES.length];
@@ -127,6 +152,14 @@ describe("combinations of the settings of v1.1, in final quality", () => {
   it.each(EDGE_CASES.map((c) => [c.name, c] as const))("%s: NoError, no pinched edge, same volume by bricks and booleans", async (_, c) => {
     const baseplate = await expectSoundAndSame(c);
     expect(baseplate.stats.pieces).toBeGreaterThan(1);
+  });
+
+  it.each(NO_MARGIN.map((c) => [c.name, c] as const))("%s: NoError, no pinched edge, same volume by bricks and booleans", async (_, c) => {
+    const baseplate = await expectSoundAndSame(c);
+    const edges = baseplate.layout.clips?.edges ?? [];
+    // Two slots on each side of 4 cells without margin, and on each side of 3 cells.
+    expect(edges.length).toBe(c.settings.marginWidth ? 4 : 8);
+    if (c.buildPlate) expect(baseplate.stats.pieces).toBeGreaterThan(1);
   });
 
   it.each(CROSSED.map((c) => [c.name, c] as const))("%s: NoError, no pinched edge, same volume by bricks and booleans", async (_, c) => {

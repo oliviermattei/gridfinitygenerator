@@ -148,7 +148,8 @@ describe("flush profile, statistics", () => {
       pocket += ((z1 - z0) / 6) * (opening(i0) + 4 * opening((i0 + i1) / 2) + opening(i1));
     }
     const block = roundedSquareArea(42, 4) * FLUSH_HEIGHT_MM;
-    const { stats } = await generateBaseplate(flushCells(1, 1), "final");
+    // Without the edge slots of its 4 sides without margin (clips.test.ts).
+    const { stats } = await generateBaseplate(flushCells(1, 1), "final", { clips: false });
     expectWithin(stats.volume ?? Number.NaN, block - pocket, 0.5);
   });
 

@@ -60,7 +60,7 @@ test("cell counts drive the 3D preview and the 3MF and STL downloads", async ({ 
 
   // Its menu offers the STL.
   await page.getByRole("button", { name: "Autres formats" }).click();
-  const [stl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: /STL/ }).click()]);
+  const [stl] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: /^Télécharger le STL/ }).click()]);
   expect(stl.suggestedFilename()).toBe("baseplate-3x2-126x84mm.stl");
   const bytes = await readFile(await stl.path());
   // Binary STL: 80-byte header, triangle count, then 50 bytes per triangle.

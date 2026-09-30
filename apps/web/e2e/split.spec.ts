@@ -36,7 +36,7 @@ test("a cut baseplate downloads as one 3MF with a named object per piece and its
   expect(model).toContain('<metadata name="Title">baseplate-9x6-399x279mm</metadata>');
 
   await page.getByRole("button", { name: "Autres formats" }).click();
-  const [zip] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: /STL/ }).click()]);
+  const [zip] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: /^Télécharger le STL/ }).click()]);
   expect(zip.suggestedFilename()).toBe("baseplate-9x6-399x279mm.zip");
   const files = unzipSync(await readFile(await zip.path()));
   expect(Object.keys(files)).toEqual([...[1, 2, 3, 4].map((n) => `baseplate-9x6-399x279mm-piece-${n}.stl`), "baseplate-9x6-399x279mm-clip-x8.stl"]);

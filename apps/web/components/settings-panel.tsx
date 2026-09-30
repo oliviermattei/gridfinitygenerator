@@ -32,8 +32,6 @@ import { AlignmentPad } from "./alignment-pad";
 import {
   AdvancedIcon,
   AlignIcon,
-  ClipArt,
-  ClipIcon,
   MarginArt,
   MarginIcon,
   ProfileArt,
@@ -51,7 +49,7 @@ import {
  * Families of settings in the panel. The print settings (layer height, line width) live in
  * the gear menu.
  */
-export type Family = "size" | "type" | "alignment" | "margin" | "profile" | "screws" | "clips" | "stack" | "advanced";
+export type Family = "size" | "type" | "alignment" | "margin" | "profile" | "screws" | "stack" | "advanced";
 
 /** "Valeurs par défaut", or the advanced settings changed: "Cellule 30 mm, chanfrein 0,6 mm". */
 function advancedSummary(settings: BaseplateSettings, t: Strings, f: Formats): string {
@@ -280,24 +278,6 @@ export function Families({
       >
         <ScrewFields settings={settings} onSettingsChange={onSettingsChange} />
       </FamilyItem>
-      {/* Clips only join the pieces of a cut baseplate: with a single piece, nothing to set. */}
-      {summary && summary.stats.pieces > 1 && (
-        <FamilyItem
-          {...bind("clips")}
-          icon={<ClipIcon className="size-[18px]" />}
-          title={t.clips}
-          summary={clipsSummary(settings, summary, t)}
-          on={settings.clips}
-          control={<ToggleSwitch label={t.clips} checked={settings.clips} onChange={(clips) => onSettingsChange({ clips })} />}
-        >
-          <div className="flex items-center gap-3">
-            <span className={`grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-surface ${settings.clips ? "text-muted [--art:var(--accent)]" : "text-faint"}`}>
-              <ClipArt className="h-9 w-12" />
-            </span>
-            <p className="text-[12.5px] leading-snug text-muted">{settings.clips ? t.clipsHint : t.clipsOffHint}</p>
-          </div>
-        </FamilyItem>
-      )}
       {summary && summary.stats.pieces > 1 && (
         <StackFamily
           {...bind("stack")}
@@ -524,11 +504,6 @@ function TestKit({
 function screwsSummary(settings: BaseplateSettings, summary: BaseplateSummary | null, t: Strings, f: Formats): string {
   const count = summary ? String(summary.stats.screws) : "…";
   return t.screwsSummary(count, f.fine.format(settings.screwShank), f.fine.format(settings.screwHead));
-}
-
-/** "8 clips à imprimer", as laid out by the engine at the ends of the junctions (a cut baseplate). */
-function clipsSummary(settings: BaseplateSettings, summary: BaseplateSummary, t: Strings): string {
-  return settings.clips ? t.clipsSummary(String(summary.stats.clips)) : t.clipsOff;
 }
 
 /**

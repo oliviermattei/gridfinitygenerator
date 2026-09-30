@@ -42,8 +42,9 @@ export interface BaseplateLayout {
    */
   split: SplitPlan;
   /**
-   * The clips that hold the pieces together: the slot, and where each clip goes along the
-   * cuts. Null for a single piece, or with the clips off (clips.ts, ADR 0010).
+   * The clips that hold the pieces together: the slot, where each clip goes along the cuts,
+   * and the edge slots on the sides of the outline without margin (clips.ts, ADR 0010, ADR
+   * 0018, ADR 0022). Null without a slot: a single piece with a margin on every side.
    */
   clips: ClipLayout | null;
 }

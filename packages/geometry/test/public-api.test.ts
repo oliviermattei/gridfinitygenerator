@@ -341,7 +341,8 @@ describe("statistics", () => {
         pocket += ((z1 - z0) / 6) * (opening(i0) + 4 * opening((i0 + i1) / 2) + opening(i1));
       }
       const block = roundedSquareArea(42, 4) * 4.6;
-      const { stats } = await generateBaseplate({ sizeMode: "cells", columns: 1, rows: 1 }, "final");
+      // Without the edge slots of its 4 sides without margin (clips.test.ts).
+      const { stats } = await generateBaseplate({ sizeMode: "cells", columns: 1, rows: 1 }, "final", { clips: false });
       // 32 segments per quarter circle fall short of the true arcs by well under 0.5 mm³.
       expectWithin(stats.volume ?? Number.NaN, block - pocket, 0.5);
     });
@@ -398,7 +399,6 @@ describe("settings", () => {
       screwShank: 3,
       screwHead: 6,
       holeGap: 0.5,
-      clips: true,
       cellSize: 42,
       outerRadius: 4,
       bottomChamfer: 0,
@@ -427,8 +427,8 @@ describe("settings", () => {
     expect(BASEPLATE_SETTINGS.screwShank).toMatchObject({ min: 2, max: 6, default: 3 });
     expect(BASEPLATE_SETTINGS.screwHead).toMatchObject({ min: 2, max: 8, default: 6 });
     expect(BASEPLATE_SETTINGS.holeGap).toMatchObject({ min: 0, max: 1, default: 0.5 });
-    // The clips are on by default (#22): they only show on a baseplate cut for the build plate.
-    expect(BASEPLATE_SETTINGS.clips).toMatchObject({ default: true });
+    // The clips are no longer a setting (#37): always there.
+    expect(BASEPLATE_SETTINGS).not.toHaveProperty("clips");
     expect(BASEPLATE_SETTINGS.cellSize).toMatchObject({ min: 20, max: 80, default: STANDARD_CELL_SIZE_MM });
     expect(BASEPLATE_SETTINGS.outerRadius).toMatchObject({ min: 0, max: 10, default: 4 });
     expect(BASEPLATE_SETTINGS.bottomChamfer).toMatchObject({ min: 0, max: 3, default: 0 });
@@ -454,7 +454,6 @@ describe("settings", () => {
         screwShank: 7,
         screwHead: 1,
         holeGap: 2,
-        clips: false,
         cellSize: 10,
         outerRadius: 12,
         bottomChamfer: -1,
@@ -480,7 +479,6 @@ describe("settings", () => {
       // A screw head narrower than its shank would not hold: raised to the shank.
       screwHead: 6,
       holeGap: 1,
-      clips: false,
       cellSize: 20,
       outerRadius: 10,
       bottomChamfer: 0,
