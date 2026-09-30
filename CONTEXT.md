@@ -1,17 +1,17 @@
 # Gridfinity Generator
 
-Site web public, gratuit et open source d'outils Gridfinity. Premier outil : le générateur de baseplates imprimables en 3D, dimensionnées pour un tiroir donné.
+Site web public, gratuit et open source d'outils Gridfinity. Premiers outils : le générateur de baseplates imprimables en 3D, dimensionnées pour un tiroir donné, puis le générateur de bins qui s'y posent.
 
 ## Language
 
 ### Géométrie
 
 **Baseplate**:
-L'objet final entier : une dalle portant une grille de poches, qui reçoit des bacs Gridfinity.
+L'objet final entier : une dalle portant une grille de poches, qui reçoit des bins Gridfinity.
 _Avoid_: plaque, plate, socle
 
 **Cellule**:
-Une case de la grille, 42 × 42 mm par défaut, qui accueille un bac d'une unité.
+Une case de la grille, 42 × 42 mm par défaut, qui accueille le pied d'un bin.
 _Avoid_: case, unité, grid unit
 
 **Grille**:
@@ -19,35 +19,31 @@ L'ensemble des cellules d'une baseplate, disposées en lignes et colonnes.
 _Avoid_: grid, quadrillage
 
 **Poche**:
-Le creux profilé d'une cellule dans lequel se pose le pied d'un bac.
+Le creux profilé d'une cellule dans lequel se pose le pied d'un bin.
 _Avoid_: cavité, empreinte, socket
 
 **Muret**:
 La cloison profilée qui sépare deux poches voisines ; son sommet est un plat, pas une arête vive.
 _Avoid_: arête, nervure, lip
 
-**Pied**:
-La partie profilée sous un bac, qui s'emboîte dans une poche.
-_Avoid_: base, socle, foot
-
 **Profil de poche**:
-La forme de la paroi d'une poche, du fond de la baseplate au plat du muret. Deux profils : **hybride** (par défaut, 4,60 mm, avec la marche verticale de 0,35 mm qui fait porter le bac par ses pentes, ADR 0002) et **ras** (4,25 mm, celui d'extrabold, sans cette marche : le bac repose sur le fond du tiroir).
+La forme de la paroi d'une poche, du fond de la baseplate au plat du muret. Deux profils : **hybride** (par défaut, 4,60 mm, avec la marche verticale de 0,35 mm qui fait porter le bin par ses pentes, ADR 0002) et **ras** (4,25 mm, celui d'extrabold, sans cette marche : le bin repose sur le fond du tiroir).
 _Avoid_: profil de base, socket profile, flush (sauf dans le code)
 
 **Kit de test**:
-Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arrière le profil ras, à imprimer pour essayer ses bacs dans chacun avant une grande baseplate. Chaque cellule garde sa hauteur : le muret entre les deux descend d'une marche de 0,35 mm sur la ligne qui les sépare.
+Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arrière le profil ras, à imprimer pour essayer ses bins dans chacun avant une grande baseplate. Chaque cellule garde sa hauteur : le muret entre les deux descend d'une marche de 0,35 mm sur la ligne qui les sépare.
 _Avoid_: échantillon, sample, test print
 
 **Type de baseplate**:
-Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bac guidé par ses 4 coins, pas de clips ; #26, ADR 0014) ou **CLICKbase** (la grille ajourée, des lamelles dans la paroi des poches qui serrent le pied des bacs, qui s'enclenchent et tiennent sans aimant ; d'après CLICKbase Refined, sous licence CC BY-NC-SA ; #27, ADR 0015).
+Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bin guidé par ses 4 coins, pas de clips ; #26, ADR 0014) ou **CLICKbase** (la grille ajourée, des lamelles dans la paroi des poches qui serrent le pied des bins, qui s'enclenchent et tiennent sans aimant ; d'après CLICKbase Refined, sous licence CC BY-NC-SA ; #27, ADR 0015).
 _Avoid_: style, variante, plateau (réservé au plateau d'impression)
 
 **Fond**:
-La dalle pleine d'un Tray sous chaque poche (0,6 mm, arrondis à la couche), cellules tronquées comprises ; les trous d'une marge en cadre, ou d'une marge minimale, n'en ont pas. La poche monte de son épaisseur plus une couche de jeu, pour que le bac reste assis sur ses pentes, 0,2 mm au-dessus du fond (ADR 0013). À ne pas confondre avec le fond du tiroir, ni avec le fond plat d'une cellule tronquée étroite.
+La dalle pleine d'un Tray sous chaque poche (0,6 mm, arrondis à la couche), cellules tronquées comprises ; les trous d'une marge en cadre, ou d'une marge minimale, n'en ont pas. La poche monte de son épaisseur plus une couche de jeu, pour que le bin reste assis sur ses pentes, 0,2 mm au-dessus du fond (ADR 0013). À ne pas confondre avec le fond du tiroir, ni avec le fond plat d'une cellule tronquée étroite, ni avec le fond intérieur d'un bin.
 _Avoid_: plancher, socle, floor (sauf dans le code)
 
 **Poteau**:
-Dans un Skeleton, le croisement des murets et le départ de ses quatre murets, qui gardent tout le profil de poche : 5 mm le long de chaque muret en haut (l'arc de coin de la poche et 1 mm de côté), 45° plus large par millimètre vers le bas. Il porte l'aimant ou la vis, et guide le bac par son coin (ADR 0014).
+Dans un Skeleton, le croisement des murets et le départ de ses quatre murets, qui gardent tout le profil de poche : 5 mm le long de chaque muret en haut (l'arc de coin de la poche et 1 mm de côté), 45° plus large par millimètre vers le bas. Il porte l'aimant ou la vis, et guide le bin par son coin (ADR 0014).
 _Avoid_: pilier, plot (réservé à la vis), post (sauf dans le code)
 
 **Bande**:
@@ -55,7 +51,7 @@ Dans un Skeleton, ce qui reste d'un muret entre deux poteaux : son pied, de 0,35
 _Avoid_: bande basse (sauf pour la décrire), semelle, band (sauf dans le code)
 
 **Lamelle**:
-Dans un CLICKbase, un morceau de 0,8 mm de la paroi verticale d'une poche, long de 12 mm au plus, libéré du muret par une saignée et tenu à ses deux bouts ; deux par côté de cellule (une seule, au milieu, sous 34 mm), aucune dans la marge. Elle fléchit quand le bac entre, et le serre (ADR 0015).
+Dans un CLICKbase, un morceau de 0,8 mm de la paroi verticale d'une poche, long de 12 mm au plus, libéré du muret par une saignée et tenu à ses deux bouts ; deux par côté de cellule (une seule, au milieu, sous 34 mm), aucune dans la marge. Elle fléchit quand le bin entre, et le serre (ADR 0015).
 _Avoid_: lame, languette (réservé à la dent du clip), ressort, clip (réservé aux pièces)
 
 **Saignée**:
@@ -63,15 +59,15 @@ La fente de 0,5 mm derrière une lamelle, du dessus de la base jusqu'à travers 
 _Avoid_: fente (réservé au logement d'un clip), rainure, slit (sauf dans le code)
 
 **Ergot**:
-Le milieu d'une lamelle, cintré de 0,5 mm vers la poche : il serre de 0,25 mm la bande verticale du pied d'un bac standard, entre z = 1,2 et 2,0 mm, et se raccorde à la paroi à 45° au-dessus (ADR 0015).
+Le milieu d'une lamelle, cintré de 0,5 mm vers la poche : il serre de 0,25 mm la bande verticale du pied d'un bin standard, entre z = 1,2 et 2,0 mm, et se raccorde à la paroi à 45° au-dessus (ADR 0015).
 _Avoid_: bossage, cran, bosse
 
 **Toile**:
-Sous une lamelle d'un CLICKbase, la paroi mince qui la porte à l'impression, sur une base d'une couche pleine : évidée côté poche, amincie jusqu'à une arête de 0,1 mm sous la lamelle, que le premier bac casse (ADR 0015).
+Sous une lamelle d'un CLICKbase, la paroi mince qui la porte à l'impression, sur une base d'une couche pleine : évidée côté poche, amincie jusqu'à une arête de 0,1 mm sous la lamelle, que le premier bin casse (ADR 0015).
 _Avoid_: support, pont, web (sauf dans le code)
 
 **Assise**:
-Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le bac ; un bac bien assis n'a aucun jeu latéral.
+Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le bin ; un bin bien assis n'a aucun jeu latéral.
 _Avoid_: appui, contact
 
 **Marge**:
@@ -127,7 +123,7 @@ Une vis à tête fraisée qui fixe la baseplate au fond du tiroir, posée à une
 _Avoid_: screw, boulon
 
 **Plot**:
-La matière qui porte la tête d'une vis. En v1, c'est le croisement des murets lui-même : la fraisure y est taillée sous les pentes des poches, sans matière ajoutée, car un bac assis descend jusqu'au fond de la baseplate (ADR 0006).
+La matière qui porte la tête d'une vis. En v1, c'est le croisement des murets lui-même : la fraisure y est taillée sous les pentes des poches, sans matière ajoutée, car un bin assis descend jusqu'au fond de la baseplate (ADR 0006).
 _Avoid_: bossage, socle, boss
 
 **Jeu des trous**:
@@ -140,34 +136,80 @@ _Avoid_: magnet (sauf dans le code)
 
 **Logement d'aimant**:
 Le trou borgne, ouvert en dessous, qui reçoit un aimant sous un croisement de murets tenu par la matière : Ø 6 mm plus le jeu des trous, 2,2 mm de profondeur arrondis à la couche. Toujours présent, sans réglage ; aucun là où il y a une vis, ni sur une coupe, ni au bord de la grille, sauf quand la marge prolonge les murets (cellules tronquées) et garde un mur entre le trou et le contour (ADR 0012).
-_Avoid_: trou d'aimant, alvéole, poche (réservé aux bacs)
+_Avoid_: trou d'aimant, alvéole, poche (réservé aux bins)
 
-**Bac**:
-Le contenant Gridfinity posé sur la baseplate ; hors du périmètre généré, mais il fixe les contraintes de compatibilité.
-_Avoid_: bin, boîte
+### Bin
 
-**Shadowbox**:
-Un insert à poser dans un bac, creusé à la forme exacte d'objets précis (outils, pièces) pour les ranger chacun à sa place.
-_Avoid_: insert, découpe, cutout
+**Bin**:
+Le contenant Gridfinity qui se pose dans les poches d'une baseplate, produit par le générateur de bins : un socle à un pied par cellule, des parois, et en option des séparateurs, une pelle, un onglet d'étiquette et un rebord d'empilage. Sa taille se donne en cellules et sa hauteur en U. Un bin n'a ni aimant ni vis sous ses pieds : il tient par son assise (ou par les lamelles d'un CLICKbase) ; les aimants de la baseplate, qui la tiennent au tiroir, n'ont rien à voir.
+_Avoid_: bac, boîte, box, container
+
+**Pied**:
+La partie profilée sous chaque cellule d'un bin, qui s'emboîte dans une poche : le pied standard exact (0,8 / 1,8 / 2,15 mm, 41,5 mm de côté en haut pour une cellule de 42), sans variante ni réglage de profil. C'est le seul contrat entre un bin et une baseplate, de ce site ou d'ailleurs (ADR 0018).
+_Avoid_: base, foot
+
+**U**:
+L'unité de hauteur d'un bin : 7 mm. Un bin de 3 U mesure 21 mm sans son rebord d'empilage ; la première U est prise par le socle.
+_Avoid_: unité (seule), grid unit, u, hauteur unitaire
+
+**Socle**:
+Le dessous d'un bin, de sa face inférieure à son fond intérieur : les pieds et la dalle qui les relie.
+_Avoid_: base, semelle, plancher
+
+**Fond intérieur**:
+Le dessus du socle, sur lequel reposent les objets rangés dans un bin. À ne pas confondre avec le fond d'un Tray, ni avec le fond du tiroir.
+_Avoid_: fond (seul), plancher, floor
+
+**Paroi**:
+Le mur qui fait le tour d'un bin, du socle au rebord d'empilage ; son épaisseur se déduit de la buse. À ne pas confondre avec le mur extérieur de la marge d'une baseplate.
+_Avoid_: mur (seul), wall
+
+**Compartiment**:
+Une des cases de l'intérieur d'un bin, disposées en grille régulière (1 à 3 par cellule dans chaque sens).
+_Avoid_: case, sous-bac, sub-bin, division
 
 **Séparateur**:
-Une cloison amovible qui divise l'intérieur d'un bac en compartiments.
-_Avoid_: divider, cloison
+Une cloison fixe, imprimée avec le bin, qui sépare deux compartiments voisins ; elle s'arrête sous le rebord d'empilage.
+_Avoid_: divider, cloison, muret (réservé à la baseplate)
+
+**Congé**:
+L'arrondi qui raccorde le fond intérieur aux parois et aux séparateurs, et les coins verticaux entre eux, pour attraper vis et petites pièces du bout du doigt. Activé par défaut.
+_Avoid_: fond arrondi, fillet, arrondi (seul)
+
+**Pelle**:
+Une rampe arrondie contre la paroi avant de chaque ligne de compartiments, pour faire glisser le contenu hors du bin ; elle prolonge le congé à l'avant.
+_Avoid_: scoop, rampe (seule)
+
+**Onglet d'étiquette**:
+Une étagère en surplomb à 45°, imprimable sans support, contre la paroi arrière de chaque ligne de compartiments, sur toute leur largeur, qui reçoit une étiquette.
+_Avoid_: label tab, languette (réservé à la dent du clip), rebord (réservé à l'empilage)
+
+**Rebord d'empilage**:
+Le profil en haut des parois d'un bin, qui reçoit le pied du bin posé dessus : **normal** (par défaut), **réduit** ou **aucun**.
+_Avoid_: lèvre, lip, stacking lip
 
 **Étiquette**:
-Le repère imprimé ou collé sur un bac pour identifier son contenu.
+Le repère imprimé ou collé sur un bin, posé sur son onglet d'étiquette, pour identifier son contenu.
 _Avoid_: label, tag
+
+**Shadowbox**:
+Un insert à poser dans un bin, creusé à la forme exacte d'objets précis (outils, pièces) pour les ranger chacun à sa place. Hors du générateur de bins v1.
+_Avoid_: insert, découpe, cutout
 
 ### Site
 
 **Générateur**:
-Un outil du site qui produit un modèle imprimable à partir de réglages (générateur de baseplates, de bacs…).
+Un outil du site qui produit un modèle imprimable à partir de réglages (générateur de baseplates, de bins…).
 _Avoid_: outil, configurateur, tool
+
+**Index**:
+La page d'entrée du site dans une langue (`/fr`, `/en`), qui présente chaque générateur par une carte : disponible, ou « bientôt » (ADR 0017).
+_Avoid_: accueil, home, catalogue, landing
 
 ### Impression
 
 **Pièce**:
-Un morceau de baseplate obtenu après découpe, imprimable séparément : un rectangle de cellules entières, avec la marge qui le borde sur le contour. Les pièces sont numérotées de 1, de l'arrière gauche à l'avant droit, le tiroir vu de dessus (ADR 0009).
+Un morceau de baseplate obtenu après découpe, imprimable séparément : un rectangle de cellules entières, avec la marge qui le borde sur le contour. Les bins découpés, plus tard, reprendront les mêmes mots (pièce, découpe, coupe), avec des coupes entre deux cellules. Les pièces sont numérotées de 1, de l'arrière gauche à l'avant droit, le tiroir vu de dessus (ADR 0009).
 _Avoid_: part, fragment, tuile
 
 **Découpe**:
@@ -192,7 +234,7 @@ _Avoid_: languette, tenon
 
 **Numéro de pièce**:
 Le numéro gravé sous une pièce, dans un demi-muret, en chiffres de 3 mm empilés et en miroir, pour qu'il se lise quand on retourne la pièce (0,4 mm de profondeur, arrondi à la couche). Une baseplate d'une seule pièce n'en a pas.
-_Avoid_: étiquette (réservé aux bacs), label, repère
+_Avoid_: étiquette (réservé aux bins), label, repère
 
 **Pile**:
 Des pièces d'une baseplate découpée imprimées l'une sur l'autre en une seule impression, en mono-matière : la première à l'endroit, les autres retournées sur celle du dessous, une couche d'air entre deux (le **pas** de la pile : la hauteur d'une pièce plus une couche). Une pièce ne se pose que sur une pièce qui la porte ; sinon elle commence une autre pile (#28, ADR 0016).
@@ -207,7 +249,7 @@ Dans une pile, la colonne de 0,8 mm qui monte du plateau à un coin que les piè
 _Avoid_: pin (sauf dans le code), tige (réservé à la vis), pilier
 
 **Plateau**:
-Le plateau d'impression de l'imprimante, uniquement. Sa taille utile est une préférence locale : elle décide de la découpe, mais n'entre pas dans le lien de partage.
+Le plateau d'impression de l'imprimante, uniquement. Sa taille utile est une préférence locale : elle décide de la découpe d'une baseplate et borne la taille d'un bin (contour réel, rebord compris), mais n'entre pas dans le lien de partage.
 _Avoid_: build plate, lit, bed (et jamais pour désigner la baseplate)
 
 **Trancheur**:

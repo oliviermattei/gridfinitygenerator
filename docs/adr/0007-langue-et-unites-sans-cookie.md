@@ -10,7 +10,7 @@ Le générateur existe en français et en anglais, aux adresses `/fr/baseplate` 
 
 - **La langue d'une page est celle de son adresse.** Les deux pages sont générées au build (`generateStaticParams`), et `<html lang>` suit le segment `[lang]`. Un lien partagé porte donc sa langue dans son chemin.
 - **Le choix du menu est une préférence locale**, dans `localStorage` (clé `preferences`, champ `language`), comme les unités, la buse, le plateau et la couleur de l'aperçu. Il vaut `null` tant que l'utilisateur n'a rien choisi. Ouvrir `/en/baseplate` par un lien ne change pas ce choix.
-- **`/` est une page statique sans contenu** (`app/route.ts`). Un script placé dans le `<head>` s'exécute avant tout affichage. Il lit le choix mémorisé ; à défaut, il prend la première langue du navigateur (`navigator.languages`) que le site parle ; à défaut, l'anglais. Puis il fait `location.replace` vers `/{lang}/baseplate`, en gardant la query string et l'ancre.
+- *(Remplacé par l'ADR 0017 : `/` mène désormais à l'index `/{lang}`, sauf pour un lien de partage.)* **`/` est une page statique sans contenu** (`app/route.ts`). Un script placé dans le `<head>` s'exécute avant tout affichage. Il lit le choix mémorisé ; à défaut, il prend la première langue du navigateur (`navigator.languages`) que le site parle ; à défaut, l'anglais. Puis il fait `location.replace` vers `/{lang}/baseplate`, en gardant la query string et l'ancre.
 - **Changer de langue dans le menu** enregistre le choix, puis navigue côté client (`router.replace`), sans rechargement. Les réglages à l'écran restent en mémoire, et un lien partagé encore présent dans l'adresse suit dans l'autre langue, où il reste lu. La page est remontée : le worker du moteur redémarre et recalcule la baseplate.
 
 ## Unités

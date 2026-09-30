@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1266 314" width="1266" height="314" font-family="system-ui,sans-serif">
+<defs><marker id="a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker>
+<pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#c9a227" stroke-width="2"/></pattern></defs>
+<style>.t{font-size:13px;fill:#222}.s{font-size:11px;fill:#666}.h{font-size:16px;font-weight:600;fill:#111}.dim{stroke:#444;stroke-width:1}.ref{stroke:#999;stroke-dasharray:4 4}.plein{fill:#e8a33d;stroke:#7a4b0a;stroke-width:1.2}.air{fill:#ffffff;stroke:#7a4b0a;stroke-width:1.2}</style>
+<rect width="100%" height="100%" fill="#fff"/>
+<text x="110" y="30" class="h">A · Rebuilt : pied plein (standard)</text>
+<path d="M138.8,204.0 L459.2,204.0 L466.4,196.8 L466.4,180.6 L485.8,161.2 L485.8,60.0 L477.2,60.0 L477.2,141.0 L120.8,141.0 L120.8,60.0 L112.2,60.0 L112.2,161.2 L131.6,180.6 L131.6,196.8 Z" class="plein"/>
+<line x1="100" y1="204" x2="498" y2="204" class="ref"/><text x="96" y="208" class="s" text-anchor="end">0</text>
+<line x1="100" y1="161.25" x2="498" y2="161.25" class="ref"/><text x="96" y="165.25" class="s" text-anchor="end">4,75</text>
+<line x1="100" y1="141" x2="498" y2="141" class="ref"/><text x="96" y="145" class="s" text-anchor="end">7</text>
+<line x1="498.8" y1="204" x2="498.8" y2="161.25" class="dim" marker-start="url(#a)" marker-end="url(#a)"/><text x="506.8" y="186.625" class="t" text-anchor="start">pied 4,75 mm</text>
+<line x1="498.8" y1="161.25" x2="498.8" y2="141" class="dim" marker-start="url(#a)" marker-end="url(#a)"/><text x="506.8" y="155.125" class="t" text-anchor="start">dalle 2,25 mm</text>
+<text x="299" y="178.8" class="t" text-anchor="middle">plein (remplissage du trancheur)</text>
+<text x="299" y="105" class="t" text-anchor="middle">intérieur du bin : fond à 7 mm</text>
+<text x="299" y="232" class="s" text-anchor="middle">coupe dans une cellule de 42 mm (pied 41,5 mm en haut), paroi 0,95 mm, vue jusqu’à 16 mm</text>
+<text x="698" y="30" class="h">B · Pied creux (à mesurer au banc)</text>
+<path d="M726.8,204.0 L1047.2,204.0 L1054.4,196.8 L1054.4,180.6 L1073.8,161.2 L1073.8,60.0 L1065.2,60.0 L1065.2,150.4 L708.8,150.4 L708.8,60.0 L700.2,60.0 L700.2,161.2 L719.6,180.6 L719.6,196.8 Z" class="plein"/>
+<path d="M737.6,204.0 L1036.4,204.0 L1036.4,180.6 L1055.8,161.2 L718.2,161.2 L737.6,180.6 Z" class="air"/>
+<line x1="688" y1="204" x2="1086" y2="204" class="ref"/><text x="684" y="208" class="s" text-anchor="end">0</text>
+<line x1="688" y1="161.25" x2="1086" y2="161.25" class="ref"/><text x="684" y="165.25" class="s" text-anchor="end">4,75</text>
+<line x1="688" y1="150.45" x2="1086" y2="150.45" class="ref"/><text x="684" y="154.45" class="s" text-anchor="end">5,95</text>
+<line x1="1086.8" y1="204" x2="1086.8" y2="161.25" class="dim" marker-start="url(#a)" marker-end="url(#a)"/><text x="1094.8" y="186.625" class="t" text-anchor="start">pied 4,75 mm</text>
+<line x1="1086.8" y1="161.25" x2="1086.8" y2="150.45" class="dim" marker-start="url(#a)" marker-end="url(#a)"/><text x="1094.8" y="159.85" class="t" text-anchor="start">fond ≈ 1,2 mm</text>
+<text x="887" y="183.3" class="t" text-anchor="middle">creux, ouvert dessous</text>
+<text x="887" y="105" class="t" text-anchor="middle">intérieur : fond à ≈ 6 mm (≈ +1 mm utile)</text>
+<text x="887" y="232" class="s" text-anchor="middle">coupe dans une cellule de 42 mm (pied 41,5 mm en haut), paroi 0,95 mm, vue jusqu’à 16 mm</text>
+<text x="110" y="274" class="t">1 U = 7 mm. En A, la 1re unité est entièrement prise par le socle : un bin de 3 U (21 mm + rebord) a 14 mm de profondeur utile.</text>
+<text x="110" y="296" class="t">En B, le fond franchit ≈ 35 mm au-dessus du vide (pont) : à vérifier au banc, avec la matière réelle (g) et la rigidité.</text>
+</svg>
