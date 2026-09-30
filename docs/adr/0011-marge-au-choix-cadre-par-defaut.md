@@ -4,6 +4,8 @@ status: proposed
 
 # Marge au choix : cadre à traverses par défaut, cellules tronquées, équerres de coin
 
+> **Remplacé en partie par l'ADR 0017 (#29)** : les équerres de coin ne sont plus une forme. Un lien `mg=brackets` donne le cadre réduit à ses appuis (marge minimale). La grille prolongée devient la troisième forme, et chaque forme peut être réduite à ses appuis. Le reste de cet ADR (cadre par défaut, traverse doublée sur une coupe, briques) reste valable.
+
 #19 avait remplacé le cadre à traverses par les cellules tronquées (ADR 0008), pour le rendu. Le grilling du 2026-09-29 (spec v1.1, #20) tranche autrement : la forme de la **marge** devient un réglage à trois choix, et le **cadre à traverses** redevient le défaut, parce qu'il est le plus économe des formes qui s'appuient sur tout le tour du tiroir. Cet ADR remplace l'ADR 0008 sur le choix de la variante ; les règles des cellules tronquées de l'ADR 0008 restent valables pour la variante `cells`.
 
 ## Décision

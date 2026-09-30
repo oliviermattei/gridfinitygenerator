@@ -1,4 +1,4 @@
-import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
+import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import type { TriangleMesh } from "./mesh";
 import { clickPocketTool, lamellaSides } from "./clickbase";
 import { brickSlotTool, slotsByCell, type BrickSide, type ClipLayout } from "./clips";
@@ -8,7 +8,7 @@ import { withArena, type Own } from "./manifold";
 import { hasMagnet, magnetTool } from "./magnets";
 import { hasScrew, screwTool } from "./screws";
 import { notchedPocketTool, notchedSides } from "./skeleton";
-import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, slabOf, type GridFrame } from "./shapes";
+import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, sectionKey, slabOf, type GridFrame } from "./shapes";
 import { latticeOf, type Lattice, type PiecePlan } from "./split";
 
 /**
@@ -207,7 +207,7 @@ function inGrid(i: number, j: number, { columns, rows }: GridFrame): boolean {
 interface HoleShape {
   /** Their outline around the cell centre, to a tenth of a micrometre, the same for two bricks with the same holes. */
   key: string;
-  /** Whether they reach a seam of the brick. */
+  /** Whether they reach a seam of the brick, or open onto the outline (`MarginCut.holesInSlab`): taken off its slab. */
   seams: boolean;
 }
 
@@ -230,7 +230,7 @@ function holeShapes(frame: GridFrame, lattice: Lattice, margin: MarginCut | null
         (sy !== -1 && min[1] <= window[1] + ON_FACE_MM) ||
         (sx !== 1 && max[0] >= window[2] - ON_FACE_MM) ||
         (sy !== 1 && max[1] >= window[3] - ON_FACE_MM);
-      shapes.set(`${i},${j}`, { key: shapeKey(holes, cx, cy), seams });
+      shapes.set(`${i},${j}`, { key: sectionKey(holes, cx, cy), seams: seams || margin.holesInSlab === true });
     }
   return shapes;
 }
@@ -244,20 +244,6 @@ function holeWindow(frame: GridFrame, lattice: Lattice, sx: Side, sy: Side, cx: 
   const [x0, y0, x1, y1] = brickArea(frame, lattice, sx, sy);
   const o = TOOL_OVERSHOOT_MM;
   return [cx + x0 - (sx === -1 ? o : 0), cy + y0 - (sy === -1 ? o : 0), cx + x1 + (sx === 1 ? o : 0), cy + y1 + (sy === 1 ? o : 0)];
-}
-
-/** Outline of a cross-section around (cx, cy), whatever the order of its polygons and of their points. */
-function shapeKey(section: CrossSection, cx: number, cy: number): string {
-  const text = (value: number) => (Math.round(value * 1e4) / 1e4 + 0).toFixed(4);
-  return section
-    .toPolygons()
-    .map((polygon) => {
-      const points = polygon.map(([x, y]) => `${text(x - cx)} ${text(y - cy)}`);
-      const first = points.indexOf(points.reduce((min, point) => (point < min ? point : min)));
-      return [...points.slice(first), ...points.slice(0, first)].join(",");
-    })
-    .sort()
-    .join("|");
 }
 
 /**

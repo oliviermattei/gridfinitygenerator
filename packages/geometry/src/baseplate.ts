@@ -8,6 +8,7 @@ import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold, withArena } from "./manifold";
 import { FLUSH_PROFILE, POCKET_PROFILES } from "./pocket-profile";
 import { magnetHolesOf, magnetPositions } from "./magnets";
+import { supportAreas } from "./margin";
 import { layerCount, type BuildPlate } from "./print";
 import { screwHolesOf, screwPositions } from "./screws";
 import { clampSettings, type BaseplateSettings } from "./settings";
@@ -72,6 +73,13 @@ export interface GenerateOptions {
    * false is for the benches and tests that measure what the holes take away.
    */
   magnets?: boolean;
+  /**
+   * Whether to build the margin, true by default. False builds the same baseplate without it:
+   * the grid alone, its layout, cut, clips and holes unchanged but for the magnets the margin
+   * held. The surplus of a shape of margin, shown under it, is the volume of the baseplate less
+   * that of its grid alone (#29).
+   */
+  margin?: boolean;
 }
 
 /** One piece of the baseplate, a closed shell of its mesh, in the order of `layout.split.pieces`. */
@@ -111,7 +119,7 @@ export interface Baseplate {
  * for a tray (the type of baseplate, baseplate-type.ts, ADR 0013), sized for a drawer or by its
  * number of cells, its outline rounded and chamfered at the bottom by the settings, and its
  * margin in the shape of the settings (a frame of crossbars by default, truncated cells or
- * corner brackets, see margin.ts and ADR 0011), with a countersunk screw hole on each inner intersection of the grid when the
+ * the extended grid, whole or reduced to their supports, see margin.ts, ADR 0011 and ADR 0017), with a countersunk screw hole on each inner intersection of the grid when the
  * screws are on (screws.ts, ADR 0006), and a magnet hole under each other crossing of the
  * murets the material holds, always (magnets.ts, ADR 0012). The type of baseplate may also notch
  * the murets (a skeleton, skeleton.ts) or cut lamellas that hold the bins in the pocket walls
@@ -180,7 +188,8 @@ async function buildBaseplate(
     profile,
     lowerCells,
     margins,
-    marginShape: settings.marginShape,
+    marginShape: options.margin === false ? "none" : settings.marginShape,
+    minimalMargin: settings.minimalMargin,
     width,
     depth,
     // Never more than half the smallest side: a single row of cells gets round ends.
@@ -202,7 +211,14 @@ async function buildBaseplate(
   const clips = clipsOf(settings.clips && type.clips, uncut, split, labels);
   const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips };
   const strategy = options.strategy ?? (canAssembleWithBricks(frame) ? "bricks" : "boolean");
-  const layout: BaseplateLayout = { ...cells, screws: screwPositions(frame), magnets: magnetPositions(frame, latticeOf(frame)), split, clips };
+  const layout: BaseplateLayout = {
+    ...cells,
+    screws: screwPositions(frame),
+    magnets: magnetPositions(frame, latticeOf(frame)),
+    supports: supportAreas(frame),
+    split,
+    clips,
+  };
   const meshes =
     strategy === "bricks"
       ? assembleWithBricks(wasm, frame, quality === "final", split.pieces, labels)

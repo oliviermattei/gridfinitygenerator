@@ -12,15 +12,16 @@ import { HYBRID_OPENINGS as POCKET_OPENINGS, badEdges, checkMesh, holeReach, inS
 
 const FRAME = { marginShape: "frame" } as const;
 const CELLS = { marginShape: "cells" } as const;
-const BRACKETS = { marginShape: "brackets" } as const;
+const EXTENDED = { marginShape: "extended" } as const;
 const PLATE_256 = { buildPlate: { width: 256, depth: 256 } };
 /** The prototype of the margins drilled no magnet holes (#24): its volumes are without them. */
 const BARE = { magnets: false };
 
-// Drawer mode, alignment (#10) and the three shapes of the margin (#23), observed through
-// the public interface only. Reference values: prototypes/margin-variants (README and
-// results.json): the frame of crossbars at 2.00 mm (variant 3, the default), the truncated
-// cells flush with the grid (variant 1, #19) and the corner brackets at 2.00 mm (variant 2).
+// Drawer mode, alignment (#10), the three shapes of the margin (#23, #29) and the minimal
+// margin (#29), observed through the public interface only. Reference values:
+// prototypes/margin-variants (README and results.json): the frame of crossbars at 2.00 mm
+// (variant 3, the default) and the truncated cells flush with the grid (variant 1, #19);
+// prototypes/minimal-margin for the extended grid and the minimal margins.
 
 const TOLERANCE_MM = 0.001;
 const HEIGHT_MM = 4.6;
@@ -232,131 +233,220 @@ describe("margin: frame of crossbars, the default (#10, #23)", () => {
   });
 });
 
-describe("margin: corner brackets only (#23)", () => {
-  // The default drawer: the grid spans ±189 × ±126 mm, the outline ±199.5 × ±139.5 mm. At
-  // 1 mm high, the outer wall is 1.2 mm wide along the outline.
-  const LEFT_WALL = -199.5 + 0.6;
-  const FRONT_WALL = -139.5 + 0.6;
+describe("margin: extended grid, open onto the drawer (#29)", () => {
+  // The default drawer: the grid spans ±189 × ±126 mm, the outline ±199.5 × ±139.5 mm. The
+  // band of the outer wall, 1.2 mm deep, is empty but for a heel at the end of each muret.
+  const BACK_BAND = 139.5 - 0.6;
 
-  it("gives the volume of the prototype's corner brackets at 2.00 mm, for the default drawer and the test bench", async () => {
-    // results.json of prototypes/margin-variants, brackets ("équerres de coin seules") at 2.00 mm, final quality.
-    const drawer = await generateBaseplate(BRACKETS, "final", BARE);
-    expectWithin(drawer.stats.volume ?? Number.NaN, 78_263.255, 0.5);
-    const bench = { ...BRACKETS, sizeMode: "cells", columns: 2, rows: 2, marginWidth: 25, marginDepth: 25, alignment: "bl" } as const;
-    expectWithin((await generateBaseplate(bench, "final", BARE)).stats.volume ?? Number.NaN, 6_134.395, 0.5);
-  });
-
-  it("closes a box at each corner and leaves the rest of the margin open onto the drawer", async () => {
-    const { mesh } = await generateBaseplate(BRACKETS, "preview");
-    const check = await checkMesh(mesh, [0.1, 1.9, 2.1]);
-    expect(check.status).toBe("NoError");
-    // 54 pockets and 4 corner boxes: the other holes of the margin open onto the outline.
-    expect(check.genus).toBe(54 + 4);
-    // 2.00 mm high, like the frame.
-    expectWithin(sectionBox(check.sections.get(1.9) ?? []).width, 399);
-    expectWithin(sectionBox(check.sections.get(2.1) ?? []).width, 378);
-    // Between the brackets, nothing along the outline, down to the first layer.
-    expect(inSection(check.sections.get(0.1) ?? [], [LEFT_WALL, -60])).toBe(false);
-    expect(inSection(check.sections.get(0.1) ?? [], [-150, FRONT_WALL])).toBe(false);
-  });
-
-  it("has legs of outer wall 10 mm past the grid lines, and T brackets on the sides longer than 4 cells", async () => {
-    const { mesh } = await generateBaseplate(BRACKETS, "preview");
-    const section = (await checkMesh(mesh, [1])).sections.get(1) ?? [];
-    const solid = (point: [number, number]) => inSection(section, point);
-    // Front left corner: the legs end 10 mm past the grid lines at x = −189 and y = −126.
-    expect([solid([LEFT_WALL, -126 + 9.9]), solid([LEFT_WALL, -126 + 10.1])]).toEqual([true, false]);
-    expect([solid([-189 + 9.9, FRONT_WALL]), solid([-189 + 10.1, FRONT_WALL])]).toEqual([true, false]);
-    // The crossbars of the first grid lines close the corner box, inside the grid's extent.
-    expect([solid([-194, -126 + 0.6]), solid([-194, -126 + 1.3])]).toEqual([true, false]);
-    // 6 rows: a T on the left and right sides, on the middle line (y = 0), its legs 10 mm each way.
-    for (const x of [LEFT_WALL, -LEFT_WALL]) {
-      expect([solid([x, -9.9]), solid([x, 9.9]), solid([x, 10.1]), solid([x, -10.1])]).toEqual([true, true, false, false]);
-    }
-    expect([solid([-194, 0]), solid([-194, 1])]).toEqual([true, false]);
-    // 9 columns: two Ts at the front and at the back, on the lines at x = −63 and 63.
-    for (const x of [-63, 63]) {
-      expect([solid([x, FRONT_WALL]), solid([x, -FRONT_WALL]), solid([x, -133]), solid([x + 10.1, FRONT_WALL])]).toEqual([true, true, true, false]);
-    }
-    expect(solid([0, FRONT_WALL])).toBe(false);
-  });
-
-  it.each([2.5, 3, 4])("leaves the holes of a margin of %s mm full under a chamfer of 3 mm: no hole reaches the foot of the chamfer", async (margin) => {
-    // The chamfer sets the foot of the outline 3 mm in; a hole between the brackets opens onto
-    // the outline, so its bottom would end on or past the foot (a pinched or folded mesh, #20).
-    // A hole is kept when it is at least one wall wide at the foot of the chamfer (4.2 mm).
-    const settings = { ...BRACKETS, sizeMode: "cells", columns: 4, rows: 2, marginWidth: 2 * margin, marginDepth: 2 * margin, bottomChamfer: 3 } as const;
-    const [bricks, booleans] = await Promise.all([
-      generateBaseplate(settings, "final", { strategy: "bricks" }),
-      generateBaseplate(settings, "final", { strategy: "boolean" }),
-    ]);
-    for (const { mesh } of [bricks, booleans]) {
-      expect((await checkMesh(mesh)).status).toBe("NoError");
-      expect(badEdges(mesh)).toBe(0);
-    }
-    expectWithin(bricks.stats.volume ?? Number.NaN, booleans.stats.volume ?? Number.NaN, 0.1);
-    const section = (await checkMesh(bricks.mesh, [1.9])).sections.get(1.9) ?? [];
-    // Between the corner brackets of the front, in the middle of the margin.
-    expect(inSection(section, [0, -42 - margin / 2])).toBe(true);
-  });
-
-  it("keeps the holes of a margin one wall wider than the chamfer", async () => {
-    const settings = { ...BRACKETS, sizeMode: "cells", columns: 4, rows: 2, marginWidth: 9, marginDepth: 9, bottomChamfer: 3 } as const;
-    const { mesh } = await generateBaseplate(settings, "final");
-    const check = await checkMesh(mesh, [1.9]);
+  it("carries the murets on to the outline, full height, and has no outer wall between their heels", async () => {
+    const { mesh } = await generateBaseplate(EXTENDED, "preview");
+    const check = await checkMesh(mesh, [0.1, 2.1, 4.5]);
     expect(check.status).toBe("NoError");
     expect(badEdges(mesh)).toBe(0);
-    expect(inSection(check.sections.get(1.9) ?? [], [0, -42 - 4.5 / 2])).toBe(false);
+    // No hole but the 54 pockets: every cell of the margin opens onto the drawer.
+    expect(check.genus).toBe(54);
+    for (const z of [0.1, 2.1, 4.5]) {
+      const solid = (point: [number, number]) => inSection(check.sections.get(z) ?? [], point);
+      // Between two heels, nothing along the outline, at any height: no outer wall.
+      expect(solid([-168, BACK_BAND]), `${z} mm`).toBe(false);
+      expect(solid([-199, -21]), `${z} mm`).toBe(false);
+      // A heel at the end of the muret of the grid line x = −147, full height.
+      expect(solid([-147, BACK_BAND]), `${z} mm`).toBe(true);
+      expect(solid([-199, 84]), `${z} mm`).toBe(true);
+    }
   });
 
-  it.each([
-    { columns: 4, lines: [] },
-    { columns: 5, lines: [3] },
-    { columns: 8, lines: [4] },
-    { columns: 9, lines: [3, 6] },
-  ])("puts Ts on $lines along a side of $columns cells", async ({ columns, lines }) => {
-    const settings = { ...BRACKETS, sizeMode: "cells", columns, rows: 1, marginDepth: 30 } as const;
-    const { mesh } = await generateBaseplate(settings, "preview");
-    const check = await checkMesh(mesh, [1]);
+  it("ends each muret on a heel as wide as its foot and one wall deep", async () => {
+    const { mesh } = await generateBaseplate(EXTENDED, "final");
+    const check = await checkMesh(mesh, [0.1, 4.5]);
+    const top = (point: [number, number]) => inSection(check.sections.get(4.5) ?? [], point);
+    const bottom = (point: [number, number]) => inSection(check.sections.get(0.1) ?? [], point);
+    // At the bottom, the heel is the foot of the muret: 2.85 mm on each side of its line.
+    expect([bottom([-147 - 2.8, BACK_BAND]), bottom([-147 + 2.8, BACK_BAND])]).toEqual([true, true]);
+    expect([bottom([-147 - 2.9, BACK_BAND]), bottom([-147 + 2.9, BACK_BAND])]).toEqual([false, false]);
+    // At the top, the muret carried on is its 0.8 mm flat, and the heel keeps the whole foot in the band.
+    expect([top([-147 + 0.3, 133]), top([-147 + 0.5, 133])]).toEqual([true, false]);
+    expect([top([-147 + 2.8, 138.4]), top([-147 + 2.8, 138.2])]).toEqual([true, false]);
+  });
+
+  it("opens the last cell of a margin wider than a cell onto the drawer: no sliver of a muret along the outline", async () => {
+    // 3 × 3 cells in 45 mm of margin all around: the muret 42 mm off the grid would stand
+    // across the band (43.8 mm): it is not built, and the cell before it opens to the heels.
+    const settings = { ...EXTENDED, sizeMode: "cells", columns: 3, rows: 3, marginWidth: 90, marginDepth: 90 } as const;
+    const { mesh } = await generateBaseplate(settings, "final");
+    const check = await checkMesh(mesh, [0.1, 4.5]);
     expect(check.status).toBe("NoError");
-    // The front wall at y = −(21 + 15) + 0.6, on each inner grid line.
-    const x0 = (-columns * 42) / 2;
-    for (let line = 1; line < columns; line++) {
-      expect(inSection(check.sections.get(1) ?? [], [x0 + line * 42, -36 + 0.6]), `line ${line}`).toBe(lines.includes(line));
+    expect(badEdges(mesh)).toBe(0);
+    for (const z of [0.1, 4.5]) {
+      // The grid spans ±63 mm, the outline ±108 mm: nothing at 105 mm, 42 mm off the grid, between the heels.
+      expect(inSection(check.sections.get(z) ?? [], [-84, 105]), `${z} mm`).toBe(false);
+      // Nor on the line 42 mm off the grid on the left, in the middle row.
+      expect(inSection(check.sections.get(z) ?? [], [-105, 0]), `${z} mm`).toBe(false);
     }
+  });
+});
+
+describe("minimal margin: two supports on each side, corners empty (#29)", () => {
+  // The default drawer: supports on the grid lines x = ±189 in the back and front margins, and
+  // y = ±126 in the left and right ones.
+  const around = (shape: "frame" | "cells" | "extended") => ({ marginShape: shape, minimalMargin: true }) as const;
+
+  it.each([
+    // The truncated cells keep the murets of the first and last cells: the second and last but one lines too.
+    ["frame", [true, false, false, false, false, false, true]],
+    ["cells", [true, false, true, false, true, false, true]],
+    ["extended", [true, false, false, false, false, false, true]],
+  ] as const)("%s: keeps the first and last grid lines of each side, full height, and nothing else", async (shape, expected) => {
+    const { mesh } = await generateBaseplate(around(shape), "final");
+    const check = await checkMesh(mesh, [0.1, 1.9, 2.1, 4.5]);
+    expect(check.status).toBe("NoError");
+    expect(badEdges(mesh)).toBe(0);
+    for (const z of [0.1, 1.9, 2.1, 4.5]) {
+      const solid = (point: [number, number]) => inSection(check.sections.get(z) ?? [], point);
+      // Across the middle of the margin, on the lines (0.3 mm inside the first and last ones) and between them.
+      const backSolid = [-189 + 0.3, -168, -147, 0, 147, 168, 189 - 0.3].map((x) => solid([x, 133]));
+      expect(backSolid, `back at ${z} mm`).toEqual(expected);
+      const leftSolid = [-126 + 0.3, -105, -84, 0, 84, 105, 126 - 0.3].map((y) => solid([-194, y]));
+      expect(leftSolid, `left at ${z} mm`).toEqual(expected);
+      // The corners of the margin are empty.
+      for (const corner of [[-196, 134], [196, 134], [-196, -134], [196, -134]] as [number, number][]) expect(solid(corner), `${corner} at ${z} mm`).toBe(false);
+    }
+  });
+
+  it("frame: its supports are a crossbar of 3 lines at least and a piece of outer wall as long as the foot of a muret, inside the grid's extent", async () => {
+    const { mesh } = await generateBaseplate(around("frame"), "final");
+    const section = (await checkMesh(mesh, [4.5])).sections.get(4.5) ?? [];
+    const solid = (point: [number, number]) => inSection(section, point);
+    // The crossbar of line x = −189, 1.2 mm wide inside the grid's extent.
+    expect([solid([-189 + 1.1, 133]), solid([-189 + 1.3, 133]), solid([-189 - 0.1, 133])]).toEqual([true, false, false]);
+    // Its piece of outer wall, 5.70 mm from the line inward, 1.2 mm deep.
+    expect([solid([-189 + 5.6, 139]), solid([-189 + 5.8, 139]), solid([-189 + 5.6, 138.2])]).toEqual([true, false, false]);
+  });
+
+  it("truncated cells: keeps the first and last cells of each side, closed by their murets and their piece of outer wall", async () => {
+    const { mesh } = await generateBaseplate(around("cells"), "preview");
+    const check = await checkMesh(mesh, [0.1, 4.5]);
+    expect(check.status).toBe("NoError");
+    // 54 pockets and the 2 closed cells of each side.
+    expect(check.genus).toBe(54 + 8);
+    // The first cell of the back margin, x from −189 to −147, cut by the outer wall at y = 138.3.
+    const cell = pocketOpening(check.sections.get(4.5) ?? [], [-168, 133]);
+    expectWithin(cell?.width, 42 - 1);
+    expectWithin(cell?.depth, 138.3 - 126 - 0.5);
+    // Its murets are whole: the muret of line x = −147 has its slope on the side of the empty margin too.
+    expect([inSection(check.sections.get(0.1) ?? [], [-147 + 2.8, 133]), inSection(check.sections.get(0.1) ?? [], [-147 + 2.9, 133])]).toEqual([true, false]);
+  });
+
+  it("extended grid: keeps the murets of the first and last lines of each side, with their heels", async () => {
+    const { mesh } = await generateBaseplate(around("extended"), "final");
+    const check = await checkMesh(mesh, [0.1, 4.5]);
+    expect(check.genus).toBe(54);
+    const [top, bottom] = [check.sections.get(4.5) ?? [], check.sections.get(0.1) ?? []];
+    // The muret of line x = −189 carried on: its flat on top, its foot below, its heel in the band.
+    expect([inSection(top, [-189, 133]), inSection(top, [-189 + 0.5, 133]), inSection(top, [-189 + 2.8, 139])]).toEqual([true, false, true]);
+    expect([inSection(bottom, [-189 - 2.8, 133]), inSection(bottom, [-189 + 2.8, 133]), inSection(bottom, [-189 + 2.9, 133])]).toEqual([true, true, false]);
+  });
+
+  it.each([4, 5, 9])("keeps two supports along a side of %s cells, whatever its length", async (columns) => {
+    for (const shape of ["frame", "cells", "extended"] as const) {
+      const settings = { ...around(shape), sizeMode: "cells", columns, rows: 1, marginDepth: 30 } as const;
+      const { mesh } = await generateBaseplate(settings, "preview");
+      const section = (await checkMesh(mesh, [1])).sections.get(1) ?? [];
+      // Along the front outline at y = −(21 + 15), on each grid line (2 mm inside the first and
+      // last ones, off the rounded corners): the truncated cells keep the first and last cells.
+      const x0 = (-columns * 42) / 2;
+      const kept = shape === "cells" ? [0, 1, columns - 1, columns] : [0, columns];
+      for (let line = 0; line <= columns; line++) {
+        const x = x0 + line * 42 + (line === 0 ? 2 : line === columns ? -2 : 0);
+        expect(inSection(section, [x, -36 + 1]), `${shape}, line ${line}`).toBe(kept.includes(line));
+      }
+    }
+  });
+
+  it.each([2.5, 3, 4])("leaves a margin of %s mm full under a chamfer of 3 mm: no hole reaches the foot of the chamfer", async (margin) => {
+    // The chamfer sets the foot of the outline 3 mm in; a hole between the supports opens onto
+    // the outline, so its bottom would end on or past the foot (a pinched or folded mesh, #20).
+    // A hole is kept when it is at least one wall wide at the foot of the chamfer (4.2 mm).
+    for (const shape of ["frame", "cells", "extended"] as const) {
+      const settings = { ...around(shape), sizeMode: "cells", columns: 4, rows: 2, marginWidth: 2 * margin, marginDepth: 2 * margin, bottomChamfer: 3 } as const;
+      const [bricks, booleans] = await Promise.all([
+        generateBaseplate(settings, "final", { strategy: "bricks" }),
+        generateBaseplate(settings, "final", { strategy: "boolean" }),
+      ]);
+      for (const { mesh } of [bricks, booleans]) {
+        expect((await checkMesh(mesh)).status).toBe("NoError");
+        expect(badEdges(mesh)).toBe(0);
+      }
+      expectWithin(bricks.stats.volume ?? Number.NaN, booleans.stats.volume ?? Number.NaN, 0.1);
+      const section = (await checkMesh(bricks.mesh, [1.9])).sections.get(1.9) ?? [];
+      // Between the supports of the front, in the middle of the margin.
+      expect(inSection(section, [0, -42 - margin / 2]), shape).toBe(true);
+    }
+  });
+
+  it("empties a margin one wall wider than the chamfer", async () => {
+    for (const shape of ["frame", "cells", "extended"] as const) {
+      const settings = { ...around(shape), sizeMode: "cells", columns: 4, rows: 2, marginWidth: 9, marginDepth: 9, bottomChamfer: 3 } as const;
+      const { mesh } = await generateBaseplate(settings, "final");
+      const check = await checkMesh(mesh, [1.9]);
+      expect(check.status).toBe("NoError");
+      expect(badEdges(mesh)).toBe(0);
+      expect(inSection(check.sections.get(1.9) ?? [], [0, -42 - 4.5 / 2]), shape).toBe(false);
+    }
+  });
+});
+
+describe("the grid alone, which the surplus of a margin is measured from (#29)", () => {
+  it("is the same baseplate without its margin: the grid, its layout, cut and clips unchanged", async () => {
+    const [whole, bare] = await Promise.all([generateBaseplate({}, "final", PLATE_256), generateBaseplate({}, "final", { ...PLATE_256, margin: false })]);
+    expect(bare.layout.split).toEqual(whole.layout.split);
+    expect(bare.layout.clips).toEqual(whole.layout.clips);
+    expect(bare.stats.clips).toBe(whole.stats.clips);
+    const check = await checkMesh(bare.mesh, [0.1, 1.9]);
+    expect(check.status).toBe("NoError");
+    expect(badEdges(bare.mesh)).toBe(0);
+    for (const z of [0.1, 1.9]) {
+      expectWithin(sectionBox(check.sections.get(z) ?? []).width, 378);
+      expectWithin(sectionBox(check.sections.get(z) ?? []).depth, 252);
+    }
+    // The same by the cell bricks and by booleans.
+    const fallback = await generateBaseplate({}, "final", { ...PLATE_256, margin: false, strategy: "boolean" });
+    expectWithin(bare.stats.volume ?? Number.NaN, fallback.stats.volume ?? Number.NaN, 0.1);
+    expect(bare.stats.volume).toBeLessThan(whole.stats.volume ?? 0);
   });
 });
 
 describe("margin on a cut (#21, #23)", () => {
   // The default drawer on a build plate of 256 mm: cut on column line 4 (x = −21) and row line 3 (y = 0).
-  it.each([
-    { shape: "frame", crossbars: true },
-    { shape: "brackets", crossbars: false },
-  ] as const)("$shape: a crossbar on a cut is doubled, a whole one on each side", async ({ shape, crossbars }) => {
-    const baseplate = await generateBaseplate({ marginShape: shape }, "final", PLATE_256);
+  it("frame: a crossbar on a cut is doubled, a whole one on each side", async () => {
+    const baseplate = await generateBaseplate({ marginShape: "frame" }, "final", PLATE_256);
     expect(baseplate.layout.split.columnCuts).toEqual([4]);
     expect(baseplate.layout.split.rowCuts).toEqual([3]);
     const check = await checkMesh(baseplate.mesh, [1]);
     expect(check.status).toBe("NoError");
     const solid = (point: [number, number]) => inSection(check.sections.get(1) ?? [], point);
-    // Row line 3 is a T of the brackets on the left and right sides: each piece gets an L.
+    // Row line 3 carries a doubled crossbar in the left and right margins.
     for (const x of [-194, 194]) expect([solid([x, -1.1]), solid([x, 1.1]), solid([x, -1.3]), solid([x, 1.3])]).toEqual([true, true, false, false]);
-    // Column line 4 carries a crossbar of the frame only, in the front and back margins.
+    // Column line 4 likewise, in the front and back margins.
     for (const y of [-133, 133]) {
-      expect([solid([-21 - 1.1, y]), solid([-21 + 1.1, y])]).toEqual([crossbars, crossbars]);
+      expect([solid([-21 - 1.1, y]), solid([-21 + 1.1, y])]).toEqual([true, true]);
       expect([solid([-21 - 1.3, y]), solid([-21 + 1.3, y])]).toEqual([false, false]);
     }
   });
 
-  it("keeps a piece along the outline without a bracket closed: only its cells, open onto the drawer", async () => {
-    // 15 × 2 cells, 10 mm of margin in front and behind, pieces of 2 cells: the Ts on lines
-    // 4, 8 and 11 leave a piece of the front and back row without any bracket.
-    const settings = { ...BRACKETS, sizeMode: "cells", columns: 15, rows: 2, marginDepth: 20 } as const;
+  it.each(["frame", "cells", "extended"] as const)("%s, minimal: keeps a piece along the outline without support closed, its margin empty", async (marginShape) => {
+    // 15 × 2 cells, 10 mm of margin in front and behind, pieces of 2 cells: only the pieces at
+    // the ends of the rows hold the supports of the front and back sides.
+    const settings = { marginShape, minimalMargin: true, sizeMode: "cells", columns: 15, rows: 2, marginDepth: 20 } as const;
     const baseplate = await generateBaseplate(settings, "final", { buildPlate: { width: 90, depth: 200 } });
-    const bare = baseplate.pieces.filter(({ dimensions }) => Math.abs(dimensions.depth - 84) < TOLERANCE_MM);
-    expect(bare.length).toBeGreaterThan(0);
+    expect(baseplate.pieces.length).toBeGreaterThan(2);
     for (const piece of baseplate.pieces) expect(piece.volume).toBeGreaterThan(0);
     expect((await checkMesh(baseplate.mesh)).status).toBe("NoError");
+    expect(badEdges(baseplate.mesh)).toBe(0);
+    // The pieces away from the ends of the rows (cells 2 to 12) are only their cells: 84 mm deep.
+    const middle = baseplate.layout.split.pieces.flatMap(({ columns: [first, end] }, index) => (first >= 2 && end <= 13 ? [baseplate.pieces[index]] : []));
+    expect(middle.length).toBeGreaterThan(0);
+    for (const piece of middle) expectWithin(piece?.dimensions.depth, 84);
   });
 });
 
@@ -544,7 +634,9 @@ async function expectSameSolid(settings: Partial<BaseplateSettings>, quality: Qu
   expect(fast.layout).toEqual(fallback.layout);
 }
 
-describe.each(MARGIN_SHAPES)("assembly strategies with a margin of shape %s", (marginShape) => {
+describe.each(MARGIN_SHAPES.flatMap((marginShape) => [false, true].map((minimalMargin) => ({ marginShape, minimalMargin }))))(
+  "assembly strategies with a margin of shape $marginShape, minimal: $minimalMargin",
+  (margin) => {
   describe.each<Quality>(["preview", "final"])("%s quality", (quality) => {
     it.each<[string, Partial<BaseplateSettings>]>([
       ["the default drawer", {}],
@@ -564,14 +656,14 @@ describe.each(MARGIN_SHAPES)("assembly strategies with a margin of shape %s", (m
       // chamfer of the rounded corner leaves vertices closer than the weld of the seams (#20).
       ["a margin of 0.5 mm by a rounded corner, under a chamfer of 3 mm", { sizeMode: "cells", columns: 2, rows: 2, marginWidth: 16, marginDepth: 0.5, alignment: "tr", outerRadius: 2.3, bottomChamfer: 3 }],
     ])("%s: same volume, bounds and genus as the boolean fallback, NoError", async (_, settings) => {
-      await expectSameSolid({ ...settings, marginShape }, quality);
+      await expectSameSolid({ ...settings, ...margin }, quality);
     });
 
     // A drawer with rests of a few millimetres (floors, full truncated cells), and cells with a
     // margin of more than a cell on one axis, in each of the 9 alignments.
     it.each(ALIGNMENTS)("aligned %s, small and large rests of margin: same solid as the boolean fallback, NoError", async (alignment) => {
-      await expectSameSolid({ drawerWidth: 262, drawerDepth: 175.5, alignment, marginShape }, quality);
-      await expectSameSolid({ sizeMode: "cells", columns: 3, rows: 2, marginWidth: 50, marginDepth: 5.5, alignment, marginShape }, quality);
+      await expectSameSolid({ drawerWidth: 262, drawerDepth: 175.5, alignment, ...margin }, quality);
+      await expectSameSolid({ sizeMode: "cells", columns: 3, rows: 2, marginWidth: 50, marginDepth: 5.5, alignment, ...margin }, quality);
     });
 
     // Cut for the build plate, with clips: the margin goes with the pieces on the outline, and
@@ -584,8 +676,8 @@ describe.each(MARGIN_SHAPES)("assembly strategies with a margin of shape %s", (m
     ])("cut, %s: each piece the same by the cell bricks and by booleans, NoError", async (_, settings, plate) => {
       const options = { buildPlate: { width: plate, depth: 256 } };
       const [bricks, booleans] = await Promise.all([
-        generateBaseplate({ ...settings, marginShape }, quality, options),
-        generateBaseplate({ ...settings, marginShape }, quality, { ...options, strategy: "boolean" }),
+        generateBaseplate({ ...settings, ...margin }, quality, options),
+        generateBaseplate({ ...settings, ...margin }, quality, { ...options, strategy: "boolean" }),
       ]);
       expect(bricks.pieces.length).toBeGreaterThan(1);
       expect(bricks.layout).toEqual(booleans.layout);
@@ -600,7 +692,7 @@ describe.each(MARGIN_SHAPES)("assembly strategies with a margin of shape %s", (m
     { sizeMode: "cells", columns: 5, rows: 1, marginWidth: 7, marginDepth: 12, alignment: "br" },
     { sizeMode: "cells", columns: 1, rows: 1, marginWidth: 0.5, marginDepth: 50 },
   ])("builds single rows and columns with a margin, closed: %o", async (settings) => {
-    const baseplate = await generateBaseplate({ ...settings, marginShape }, "final");
+    const baseplate = await generateBaseplate({ ...settings, ...margin }, "final");
     const check = await checkMesh(baseplate.mesh);
     expect(check.status).toBe("NoError");
     expectWithin(baseplate.stats.volume ?? Number.NaN, check.volume, check.volume * 1e-6);

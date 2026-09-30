@@ -3,6 +3,8 @@
 > Question posée : **quelle forme donner à la marge pour qu'elle retienne la baseplate dans le tiroir sans coûter plus de matière que la grille ?**
 > Code jetable, gardé comme référence : il ne sera pas repris tel quel dans `packages/geometry`. Le moteur de la marge (#10) est parti de la variante provisoire de #3, le cadre à nervures. #19 l'a remplacé par la variante 1, les cellules tronquées à ras (ADR 0008). **Depuis #23, les trois variantes sont au choix dans le moteur, et le cadre à nervures (« cadre à traverses ») est de nouveau le défaut** (ADR 0011) : variante 3 à 2,00 mm, variante 1 à 4,60 mm, variante 2 à 2,00 mm. Le moteur retrouve les volumes des trois à 0,5 mm³ près. Le verdict viendra de la recette d'impression (#16).
 
+> **Depuis #29 (ADR 0017)**, les équerres de coin (variante 2) ne sont plus une forme du moteur : un lien `mg=brackets` donne le cadre réduit à ses appuis (marge minimale), et la grille prolongée, ouverte, s'ajoute aux formes. Les bancs d'appui de la marge minimale sont dans `prototypes/minimal-margin/`. Les fichiers `banc-2-equerres-*` restent ici comme référence.
+
 ## Relancer
 
 ```bash

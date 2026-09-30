@@ -42,8 +42,8 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
     } else if (request.type === "volumes") {
       const volumes: number[] = [];
       let triangles = 0;
-      for (const settings of request.settings) {
-        const { stats, mesh } = await generateBaseplate(settings, "final", { buildPlate: request.buildPlate });
+      for (const { settings, bare } of request.comparisons) {
+        const { stats, mesh } = await generateBaseplate(settings, "final", { buildPlate: request.buildPlate, margin: !bare });
         volumes.push(stats.volume as number);
         triangles = Math.max(triangles, mesh.indices.length / 3);
       }

@@ -13,7 +13,7 @@ test("the stack is offered with several pieces, asks for a margin held upside do
   const toggle = page.getByRole("switch", { name: "Empiler les pièces" });
 
   // The default drawer, cut in 4 pieces, has a frame of 2 mm: it would hang in the air.
-  await expect(family).toHaveAccessibleName("Empiler les pièces Marge trop basse");
+  await expect(family).toHaveAccessibleName("Empiler les pièces Marge en cadre");
   await expect(toggle).toBeDisabled();
   await family.click();
   await page.getByRole("button", { name: "Passer aux cellules tronquées" }).click();

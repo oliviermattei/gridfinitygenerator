@@ -69,11 +69,16 @@ describe("layout of the magnets: under the crossings of the murets the material 
     }
   });
 
-  it.each(["frame", "brackets"] as const)(
-    "gives the default drawer 40 magnets with the %s margin: none on the edge of the grid, the margin is lower than the hole",
-    async (marginShape) => {
+  it.each([
+    ["frame", false],
+    ["frame", true],
+    ["cells", true],
+    ["extended", true],
+  ] as const)(
+    "gives the default drawer 40 magnets with the %s margin (minimal: %s): none on the edge of the grid, the margin is lower than the hole or leaves it half empty",
+    async (marginShape, minimalMargin) => {
       // 9 × 6 cells centred in 10.5 and 13.5 mm margins: (9 − 1) × (6 − 1) inner crossings.
-      const { layout, stats } = await generateBaseplate({ marginShape }, "preview");
+      const { layout, stats } = await generateBaseplate({ marginShape, minimalMargin }, "preview");
       expect(stats.magnets).toBe(40);
       expectPositions(layout.magnets, grid(steps(-147, 8), steps(-84, 5)));
     },
@@ -129,7 +134,7 @@ describe("layout of the magnets: under the crossings of the murets the material 
       columnCuts.some((a) => Math.abs(x - (x0 + 42 * a)) < TOLERANCE_MM) || rowCuts.some((b) => Math.abs(y - (y0 + 42 * b)) < TOLERANCE_MM);
     expect(cut.layout.magnets.filter(onCut)).toEqual([]);
     expectPositions(cut.layout.magnets, whole.layout.magnets.filter((position) => !onCut(position)));
-    expect(cut.stats.magnets).toBe(marginShape === "cells" ? 70 - 7 - 10 + 1 : 40 - 5 - 8 + 1);
+    expect(cut.stats.magnets).toBe(marginShape === "frame" ? 40 - 5 - 8 + 1 : 70 - 7 - 10 + 1);
   });
 });
 
@@ -234,7 +239,9 @@ describe("with magnets, the mesh", () => {
     ["3 × 2", cells(3, 2)],
     ["7 × 4", cells(7, 4)],
     ["the default drawer (frame of crossbars)", {}],
-    ["the default drawer in corner brackets", { marginShape: "brackets" }],
+    ["the default drawer, frame reduced to its supports", { minimalMargin: true }],
+    ["the default drawer in extended grid, magnets on the edge", { marginShape: "extended" }],
+    ["the default drawer in minimal truncated cells", { marginShape: "cells", minimalMargin: true }],
     ["the default drawer in truncated cells, magnets on the edge", { marginShape: "cells" }],
     ["truncated cells with whole cells of margin", cells(2, 2, { marginShape: "cells", marginWidth: 100, marginDepth: 60 })],
     ["truncated cells, chamfered, rounded 10 mm", cells(3, 2, { marginShape: "cells", marginWidth: 16, marginDepth: 20, bottomChamfer: 3, outerRadius: 10 })],

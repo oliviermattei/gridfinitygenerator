@@ -66,10 +66,11 @@ describe("rule", () => {
     expect(stackRuleOf({ marginShape: "frame", baseplateType: "normal", layerHeight: 0.2 }, await layout(bare))).toEqual({ blockers: [], warnings: [] });
   });
 
-  it("blocks a single piece, a low margin (frame, brackets), a tray and a CLICKbase", async () => {
+  it("blocks a single piece, a frame (low, or reduced to single crossbars), a tray and a CLICKbase", async () => {
     expect(stackRuleOf({ marginShape: "cells", baseplateType: "normal", layerHeight: 0.2 }, await layout({}, null)).blockers).toEqual(["single-piece"]);
-    for (const marginShape of ["frame", "brackets"] as const) {
-      expect(stackRuleOf({ marginShape, baseplateType: "normal", layerHeight: 0.2 }, await layout({ marginShape })).blockers).toEqual(["low-margin"]);
+    for (const minimalMargin of [false, true]) {
+      const settings = { marginShape: "frame", minimalMargin } as const;
+      expect(stackRuleOf({ ...settings, baseplateType: "normal", layerHeight: 0.2 }, await layout(settings)).blockers).toEqual(["low-margin"]);
     }
     const cut = await layout({ marginShape: "cells" });
     expect(stackRuleOf({ marginShape: "cells", baseplateType: "tray", layerHeight: 0.2 }, cut).blockers).toEqual(["tray"]);

@@ -16,6 +16,16 @@ export type FileExtension = ExportFormat | "zip";
  */
 export type ExportPiece = "baseplate" | "test-kit";
 
+/**
+ * A baseplate to measure against the one shown (`EngineClient.compare`): its settings, and
+ * whether without its margin, the grid alone (`GenerateOptions.margin`), which the surplus of
+ * each shape of margin is measured from (#29).
+ */
+export interface Comparison {
+  settings: BaseplateSettings;
+  bare: boolean;
+}
+
 /** Requests from the page to the engine worker; each one gets a response with its id. */
 export type EngineRequest =
   | {
@@ -59,9 +69,9 @@ export type EngineRequest =
       type: "volumes";
       /**
        * Baseplates to measure, in final quality: the one shown with another shape of margin
-       * (#23) or of another type (#25), to compare what each one costs.
+       * (#23) or of another type (#25), or without its margin (#29), to compare what each one costs.
        */
-      settings: BaseplateSettings[];
+      comparisons: Comparison[];
       buildPlate: BuildPlate;
     };
 

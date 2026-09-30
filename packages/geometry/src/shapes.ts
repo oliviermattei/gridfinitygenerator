@@ -31,8 +31,14 @@ export interface GridFrame {
    */
   lowerCells: readonly LowerCell[];
   margins: Margins;
-  /** Shape of the margin (margin.ts): which variant builds it. */
-  marginShape: MarginShape;
+  /**
+   * Shape of the margin (margin.ts): which variant builds it; `"none"` for the grid alone, its
+   * layout and cut unchanged (`GenerateOptions.margin`), which the surplus of a margin is
+   * measured from.
+   */
+  marginShape: MarginShape | "none";
+  /** Whether the margin is reduced to its supports (`BaseplateSettings.minimalMargin`). */
+  minimalMargin: boolean;
   /** Size of the outline, grid and margins included. */
   width: number;
   depth: number;
@@ -108,6 +114,23 @@ export function rect(x0: number, y0: number, x1: number, y1: number): [number, n
     [x1, y1],
     [x0, y1],
   ];
+}
+
+/**
+ * Outline of a cross-section around (cx, cy), to a tenth of a micrometre, whatever the order of
+ * its polygons and of their points: the same for two shapes that repeat, to share their work.
+ */
+export function sectionKey(section: CrossSection, cx: number, cy: number): string {
+  const text = (value: number) => (Math.round(value * 1e4) / 1e4 + 0).toFixed(4);
+  return section
+    .toPolygons()
+    .map((polygon) => {
+      const points = polygon.map(([x, y]) => `${text(x - cx)} ${text(y - cy)}`);
+      const first = points.indexOf(points.reduce((min, point) => (point < min ? point : min)));
+      return [...points.slice(first), ...points.slice(0, first)].join(",");
+    })
+    .sort()
+    .join("|");
 }
 
 /** Throws unless manifold reports the solid as closed and valid. */
@@ -220,13 +243,25 @@ function footOfChamfer({ width, depth, outerRadius: radius, bottomChamfer: chamf
  * straight (a vertical step stays vertical, a slope widens), so that the bottom of the
  * frame cuts the tool across a face, not along a ring of its edges; above the frame, the
  * tool goes up vertically from the top flat. A profile with a floor (a tray) starts at its
- * floor, inside the frame: the floor is what the tool leaves under it.
+ * floor, inside the frame: the floor is what the tool leaves under it. `grow` stretches the
+ * tool past its left, right, front and back sides.
  */
-export function pocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame, profile = frame.profile): Manifold {
+export function pocketTool(
+  wasm: ManifoldToplevel,
+  own: Own,
+  frame: GridFrame,
+  profile = frame.profile,
+  grow: readonly [left: number, right: number, front: number, back: number] = [0, 0, 0, 0],
+): Manifold {
   const { cellSize, segmentsPerQuarter } = frame;
+  // A pocket open on some sides (the extended grid, margin.ts) reaches past them by `grow`,
+  // with the same levels: no parallel muret on those sides.
+  const [left, right, front, back] = grow;
   const layers = pocketLevels(profile).map(([z, inset]) => ({
     z,
-    points: roundedRect(cellSize - 2 * inset, cellSize - 2 * inset, profile.topRadius - inset, segmentsPerQuarter),
+    points: roundedRect(cellSize - 2 * inset + left + right, cellSize - 2 * inset + front + back, profile.topRadius - inset, segmentsPerQuarter).map(
+      ([x, y]): [number, number] => [x + (right - left) / 2, y + (back - front) / 2],
+    ),
   }));
   const { positions, indices } = loft(layers);
   return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: positions, triVerts: indices })));

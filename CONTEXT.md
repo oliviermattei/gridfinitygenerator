@@ -78,6 +78,10 @@ _Avoid_: appui, contact
 La zone de la baseplate située hors de la grille, qui comble l'écart entre la grille et le tiroir. Sa forme se choisit parmi trois : le **cadre à traverses** (par défaut, le plus économe), les **cellules** (la grille prolongée et fermée par un mur extérieur, ADR 0008) ou la **grille prolongée** (ouverte, sans mur extérieur). Chaque forme peut être réduite à ses appuis (**marge minimale**).
 _Avoid_: padding, bordure, remplissage
 
+**Surplus**:
+La matière qu'ajoute une forme de marge à la baseplate, affichée sous chaque forme : le volume de la baseplate avec cette marge (marge minimale comprise, si elle est cochée) moins celui de la même baseplate sans marge, sa **grille seule** (mêmes type, vis, découpe et clips), tous deux mesurés sur les maillages finaux (#29, ADR 0017).
+_Avoid_: coût de la marge, supplément, delta
+
 **Marge minimale**:
 Réglage de la marge, décoché par défaut, applicable à chaque forme : la marge n'est gardée que là où elle est nécessaire pour que la baseplate soit bien placée dans le tiroir, et assez solide pour y rester sans casser. Le reste de la marge est vide. Chaque côté qui a une marge garde deux **appuis**, sur la première et la dernière ligne de la grille de ce côté ; les cellules y gardent aussi la première et la dernière cellule tronquée, fermées. Les coins où deux marges se croisent sont vides.
 _Avoid_: marge réduite, équerres, marge partielle
@@ -139,7 +143,7 @@ Un disque aimanté de 6 × 2 mm, glissé par-dessous dans un logement d'aimant, 
 _Avoid_: magnet (sauf dans le code)
 
 **Logement d'aimant**:
-Le trou borgne, ouvert en dessous, qui reçoit un aimant sous un croisement de murets tenu par la matière : Ø 6 mm plus le jeu des trous, 2,2 mm de profondeur arrondis à la couche. Toujours présent, sans réglage ; aucun là où il y a une vis, ni sur une coupe, ni au bord de la grille, sauf quand la marge prolonge les murets (cellules tronquées) et garde un mur entre le trou et le contour (ADR 0012).
+Le trou borgne, ouvert en dessous, qui reçoit un aimant sous un croisement de murets tenu par la matière : Ø 6 mm plus le jeu des trous, 2,2 mm de profondeur arrondis à la couche. Toujours présent, sans réglage ; aucun là où il y a une vis, ni sur une coupe, ni au bord de la grille, sauf quand les murets de la marge l'entourent (cellules tronquées, grille prolongée) et gardent un mur entre le trou et le contour, et entre le trou et la marge laissée vide (ADR 0012, ADR 0017).
 _Avoid_: trou d'aimant, alvéole, poche (réservé aux bacs)
 
 **Bac**:
@@ -177,6 +181,10 @@ _Avoid_: split, partition, tuilage
 **Coupe**:
 Une ligne de la grille, prolongée à travers la marge, où deux pièces se séparent : dans l'axe d'un muret, chaque pièce en garde la moitié. Une coupe est plane, à coins vifs, sans chanfrein ; aucun croisement coupé ne porte de vis.
 _Avoid_: joint, jonction, split line
+
+**Jonction**:
+Le bord commun à deux pièces voisines, le long d'une coupe. Une jonction reçoit deux clips, un à chaque bout, ou un seul si elle ne fait qu'une ou deux cellules.
+_Avoid_: joint, raccord, liaison
 
 **Clip**:
 Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au milieu d'un bord de cellule, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus (ADR 0010).

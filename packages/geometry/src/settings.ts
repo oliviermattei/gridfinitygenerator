@@ -21,11 +21,12 @@ export type SizeMode = "drawer" | "cells";
 export type Alignment = "tl" | "t" | "tr" | "l" | "c" | "r" | "bl" | "b" | "br";
 
 /**
- * Shape of the margin (margin.ts, ADR 0011): a frame of crossbars (`frame`, the cheapest, by
- * default), truncated cells (`cells`, the grid carried on up to the outline), or corner
- * brackets only (`brackets`).
+ * Shape of the margin (margin.ts, ADR 0011, ADR 0017): a frame of crossbars (`frame`, the
+ * cheapest, by default), truncated cells (`cells`, the grid carried on up to the outline and
+ * closed by an outer wall), or the extended grid (`extended`, the murets of the grid carried
+ * on up to the outline, open onto the drawer, each ending on a heel).
  */
-export type MarginShape = "frame" | "cells" | "brackets";
+export type MarginShape = "frame" | "cells" | "extended";
 
 export interface BaseplateSettings {
   /** Size mode: the drawer by default, or a number of cells (shelf, worktop…). */
@@ -48,6 +49,12 @@ export interface BaseplateSettings {
   alignment: Alignment;
   /** Shape of the margin: the frame of crossbars by default, the cheapest. */
   marginShape: MarginShape;
+  /**
+   * Minimal margin (#29, ADR 0017): the margin keeps only its supports, two on each side that
+   * has one, on the first and last grid lines of that side; the rest of it, corners included,
+   * is empty. Off by default; it applies to every shape.
+   */
+  minimalMargin: boolean;
   /**
    * Type of baseplate (baseplate-type.ts, ADR 0013): the open grid by default, the cheapest,
    * or a tray, the grid on a solid floor.
@@ -108,7 +115,7 @@ export const STANDARD_CELL_SIZE_MM = 42;
 export const ALIGNMENTS: readonly Alignment[] = ["tl", "t", "tr", "l", "c", "r", "bl", "b", "br"];
 
 /** The shapes of the margin, the default (the cheapest) first. */
-export const MARGIN_SHAPES: readonly MarginShape[] = ["frame", "cells", "brackets"];
+export const MARGIN_SHAPES: readonly MarginShape[] = ["frame", "cells", "extended"];
 
 /** Range and default of every baseplate setting (spec v1, table of settings). */
 export const BASEPLATE_SETTINGS = {
@@ -122,6 +129,7 @@ export const BASEPLATE_SETTINGS = {
   marginDepth: { min: 0, max: 500, default: 0, integer: false },
   alignment: { options: ALIGNMENTS, default: "c" } as ChoiceSetting<Alignment>,
   marginShape: { options: MARGIN_SHAPES, default: "frame" } as ChoiceSetting<MarginShape>,
+  minimalMargin: { default: false } as FlagSetting,
   baseplateType: { options: BASEPLATE_TYPES, default: "normal" } as ChoiceSetting<BaseplateType>,
   pocketProfile: {
     options: Object.keys(POCKET_PROFILES) as PocketProfileName[],
@@ -153,6 +161,7 @@ export const DEFAULT_SETTINGS: BaseplateSettings = {
   marginDepth: BASEPLATE_SETTINGS.marginDepth.default,
   alignment: BASEPLATE_SETTINGS.alignment.default,
   marginShape: BASEPLATE_SETTINGS.marginShape.default,
+  minimalMargin: BASEPLATE_SETTINGS.minimalMargin.default,
   baseplateType: BASEPLATE_SETTINGS.baseplateType.default,
   pocketProfile: BASEPLATE_SETTINGS.pocketProfile.default,
   screws: BASEPLATE_SETTINGS.screws.default,

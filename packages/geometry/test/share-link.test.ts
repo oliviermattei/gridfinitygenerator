@@ -55,7 +55,10 @@ describe("share link content", () => {
     // The frame of crossbars is the default margin (#23): only the other shapes are written.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "frame" })).toBe("v=1");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "cells" })).toBe("v=1&mg=cells");
-    expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "brackets", alignment: "t" })).toBe("v=1&al=t&mg=brackets");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "extended", alignment: "t" })).toBe("v=1&al=t&mg=extended");
+    // The minimal margin is off by default (#29): only turning it on is written, as `min=1`.
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, minimalMargin: false })).toBe("v=1");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "cells", minimalMargin: true })).toBe("v=1&mg=cells&min=1");
     // The open grid is the default type (#25): only the tray and the skeleton (#26) are written.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "normal" })).toBe("v=1");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "tray", pocketProfile: "flush" })).toBe("v=1&ty=tray&pr=flush");
@@ -80,6 +83,7 @@ describe("frozen v1 links", () => {
       my: 0,
       al: "c",
       mg: "frame",
+      min: false,
       ty: "normal",
       pr: "hybrid",
       sc: false,
@@ -110,6 +114,8 @@ describe("frozen v1 links", () => {
       al: "tr",
       // `mg` came into the v1 table with the choice of the margin (#23), before v1 was published: the frame by default.
       mg: "brackets",
+      // `min` came into the v1 table with the minimal margin (#29), before v1 was published: off by default.
+      min: false,
       // `ty` came into the v1 table with the types of baseplate (#25), before v1 was published: normal by default.
       ty: "tray",
       pr: "flush",
@@ -136,7 +142,9 @@ describe("frozen v1 links", () => {
       marginWidth: 12.5,
       marginDepth: 30,
       alignment: "tr",
-      marginShape: "brackets",
+      // The corner brackets of #23 are no longer a shape (#29): the frame reduced to its supports.
+      marginShape: "frame",
+      minimalMargin: true,
       baseplateType: "tray",
       // `pr` was in the v1 table from the start; the engine reads it since the flush profile (#12).
       pocketProfile: "flush",
@@ -208,6 +216,16 @@ describe("reading any link", () => {
     // An unknown shape of the margin gives the default one, the frame of crossbars.
     expect(readShareLink("v=1&mg=solid")).toMatchObject({ mg: "frame" });
     expect(decodeSettings("v=1&mg=cells")).toEqual({ ...DEFAULT_SETTINGS, marginShape: "cells" });
+    expect(decodeSettings("v=1&mg=extended")).toEqual({ ...DEFAULT_SETTINGS, marginShape: "extended" });
+    // The minimal margin (#29), on from `min=1`, off otherwise.
+    expect(decodeSettings("v=1&mg=extended&min=1")).toEqual({ ...DEFAULT_SETTINGS, marginShape: "extended", minimalMargin: true });
+    expect(decodeSettings("v=1&min=0")).toEqual(DEFAULT_SETTINGS);
+    expect(decodeSettings("v=1&min=maybe")).toEqual(DEFAULT_SETTINGS);
+    // Links of the corner brackets (#23) give the frame reduced to its supports, written anew as such.
+    expect(readShareLink("v=1&mg=brackets")).toMatchObject({ mg: "brackets", min: false });
+    const brackets = decodeSettings("v=1&mg=brackets&al=t");
+    expect(brackets).toEqual({ ...DEFAULT_SETTINGS, alignment: "t", marginShape: "frame", minimalMargin: true });
+    expect(encodeSettings(brackets as BaseplateSettings)).toBe("v=1&al=t&min=1");
     expect(decodeSettings("v=1&pr=rebuilt")).toEqual(DEFAULT_SETTINGS);
     // Every type of the table v1 is built (#27 the last): an unknown one gives the open grid.
     expect(readShareLink("v=1&ty=clickbase")).toMatchObject({ ty: "clickbase" });

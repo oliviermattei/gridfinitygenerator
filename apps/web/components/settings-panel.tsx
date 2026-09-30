@@ -148,11 +148,12 @@ export interface FamiliesProps {
   /** Whether a download is being prepared: every download waits for it. */
   downloadBusy: boolean;
   /**
-   * Volume of the baseplate with each shape of margin, the other settings as they are, in
-   * mm³, measured on the final mesh; missing while it is being measured.
+   * Material each shape of margin adds, the other settings as they are (the minimal margin
+   * included), in mm³: the volume of the baseplate with it less that of its grid alone, both
+   * measured on final meshes (#29); missing while they are being measured.
    */
-  marginVolumes: Partial<Record<MarginShape, number>>;
-  /** Volume of the baseplate of each type, the other settings as they are, in mm³, as `marginVolumes`. */
+  marginSurpluses: Partial<Record<MarginShape, number>>;
+  /** Volume of the baseplate of each type, the other settings as they are, in mm³, measured on the final mesh; missing while it is being measured. */
   typeVolumes: Partial<Record<BaseplateType, number>>;
   /** Stacked print of the pieces (#28): a preference of this browser, not a setting. */
   stack: StackPreference;
@@ -170,7 +171,7 @@ export function Families({
   onDownloadTestKit,
   exportingTestKit,
   downloadBusy,
-  marginVolumes,
+  marginSurpluses,
   typeVolumes,
   stack,
   onStackChange,
@@ -214,9 +215,9 @@ export function Families({
         {...bind("margin")}
         icon={<MarginIcon className="size-[18px]" />}
         title={t.margin}
-        summary={t.marginShapeNames[settings.marginShape]}
+        summary={`${t.marginShapeNames[settings.marginShape]}${settings.minimalMargin ? t.minimalMarginShort : ""}`}
       >
-        <MarginFields settings={settings} onSettingsChange={onSettingsChange} summary={summary} volumes={marginVolumes} />
+        <MarginFields settings={settings} onSettingsChange={onSettingsChange} summary={summary} surpluses={marginSurpluses} />
       </FamilyItem>
       <FamilyItem
         {...bind("profile")}
@@ -344,23 +345,25 @@ export function Families({
 }
 
 /**
- * The shape of the margin, each with the volume of the baseplate it gives, measured on its
- * final mesh ("…" while it is), and what the chosen one is. Without a margin, the shape
- * changes nothing, and no volume is shown.
+ * The shape of the margin, each with the material it adds to the grid alone, measured on the
+ * final meshes ("…" while it is), what the chosen one is, and the minimal margin (#29), which
+ * applies to every shape. Without a margin, the shape changes nothing, and no volume is shown.
  */
 function MarginFields({
   settings,
   onSettingsChange,
   summary,
-  volumes,
-}: FieldsProps & { summary: BaseplateSummary | null; volumes: Partial<Record<MarginShape, number>> }) {
+  surpluses,
+}: FieldsProps & { summary: BaseplateSummary | null; surpluses: Partial<Record<MarginShape, number>> }) {
   const t = useStrings();
   const f = useFormats();
   const margins = summary?.layout.margins;
   const hasMargin = !margins || margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0;
-  const volume = (shape: MarginShape) => {
-    const measured = volumes[shape];
-    return measured === undefined ? "…" : `${f.volumes.format(measured / 1000)} cm³`;
+  const surplus = (shape: MarginShape) => {
+    const measured = surpluses[shape];
+    if (measured === undefined) return "…";
+    const volume = f.volumes.format(Math.abs(measured) / 1000);
+    return measured < 0 ? t.marginSaving(volume) : t.marginSurplus(volume);
   };
   return (
     <>
@@ -372,12 +375,20 @@ function MarginFields({
         options={MARGIN_SHAPES.map((shape) => ({
           value: shape,
           label: t.marginShapes[shape],
-          description: hasMargin ? volume(shape) : undefined,
+          description: hasMargin ? surplus(shape) : undefined,
           art: <MarginArt kind={shape} className="h-auto w-full max-w-[64px]" />,
         }))}
       />
       <p className="mt-3 text-[12.5px] leading-snug text-muted">{hasMargin ? t.marginShapeHints[settings.marginShape] : t.noMarginHint}</p>
-      {hasMargin && <p className="mt-1 text-[12px] leading-snug text-muted">{t.marginVolumesHint}</p>}
+      <div className="mt-3">
+        <SwitchOption
+          label={t.minimalMargin}
+          hint={t.minimalMarginHint}
+          checked={settings.minimalMargin}
+          onChange={(minimalMargin) => onSettingsChange({ minimalMargin })}
+        />
+      </div>
+      {hasMargin && <p className="mt-2 text-[12px] leading-snug text-muted">{t.marginVolumesHint}</p>}
     </>
   );
 }
@@ -607,8 +618,8 @@ function StackFamily({
           {warnings.map((kind) => (kind === "layer-height" ? warning(t.stackLayerWarning(f.fine.format(settings.layerHeight)), kind) : warning(t.stackSkeletonWarning, kind)))}
           {on && (
             <div className="mt-3 flex flex-col gap-2.5">
-              <StackOption label={t.stackEars} hint={t.stackEarsHint} checked={stack.ears || stack.pins} disabled={stack.pins} onChange={(ears) => onStackChange({ ears })} />
-              <StackOption label={t.stackPins} hint={t.stackPinsHint} checked={stack.pins} onChange={(pins) => onStackChange({ pins })} />
+              <SwitchOption label={t.stackEars} hint={t.stackEarsHint} checked={stack.ears || stack.pins} disabled={stack.pins} onChange={(ears) => onStackChange({ ears })} />
+              <SwitchOption label={t.stackPins} hint={t.stackPinsHint} checked={stack.pins} onChange={(pins) => onStackChange({ pins })} />
             </div>
           )}
           <p className="mt-3 text-[12px] leading-snug text-muted">{t.stackTips}</p>
@@ -619,8 +630,8 @@ function StackFamily({
   );
 }
 
-/** An option of the stack: its switch, its name and what it does. */
-function StackOption({ label, hint, checked, disabled = false, onChange }: { label: string; hint: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
+/** An option switched on or off: its switch, its name and what it does. */
+function SwitchOption({ label, hint, checked, disabled = false, onChange }: { label: string; hint: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
   return (
     <div className="flex items-start gap-3">
       <div className="min-w-0 flex-1">

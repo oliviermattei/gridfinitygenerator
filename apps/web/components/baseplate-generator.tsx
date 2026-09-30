@@ -2,6 +2,7 @@
 
 import {
   BASEPLATE_TYPES,
+  DEFAULT_SETTINGS,
   MARGIN_SHAPES,
   changedAdvancedSettings,
   encodeSettings,
@@ -19,7 +20,7 @@ import { LocateFixed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
-import type { ExportFormat, ExportPiece } from "@/lib/engine/protocol";
+import type { Comparison, ExportFormat, ExportPiece } from "@/lib/engine/protocol";
 import { MEDIA_TYPES } from "@/lib/export-file";
 import { baseplatePath, type Locale } from "@/lib/i18n";
 import { useStrings } from "@/lib/locale";
@@ -63,9 +64,13 @@ interface OnScreen {
 /** Volumes measured this session, at most: enough to go back and forth between a few baseplates. */
 const MAX_VOLUMES = 200;
 
-/** Key of the volume of a baseplate: its settings and the build plate it is cut for. */
-function volumeKey(settings: BaseplateSettings, { width, depth }: BuildPlate): string {
-  return `${encodeSettings(settings)}|${width}×${depth}`;
+/**
+ * Key of the volume of a baseplate: its settings and the build plate it is cut for; `bare` for
+ * its grid alone, the same whatever the shape of its margin (#29).
+ */
+function volumeKey(settings: BaseplateSettings, { width, depth }: BuildPlate, bare = false): string {
+  const measured = bare ? { ...settings, marginShape: DEFAULT_SETTINGS.marginShape, minimalMargin: DEFAULT_SETTINGS.minimalMargin } : settings;
+  return `${encodeSettings(measured)}|${width}×${depth}${bare ? "|bare" : ""}`;
 }
 
 /** `volumes` with some more, the oldest dropped past MAX_VOLUMES. */
@@ -146,7 +151,7 @@ export function BaseplateGenerator() {
         if (quality === "final" && volume !== null) setVolumes((known) => withVolumes(known, [[volumeKey(computedFor, buildPlate), volume]]));
       },
       onVolumes(measured, buildPlate) {
-        setVolumes((known) => withVolumes(known, measured.map(({ settings, volume }) => [volumeKey(settings, buildPlate), volume])));
+        setVolumes((known) => withVolumes(known, measured.map(({ comparison, volume }) => [volumeKey(comparison.settings, buildPlate, comparison.bare), volume])));
       },
       onError(reason) {
         console.error(reason);
@@ -168,10 +173,22 @@ export function BaseplateGenerator() {
     if (hydrated) engine.current?.show(settings, buildPlate);
   }, [settings, buildPlate, hydrated]);
 
-  // The volume of the baseplate with each shape of margin, and of each type, as far as it is known.
+  // The volume of the baseplate with each shape of margin, of its grid alone, and of each type, as far as it is known.
   const marginVolumes = useMemo(
     () => Object.fromEntries(MARGIN_SHAPES.map((marginShape) => [marginShape, volumes.get(volumeKey({ ...settings, marginShape }, buildPlate))])),
     [volumes, settings, buildPlate],
+  ) as Partial<Record<MarginShape, number>>;
+  const bareVolume = volumes.get(volumeKey(settings, buildPlate, true));
+  // What each shape adds to the grid alone (#29), once both are measured.
+  const marginSurpluses = useMemo(
+    () =>
+      Object.fromEntries(
+        MARGIN_SHAPES.flatMap((shape) => {
+          const volume = marginVolumes[shape];
+          return volume === undefined || bareVolume === undefined ? [] : [[shape, volume - bareVolume]];
+        }),
+      ),
+    [marginVolumes, bareVolume],
   ) as Partial<Record<MarginShape, number>>;
   const typeVolumes = useMemo(
     () => Object.fromEntries(BASEPLATE_TYPES.map((baseplateType) => [baseplateType, volumes.get(volumeKey({ ...settings, baseplateType }, buildPlate))])),
@@ -182,16 +199,22 @@ export function BaseplateGenerator() {
   const margins = current?.layout.margins;
   const hasMargin = margins !== undefined && (margins.left > 0 || margins.right > 0 || margins.back > 0 || margins.front > 0);
   // While the margin family (with a margin) or the type family is open, the other shapes or
-  // types are measured once the baseplate shown is.
-  const toCompare = useMemo((): BaseplateSettings[] => {
+  // types are measured once the baseplate shown is; and the grid alone, which the surplus of
+  // each shape is measured from.
+  const toCompare = useMemo((): Comparison[] => {
     if (openFamily === "margin" && hasMargin) {
-      return MARGIN_SHAPES.filter((shape) => shape !== settings.marginShape && marginVolumes[shape] === undefined).map((marginShape) => ({ ...settings, marginShape }));
+      const shapes = MARGIN_SHAPES.filter((shape) => shape !== settings.marginShape && marginVolumes[shape] === undefined);
+      const others = shapes.map((marginShape) => ({ settings: { ...settings, marginShape }, bare: false }));
+      return bareVolume === undefined ? [{ settings, bare: true }, ...others] : others;
     }
     if (openFamily === "type") {
-      return BASEPLATE_TYPES.filter((type) => type !== settings.baseplateType && typeVolumes[type] === undefined).map((baseplateType) => ({ ...settings, baseplateType }));
+      return BASEPLATE_TYPES.filter((type) => type !== settings.baseplateType && typeVolumes[type] === undefined).map((baseplateType) => ({
+        settings: { ...settings, baseplateType },
+        bare: false,
+      }));
     }
     return [];
-  }, [openFamily, hasMargin, settings, marginVolumes, typeVolumes]);
+  }, [openFamily, hasMargin, settings, marginVolumes, bareVolume, typeVolumes]);
   // After `show`, which drops the list of the settings shown before.
   useEffect(() => {
     if (hydrated) engine.current?.compare(toCompare);
@@ -308,7 +331,7 @@ export function BaseplateGenerator() {
       onDownloadTestKit={() => void exportPiece("test-kit", "3mf")}
       exportingTestKit={exporting?.piece === "test-kit"}
       downloadBusy={exporting !== null}
-      marginVolumes={marginVolumes}
+      marginSurpluses={marginSurpluses}
       typeVolumes={typeVolumes}
       stack={preferences.stack}
       onStackChange={(patch) => setPreferences({ stack: { ...preferences.stack, ...patch } })}

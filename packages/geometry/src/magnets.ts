@@ -50,9 +50,11 @@ export function magnetHolesOf(settings: BaseplateSettings): MagnetHoles {
  * - Every crossing inside the lattice does (the grid, and the whole cells of the margin),
  *   but where a screw sits, and on a line the baseplate is cut on (as the screws).
  * - A crossing on the edge of the lattice only does when the margin carries the murets on
- *   at their full height (truncated cells), and the hole stays inside the outline by a wall
- *   (and the bottom chamfer). A margin of walls 2 mm high (the frame of crossbars, the
- *   brackets) is lower than the hole, and leaves half of it empty: no magnet there.
+ *   at their full height (truncated cells, extended grid), the hole stays inside the outline
+ *   by a wall (and the bottom chamfer), and a wall off the parts of the margin left empty
+ *   (between the supports of a minimal margin, between the heels of the extended grid, #29):
+ *   the murets of the margin must surround it. A margin of walls 2 mm high (the frame of
+ *   crossbars) is lower than the hole, and leaves half of it empty: no magnet there.
  */
 export function hasMagnet(frame: GridFrame, lattice: Lattice, a: number, b: number): boolean {
   const { magnets, cuts } = frame;
@@ -60,9 +62,12 @@ export function hasMagnet(frame: GridFrame, lattice: Lattice, a: number, b: numb
   if (!magnets || a < a0 || a > a1 || b < b0 || b > b1) return false;
   if (cuts.columns.includes(a) || cuts.rows.includes(b) || hasScrew(frame, a, b)) return false;
   if (a > a0 && a < a1 && b > b0 && b < b1) return true;
-  if (!marginOf(frame).carriesMurets) return false;
+  const margin = marginOf(frame);
+  if (!margin.carriesMurets) return false;
   const [x, y] = crossing(frame, a, b);
-  return insideOutline(frame, x, y) >= magnets.diameter / 2 + wallWidth(frame) + frame.bottomChamfer - EPSILON_MM;
+  const clear = magnets.diameter / 2 + wallWidth(frame);
+  if (insideOutline(frame, x, y) < clear + frame.bottomChamfer - EPSILON_MM) return false;
+  return (margin.emptyAreas?.(frame) ?? []).every(([x0, y0, x1, y1]) => Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(y0 - y, 0, y - y1)) >= clear - EPSILON_MM);
 }
 
 /** Slack for the floating-point error of a distance compared with a hole and its wall. */
