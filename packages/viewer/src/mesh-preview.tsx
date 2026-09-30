@@ -77,12 +77,14 @@ function usePrefersReducedMotion(): boolean {
 
 /**
  * 3D preview of a mesh in a photo studio: plastic under procedural softboxes, ambient
- * occlusion and a contact shadow. Damped orbit, bounded zoom, and an animated automatic
- * framing inside the area left visible by the floating panels (`insets`).
+ * occlusion and a contact shadow. Damped orbit all the way round, underside included, pan,
+ * bounded zoom, and an animated automatic framing inside the area left visible by the
+ * floating panels (`insets`).
  *
  * The container exposes `data-triangles`, `data-color`, `data-extent` (the width and depth
  * of the mesh, in millimetres) and `data-view-box` (the model's screen rectangle, "left top
- * right bottom" in CSS pixels) for end-to-end tests.
+ * right bottom" in CSS pixels) and `data-camera-elevation` (degrees of the camera above
+ * the horizontal through the orbit target, negative from underneath) for end-to-end tests.
  */
 export function MeshPreview({ mesh, color, insets, recenter = 0, className, fallback = null }: MeshPreviewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -155,9 +157,8 @@ export function MeshPreview({ mesh, color, insets, recenter = 0, className, fall
             makeDefault
             enableDamping={!reducedMotion}
             dampingFactor={0.08}
-            enablePan={false}
-            minPolarAngle={0.05}
-            maxPolarAngle={Math.PI / 2.15}
+            minPolarAngle={0}
+            maxPolarAngle={Math.PI}
           />
           <Framing
             box={box}

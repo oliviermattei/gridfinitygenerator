@@ -136,6 +136,8 @@ export function StudioLights({ span }: { span: number }) {
         <Lightformer form="rect" intensity={1.2} color="#e8efff" position={[8, 2, -1]} scale={[4, 2.5, 1]} target={[0, 0, 0]} />
         {/* Front fill, so that the outer edges do not turn black. */}
         <Lightformer form="rect" intensity={1.6} color="#ffffff" position={[2, 1.5, 9]} scale={[12, 2.5, 1]} target={[0, 0, 0]} />
+        {/* Soft bounce from under the floor: the underside reads when the view orbits below. */}
+        <Lightformer form="rect" intensity={0.9} color="#ffffff" position={[0, -7, 0]} scale={[10, 10, 1]} target={[0, 0, 0]} />
       </Environment>
       <directionalLight
         ref={keyLight}
@@ -167,14 +169,24 @@ export function BasicLights() {
       <ambientLight intensity={0.8} />
       <directionalLight position={[1, 2, 1.5]} intensity={2.2} />
       <directionalLight position={[-1.5, 1, -1]} intensity={0.6} />
+      {/* From under the floor: the underside reads when the view orbits below. */}
+      <directionalLight position={[0.5, -2, 1]} intensity={1.4} />
     </>
   );
 }
 
-/** Invisible floor that only receives the key light's shadow, plus a soft contact shadow. */
+/**
+ * Invisible floor that only receives the key light's shadow, plus a soft contact shadow.
+ * Both are hidden while the camera looks from under the floor, where they would lie
+ * between it and the underside of the model.
+ */
 export function Floor({ span, model }: { span: number; model: string }) {
+  const floor = useRef<Group>(null);
+  useFrame(({ camera }) => {
+    if (floor.current) floor.current.visible = camera.position.y > 0;
+  });
   return (
-    <>
+    <group ref={floor}>
       <mesh
         rotation-x={-Math.PI / 2}
         position={[0, -0.01, 0]}
@@ -185,7 +197,7 @@ export function Floor({ span, model }: { span: number; model: string }) {
         <shadowMaterial transparent opacity={0.22} color="#1b1f2a" />
       </mesh>
       <ContactShadow size={span * 1.6} far={Math.max(12, span * 0.06)} model={model} />
-    </>
+    </group>
   );
 }
 

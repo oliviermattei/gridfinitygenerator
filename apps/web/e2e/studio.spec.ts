@@ -103,6 +103,29 @@ test.describe("desktop", () => {
     await expectFramedIn(page, visible, first);
   });
 
+  test("the view orbits all the way round, underside included, and recentres", async ({ page }) => {
+    await page.goto("/fr/baseplate");
+    const panel = await page.getByRole("complementary", { name: "Réglages" }).boundingBox();
+    const viewport = page.viewportSize();
+    if (!panel || !viewport) throw new Error("No layout");
+    const preview = page.getByTestId("mesh-preview");
+    await expectFramedIn(page, { left: panel.x + panel.width, top: 0, right: viewport.width, bottom: viewport.height });
+    const elevation = async () => Number(await preview.getAttribute("data-camera-elevation"));
+    expect(await elevation()).toBeGreaterThan(0);
+
+    // Dragging up turns the model over: the camera goes under the floor, to look at the underside.
+    const x = (panel.x + panel.width + viewport.width) / 2;
+    const y = viewport.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, 40, { steps: 12 });
+    await page.mouse.up();
+    await expect.poll(elevation).toBeLessThan(-45);
+
+    await page.getByRole("button", { name: "Recentrer la vue" }).click();
+    await expect.poll(elevation).toBeGreaterThan(0);
+  });
+
   test("every control is reachable and operable with the keyboard, with a visible focus", async ({ page }) => {
     await page.goto("/fr/baseplate");
     await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");

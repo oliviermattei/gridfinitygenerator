@@ -133,7 +133,11 @@ export interface FramingProps {
   /** Changes when the user asks to recentre the view. */
   recenter: number;
   animate: boolean;
-  /** Element that receives `data-view-box`: the model's screen rectangle "left top right bottom". */
+  /**
+   * Element that receives `data-view-box`, the model's screen rectangle "left top right
+   * bottom", and `data-camera-elevation`, the camera's angle above the horizontal through
+   * the orbit target in degrees (negative from underneath).
+   */
   report: RefObject<HTMLElement | null>;
 }
 
@@ -152,6 +156,7 @@ export function Framing({ box, boxKey, insets, recenter, animate, report }: Fram
   const flight = useRef<Flight | null>(null);
   const framed = useRef(false);
   const viewBox = useRef("");
+  const cameraElevation = useRef("");
   const { top, right, bottom, left } = insets;
 
   useLayoutEffect(() => {
@@ -218,6 +223,12 @@ export function Framing({ box, boxKey, insets, recenter, animate, report }: Fram
       const next = [rect.left, rect.top, rect.right, rect.bottom].map(Math.round).join(" ");
       if (next !== viewBox.current) element.setAttribute("data-view-box", next);
       viewBox.current = next;
+    }
+    if (element && controls) {
+      const offset = camera.position.clone().sub(controls.target);
+      const degrees = String(Math.round(MathUtils.radToDeg(Math.asin(offset.y / Math.max(offset.length(), 1e-9)))));
+      if (degrees !== cameraElevation.current) element.setAttribute("data-camera-elevation", degrees);
+      cameraElevation.current = degrees;
     }
   });
 
