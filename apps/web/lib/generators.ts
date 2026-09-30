@@ -19,5 +19,5 @@ const IMAGE_SIZE = { width: 960, height: 720 };
 
 export const GENERATORS: readonly Generator[] = [
   { id: "baseplate", path: baseplatePath, image: { src: "/previews/baseplate.jpg", ...IMAGE_SIZE }, available: true },
-  { id: "bin", path: binPath, image: null, available: false },
+  { id: "bin", path: binPath, image: { src: "/previews/bin.jpg", ...IMAGE_SIZE }, available: true },
 ];

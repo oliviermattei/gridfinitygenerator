@@ -131,7 +131,7 @@ test.describe("desktop", () => {
     await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
 
     const reached: string[] = [];
-    for (let step = 0; step < 20; step++) {
+    for (let step = 0; step < 21; step++) {
       await page.keyboard.press("Tab");
       const name = await page.evaluate(() => {
         const element = document.activeElement as HTMLElement | null;
@@ -141,7 +141,7 @@ test.describe("desktop", () => {
       });
       reached.push(name);
     }
-    for (const name of ["Paramètres", "Tiroir", "Largeur", "Profondeur", "Vis", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
+    for (const name of ["Tous les générateurs", "Paramètres", "Tiroir", "Largeur", "Profondeur", "Vis", "Télécharger le 3MF", "Autres formats", "Recentrer la vue"]) {
       expect(reached, `${name} is reached with Tab`).toContain(name);
     }
     expect(reached.some((name) => name.startsWith("Taille"))).toBe(true);

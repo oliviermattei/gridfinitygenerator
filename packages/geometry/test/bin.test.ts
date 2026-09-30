@@ -1,6 +1,16 @@
 import Module from "manifold-3d";
 import { describe, expect, it } from "vitest";
-import { binFitsOn, clampBinSettings, generateBin, maxBinCells, type TriangleMesh } from "../src/index";
+import {
+  DEFAULT_BIN_SETTINGS,
+  binFitsOn,
+  clampBinSettings,
+  decodeBinSettings,
+  encodeBinSettings,
+  generateBin,
+  maxBinCells,
+  openingBinSettings,
+  type TriangleMesh,
+} from "../src/index";
 import { checkMesh } from "./support/measure";
 
 // The bin (#32), observed through the public interface only: the standard foot (ADR 0018),
@@ -157,5 +167,21 @@ describe("the socle", () => {
     expect((await checkMesh(hollow.mesh)).status).toBe("NoError");
     expect(hollow.layout.floor).toBe(6);
     expect(hollow.stats.volume as number).toBeLessThan(solid.stats.volume as number);
+  });
+});
+
+describe("the share link of a bin", () => {
+  it("carries only what differs from the defaults, and reads back the same bin", () => {
+    expect(encodeBinSettings(DEFAULT_BIN_SETTINGS)).toBe("v=1");
+    const settings = clampBinSettings({ columns: 3, rows: 2, units: 6, compartmentColumns: 4, lip: "reduced", fillet: false, scoop: true, labelTab: true });
+    const link = encodeBinSettings(settings);
+    expect(link).toBe("v=1&x=3&y=2&h=6&dx=4&lip=reduced&fi=0&sc=1&lt=1");
+    expect(decodeBinSettings(link)).toEqual(settings);
+  });
+
+  it("brings a value back into its range, and ignores what it cannot read", () => {
+    expect(decodeBinSettings("v=1&x=99&h=abc&lip=wide")).toEqual({ ...DEFAULT_BIN_SETTINGS, columns: 20 });
+    expect(decodeBinSettings("x=3")).toBeNull();
+    expect(openingBinSettings("", "v=1&x=4")).toEqual({ ...DEFAULT_BIN_SETTINGS, columns: 4 });
   });
 });

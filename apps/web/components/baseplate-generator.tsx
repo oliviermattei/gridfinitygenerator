@@ -20,18 +20,19 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
 import type { ExportFormat, ExportPiece } from "@/lib/engine/protocol";
-import { MEDIA_TYPES } from "@/lib/export-file";
+import { MEDIA_TYPES, download } from "@/lib/export-file";
 import { baseplatePath, type Locale } from "@/lib/i18n";
 import { useStrings } from "@/lib/locale";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
 import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
+import { useElementSize } from "@/lib/use-element-size";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
 import { DownloadButton } from "./download-button";
 import { GeneratorHeader } from "./generator-header";
 import { DOCK_OFFSET, MobileDock } from "./mobile-dock";
 import { Notifications, notify } from "./notifications";
 import { ResetDialog } from "./reset-dialog";
-import { Families, Readout, type Family } from "./settings-panel";
+import { DockReadout, Families, Readout, type Family } from "./settings-panel";
 import { StatsCard, fitsOn } from "./stats-card";
 import { SettingsMenu, TopActions, type TopBarActions } from "./top-bar";
 
@@ -85,29 +86,6 @@ function withVolumes(volumes: ReadonlyMap<string, number>, added: [key: string, 
 /** A failure shown to the user, by the key of its message. */
 type Failure = "computeFailed" | "exportFailed";
 
-function download(bytes: Uint8Array<ArrayBuffer>, fileName: string, type: string) {
-  const url = URL.createObjectURL(new Blob([bytes], { type }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-}
-
-/** Layout size of an element (transforms ignored), kept up to date; null while unmounted. */
-function useElementSize(element: HTMLElement | null): { width: number; height: number } | null {
-  const [size, setSize] = useState<{ element: HTMLElement; width: number; height: number } | null>(null);
-  useEffect(() => {
-    if (!element) return;
-    // The observer reports the initial size too.
-    const observer = new ResizeObserver(() =>
-      setSize({ element, width: element.offsetWidth, height: element.offsetHeight }),
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [element]);
-  return size && size.element === element ? size : null;
-}
 
 export function BaseplateGenerator() {
   const t = useStrings();
@@ -376,8 +354,8 @@ export function BaseplateGenerator() {
       </button>
 
       <MobileDock
-        summary={baseplate}
-        fits={fits}
+        dockReadout={<DockReadout summary={baseplate} fits={fits} />}
+        readout={<Readout summary={baseplate} live />}
         stats={renderStats("mb-2 rounded-2xl bg-sunken")}
         open={sheetOpen}
         onOpenChange={setSheetOpen}

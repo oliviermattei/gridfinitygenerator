@@ -13,24 +13,24 @@ import { DEFAULT_SETTINGS, clampSettings, type BaseplateSettings } from "./setti
 /** Version of the links written today. */
 const SHARE_LINK_VERSION = 1;
 
-type NumberSetting = { kind: "number"; min: number; max: number; default: number; integer?: boolean };
-type ChoiceSetting<T extends string> = { kind: "choice"; options: readonly T[]; default: T };
-type FlagSetting = { kind: "flag"; default: boolean };
-type LinkSetting = NumberSetting | ChoiceSetting<string> | FlagSetting;
+export type NumberSetting = { kind: "number"; min: number; max: number; default: number; integer?: boolean };
+export type ChoiceSetting<T extends string> = { kind: "choice"; options: readonly T[]; default: T };
+export type FlagSetting = { kind: "flag"; default: boolean };
+export type LinkSetting = NumberSetting | ChoiceSetting<string> | FlagSetting;
 
-const number = (min: number, max: number, value: number, integer = false): NumberSetting => ({
+export const number = (min: number, max: number, value: number, integer = false): NumberSetting => ({
   kind: "number",
   min,
   max,
   default: value,
   integer,
 });
-const choice = <T extends string>(options: readonly T[], value: T): ChoiceSetting<T> => ({
+export const choice = <T extends string>(options: readonly T[], value: T): ChoiceSetting<T> => ({
   kind: "choice",
   options,
   default: value,
 });
-const flag = (value: boolean): FlagSetting => ({ kind: "flag", default: value });
+export const flag = (value: boolean): FlagSetting => ({ kind: "flag", default: value });
 
 /**
  * Every setting a v1 link can carry, by its link key, with its v1 range and default: the
@@ -157,7 +157,7 @@ export function readShareLink(query: string): ShareLinkSettings | null {
   return settings;
 }
 
-function readValue(setting: LinkSetting, raw: string): number | string | boolean | null {
+export function readValue(setting: LinkSetting, raw: string): number | string | boolean | null {
   switch (setting.kind) {
     case "number": {
       // Plain decimals only, with a point or a comma (no hexadecimal, exponent or Infinity).

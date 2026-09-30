@@ -308,3 +308,33 @@ export function TestKitArt({ className }: ArtProps) {
     </svg>
   );
 }
+
+/** Family icon "Compartiments": a bin seen from above, divided in four. */
+export function CompartmentIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <rect x="4" y="5" width="16" height="14" rx="2.5" />
+      <path d="M12 5 V19 M4 12 H20" strokeOpacity={0.55} />
+    </svg>
+  );
+}
+
+/** Family icon "Finitions": a bin seen from the side, its floor curving into the wall, a scoop in front. */
+export function FinishIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <path d="M4 5 V16 Q4 19 7 19 H17 Q20 19 20 16 V5" />
+      <path d="M4 11 Q4 16 10 16" strokeOpacity={0.55} />
+    </svg>
+  );
+}
+
+/** Family icon "Rebord d'empilage": the top of a wall with its stepped lip. */
+export function LipIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <path d="M6 20 V9 L9 6 H10 V10 L12 12 V20" />
+      <path d="M14 20 V14 H19" strokeOpacity={0.55} />
+    </svg>
+  );
+}

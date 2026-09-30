@@ -125,7 +125,7 @@ test("reset asks for a confirmation, then brings back the defaults and keeps the
   await expect(readout(page, "cells")).toHaveText("9 × 6 cellules");
   // And the language chosen still leads the site root, over the English browser.
   await page.goto("/");
-  await expect(page).toHaveURL(/\/fr\/baseplate$/);
+  await expect(page).toHaveURL(/\/fr$/);
 });
 
 test("a drawer is shared by its dimensions, and links made before the drawer mode keep their cells", async ({ page, browser }, testInfo) => {

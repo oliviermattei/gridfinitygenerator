@@ -9,13 +9,15 @@ export interface ResetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  /** What the reset does, when it is not the baseplate's. */
+  description?: string;
 }
 
 /**
  * Confirmation before a reset of the baseplate settings, so that a stray click loses
  * nothing. Focus starts on Cancel, the safe choice.
  */
-export function ResetDialog({ open, onOpenChange, onConfirm }: ResetDialogProps) {
+export function ResetDialog({ open, onOpenChange, onConfirm, description }: ResetDialogProps) {
   const t = useStrings();
   const cancel = useRef<HTMLButtonElement>(null);
   const button = `flex h-10 items-center justify-center rounded-ctl px-4 text-[14px] font-semibold transition-colors ${focusRing}`;
@@ -29,7 +31,7 @@ export function ResetDialog({ open, onOpenChange, onConfirm }: ResetDialogProps)
         >
           <div className="flex flex-col gap-1.5">
             <AlertDialog.Title className="text-[16px] font-semibold tracking-[-0.01em]">{t.resetTitle}</AlertDialog.Title>
-            <AlertDialog.Description className="text-[13.5px] leading-snug text-muted">{t.resetDescription}</AlertDialog.Description>
+            <AlertDialog.Description className="text-[13.5px] leading-snug text-muted">{description ?? t.resetDescription}</AlertDialog.Description>
           </div>
           <div className="flex justify-end gap-2">
             <AlertDialog.Close ref={cancel} className={`${button} bg-sunken text-ink hover:bg-track`}>

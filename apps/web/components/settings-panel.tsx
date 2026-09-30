@@ -757,7 +757,7 @@ function SizeFields({ settings, onSettingsChange, unit }: FieldsProps & { unit: 
   );
 }
 
-interface FamilyItemProps {
+export interface FamilyItemProps {
   icon: ReactNode;
   title: string;
   /** One-line summary, shown whether the family is open or closed. */
@@ -771,7 +771,7 @@ interface FamilyItemProps {
   children: ReactNode;
 }
 
-function FamilyItem({ icon, title, summary, control, on = false, open, onOpenChange, children }: FamilyItemProps) {
+export function FamilyItem({ icon, title, summary, control, on = false, open, onOpenChange, children }: FamilyItemProps) {
   return (
     <Collapsible.Root
       open={open}

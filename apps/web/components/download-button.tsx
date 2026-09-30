@@ -14,6 +14,8 @@ export interface DownloadButtonProps {
   disabled: boolean;
   /** Dock variant: the format alone as visible text. */
   compact?: boolean;
+  /** What the STL holds, when it is not the baseplate's (a zip of pieces once cut). */
+  stlDescription?: string;
 }
 
 const FORMATS: readonly { format: ExportFormat; description: "threeMfDescription" | "stlDescription" }[] = [
@@ -25,7 +27,7 @@ const FORMATS: readonly { format: ExportFormat; description: "threeMfDescription
  * Download of the baseplate: the main button downloads a 3MF, the cheapest path to the
  * slicer (named object, share link inside); its menu also offers the STL.
  */
-export function DownloadButton({ onDownload, exporting, disabled, compact = false }: DownloadButtonProps) {
+export function DownloadButton({ onDownload, exporting, disabled, compact = false, stlDescription }: DownloadButtonProps) {
   const t = useStrings();
   const label = exporting ? t.preparing[exporting] : t.download["3mf"];
   const accent = `h-12 bg-accent text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-70 ${focusRing}`;
@@ -62,7 +64,7 @@ export function DownloadButton({ onDownload, exporting, disabled, compact = fals
                   <Download className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
                   <span className="min-w-0">
                     <span className="block text-[13.5px] font-semibold">{t.download[format]}</span>
-                    <span className="block text-[12px] leading-snug text-muted">{t[description]}</span>
+                    <span className="block text-[12px] leading-snug text-muted">{format === "stl" && stlDescription ? stlDescription : t[description]}</span>
                   </span>
                 </Menu.Item>
               ))}

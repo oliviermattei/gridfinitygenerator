@@ -1,10 +1,10 @@
 # Gridfinity Generator
 
-Public, free, open-source (MIT) website of Gridfinity tools. First tool: a generator of 3D-printable baseplates sized for a given drawer. Everything is computed in the browser, no backend.
+Public, free, open-source (MIT) website of Gridfinity tools: an index of the generators (`/{lang}`), a generator of 3D-printable baseplates sized for a given drawer (`/{lang}/baseplate`) and a generator of bins (`/{lang}/bin`). Everything is computed in the browser, no backend.
 
 ## Where things are
 
-- **Spec v1**: GitHub issue #1 ("Spec v1 : générateur de baseplates"). It is the source of truth for scope and decisions; work is split into tickets from it.
+- **Specs**: GitHub issues #1 ("Spec v1 : générateur de baseplates"), #20 (v1.1) and #32 ("Spec v2 : index des générateurs et générateur de bins"). They are the source of truth for scope and decisions; work is split into tickets from them.
 - **Glossary**: `CONTEXT.md` (French domain terms: baseplate, cellule, poche, muret, marge, tiroir, plateau…). Use these terms in code, issues and UI copy.
 - **Decisions**: `docs/adr/` (Next.js, pocket profile 4.60 mm, monorepo with a separate geometry engine, manifold-3d with cell bricks, 3MF with deflate, provisional margin as a frame of crossbars, countersunk screws, language and units, margin in truncated cells, split for the build plate, U clips pushed up under the murets, margin shape to choose with the frame of crossbars by default, magnet holes under the crossings of the murets, type of baseplate with the tray's pockets raised on a floor, skeleton with murets notched between posts, CLICKbase lamellas after CLICKbase Refined and its CC BY-NC-SA licence, stacked print after Stu142 with one layer of air and a full-height margin, index of the generators at `/{lang}`, the exact standard foot as the only contract between a bin and a baseplate).
 - **Research**: `docs/research/` (extrabold reverse engineering with real export measurements, Gridfinity spec, licensing, ModuBOX, bin generators and index pages).
@@ -17,6 +17,7 @@ Public, free, open-source (MIT) website of Gridfinity tools. First tool: a gener
   - `prototypes/magnets/`: bench of the magnet holes under the crossings (#24): walls around the hole, edge crossings, print files.
   - `prototypes/tray/`: bench of the tray (#25): where a bin foot stops over the floor, material, print files.
   - `prototypes/stack/`: bench of the stacked print (#28): contact and unheld area at each joint, ceilings of a piece upside down by type and margin, print files.
+  - `prototypes/bin/`: bench of the bin (#34): seat of the standard foot in each type of baseplate, solid or hollow socle sliced by PrusaSlicer, fillet radius, print files.
 
 ## Product principles
 

@@ -4,17 +4,16 @@ import { Drawer } from "@base-ui/react/drawer";
 import { focusRing } from "@repo/ui";
 import { SlidersHorizontal, X } from "lucide-react";
 import type { ReactNode, Ref } from "react";
-import type { BaseplateSummary } from "@/lib/engine/protocol";
 import { useStrings } from "@/lib/locale";
-import { DockReadout, Readout } from "./settings-panel";
 
 /** Distance between the dock and the edges of the screen, in CSS pixels. */
 export const DOCK_OFFSET = 12;
 
 export interface MobileDockProps {
-  summary: BaseplateSummary | null;
-  /** Whether the baseplate fits on the build plate; null until it is known. */
-  fits: boolean | null;
+  /** Short lines above the dock's buttons: the dimensions, and a warning when the model does not fit. */
+  dockReadout: ReactNode;
+  /** Dimensions at the head of the sheet. */
+  readout: ReactNode;
   /** The statistics frame, shown in the sheet under the dimensions. */
   stats: ReactNode;
   open: boolean;
@@ -32,7 +31,7 @@ export interface MobileDockProps {
  * sheet is not modal and only closes on request, so the preview above it stays visible and
  * can be orbited.
  */
-export function MobileDock({ summary, fits, stats, open, onOpenChange, download, children, dockRef, sheetRef }: MobileDockProps) {
+export function MobileDock({ dockReadout, readout, stats, open, onOpenChange, download, children, dockRef, sheetRef }: MobileDockProps) {
   const t = useStrings();
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange} modal={false} disablePointerDismissal>
@@ -43,7 +42,7 @@ export function MobileDock({ summary, fits, stats, open, onOpenChange, download,
         className={`absolute md:hidden ${open ? "invisible" : ""}`}
       >
         <div className="rounded-[22px] border border-line bg-surface p-2 shadow-[0_18px_40px_-18px_rgb(18_19_25/0.35)]">
-          <DockReadout summary={summary} fits={fits} />
+          {dockReadout}
           <div className="flex gap-2">
             <Drawer.Trigger
               className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-[14px] bg-sunken text-[14px] font-semibold ${focusRing}`}
@@ -64,7 +63,7 @@ export function MobileDock({ summary, fits, stats, open, onOpenChange, download,
               <div aria-hidden className="absolute top-2 left-1/2 h-1 w-10 -translate-x-1/2 rounded-full bg-line-strong" />
               <Drawer.Title className="sr-only">{t.settings}</Drawer.Title>
               <div className="min-w-0 flex-1">
-                <Readout summary={summary} live />
+                {readout}
               </div>
               <Drawer.Close
                 aria-label={t.close}

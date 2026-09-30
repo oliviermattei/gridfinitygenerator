@@ -1,4 +1,4 @@
-import type { BaseplateSettings } from "@repo/geometry";
+import type { BaseplateSettings, BinSettings } from "@repo/geometry";
 import type { BaseplateSummary, ExportPiece, FileExtension } from "./engine/protocol";
 
 /** Media type of each downloaded file. */
@@ -20,4 +20,26 @@ export function exportName(piece: ExportPiece, { layout, stats }: BaseplateSumma
   const type = settings.baseplateType === "normal" ? "" : `-${settings.baseplateType}`;
   const profile = settings.pocketProfile === "flush" ? "-flush" : "";
   return `baseplate-${layout.columns}x${layout.rows}-${size}${type}${profile}${stacked ? "-stack" : ""}`;
+}
+
+/**
+ * Name of a downloaded bin without its extension, also the name of its object in a 3MF:
+ * `bin-{x}x{y}x{h}u`, then its compartments when there are several (`-3x2`), and its lip
+ * when it is not the normal one (`-reduced-lip`, `-no-lip`).
+ */
+export function binExportName(settings: BinSettings): string {
+  const { columns, rows, units, compartmentColumns, compartmentRows, lip } = settings;
+  const compartments = compartmentColumns * compartmentRows > 1 ? `-${compartmentColumns}x${compartmentRows}` : "";
+  const lipName = lip === "normal" ? "" : lip === "reduced" ? "-reduced-lip" : "-no-lip";
+  return `bin-${columns}x${rows}x${units}u${compartments}${lipName}`;
+}
+
+/** Saves bytes as a file through a temporary link. */
+export function download(bytes: Uint8Array<ArrayBuffer>, fileName: string, type: string) {
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

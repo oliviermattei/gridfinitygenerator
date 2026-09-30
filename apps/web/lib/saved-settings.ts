@@ -1,76 +1,128 @@
 "use client";
 
-import { DEFAULT_SETTINGS, decodeSettings, encodeSettings, openingSettings, type BaseplateSettings } from "@repo/geometry";
+import {
+  DEFAULT_BIN_SETTINGS,
+  DEFAULT_SETTINGS,
+  decodeBinSettings,
+  decodeSettings,
+  encodeBinSettings,
+  encodeSettings,
+  openingBinSettings,
+  openingSettings,
+  type BaseplateSettings,
+  type BinSettings,
+} from "@repo/geometry";
 import { useCallback, useSyncExternalStore } from "react";
 
 /**
- * Settings of the baseplate on screen. On opening, a shared link in the page address wins
- * over the last settings stored in this browser, which win over the defaults. Only a change
- * made on the page is stored: opening a link to look at it keeps the work in progress. The server
- * renders the defaults; the browser switches to the restored settings right after
- * hydration, so both renders match.
+ * Settings of the model on screen, one store per generator. On opening, a shared link in the
+ * page address wins over the last settings stored in this browser, which win over the
+ * defaults. Only a change made on the page is stored: opening a link to look at it keeps the
+ * work in progress. The server renders the defaults; the browser switches to the restored
+ * settings right after hydration, so both renders match.
  */
 
-/** Browser storage of the last settings, kept as a share link (versioned like one). */
-const STORAGE_KEY = "settings";
+interface Codec<T> {
+  /** Browser storage of the last settings, kept as a share link (versioned like one). */
+  storageKey: string;
+  defaults: T;
+  encode: (settings: T) => string;
+  decode: (query: string) => T | null;
+  opening: (pageQuery: string, stored: string | null) => T;
+}
 
-/** Settings on screen; restored from the address or the storage on the first client read. */
-let current: BaseplateSettings | null = null;
-const listeners = new Set<() => void>();
+export type SettingsUpdate<T> = T | ((previous: T) => T);
 
-function snapshot(): BaseplateSettings {
-  if (current === null) {
-    let stored: string | null = null;
-    try {
-      stored = localStorage.getItem(STORAGE_KEY);
-    } catch {
-      // Storage blocked: nothing to restore.
+function createSettingsStore<T>({ storageKey, defaults, encode, decode, opening }: Codec<T>) {
+  /** Settings on screen; restored from the address or the storage on the first client read. */
+  let current: T | null = null;
+  const listeners = new Set<() => void>();
+
+  function snapshot(): T {
+    if (current === null) {
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem(storageKey);
+      } catch {
+        // Storage blocked: nothing to restore.
+      }
+      current = opening(window.location.search, stored);
     }
-    current = openingSettings(window.location.search, stored);
+    return current;
   }
-  return current;
-}
 
-const serverSnapshot = () => DEFAULT_SETTINGS;
+  const serverSnapshot = () => defaults;
 
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-/** Stores the settings as the last ones of this browser; they are lost with the page if storage fails. */
-function saveSettings(settings: BaseplateSettings) {
-  try {
-    localStorage.setItem(STORAGE_KEY, encodeSettings(settings));
-  } catch {
-    // Storage unavailable or full.
+  function subscribe(listener: () => void) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
   }
+
+  /** Stores the settings as the last ones of this browser; they are lost with the page if storage fails. */
+  function save(settings: T) {
+    try {
+      localStorage.setItem(storageKey, encode(settings));
+    } catch {
+      // Storage unavailable or full.
+    }
+  }
+
+  /**
+   * Once the settings of a shared link are changed, the address stops carrying that link, so
+   * that a reload keeps the change instead of opening the link again.
+   */
+  function forgetSharedLinkInAddress() {
+    const { pathname, search, hash } = window.location;
+    if (decode(search) !== null) window.history.replaceState(null, "", pathname + hash);
+  }
+
+  /** The settings on screen, and a setter that changes and stores them. */
+  function useSettings(): [T, (update: SettingsUpdate<T>) => void] {
+    const settings = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
+    const setSettings = useCallback((update: SettingsUpdate<T>) => {
+      current = typeof update === "function" ? (update as (previous: T) => T)(snapshot()) : update;
+      save(current);
+      forgetSharedLinkInAddress();
+      listeners.forEach((listener) => listener());
+    }, []);
+    return [settings, setSettings];
+  }
+
+  /** The share link of the settings: this page, with the settings in its query string. */
+  function shareLink(settings: T): string {
+    const { origin, pathname } = window.location;
+    return `${origin}${pathname}?${encode(settings)}`;
+  }
+
+  return { useSettings, shareLink };
 }
 
-/**
- * Once the settings of a shared link are changed, the address stops carrying that link, so
- * that a reload keeps the change instead of opening the link again.
- */
-function forgetSharedLinkInAddress() {
-  const { pathname, search, hash } = window.location;
-  if (decodeSettings(search) !== null) window.history.replaceState(null, "", pathname + hash);
-}
+const baseplates = createSettingsStore<BaseplateSettings>({
+  storageKey: "settings",
+  defaults: DEFAULT_SETTINGS,
+  encode: encodeSettings,
+  decode: decodeSettings,
+  opening: openingSettings,
+});
 
-export type SettingsUpdate = BaseplateSettings | ((previous: BaseplateSettings) => BaseplateSettings);
+const bins = createSettingsStore<BinSettings>({
+  storageKey: "bin-settings",
+  defaults: DEFAULT_BIN_SETTINGS,
+  encode: encodeBinSettings,
+  decode: decodeBinSettings,
+  opening: openingBinSettings,
+});
 
-/** The settings on screen, and a setter that changes and stores them. */
-export function useSavedSettings(): [BaseplateSettings, (update: SettingsUpdate) => void] {
-  const settings = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
-  const setSettings = useCallback((update: SettingsUpdate) => {
-    current = typeof update === "function" ? update(snapshot()) : update;
-    saveSettings(current);
-    forgetSharedLinkInAddress();
-    listeners.forEach((listener) => listener());
-  }, []);
-  return [settings, setSettings];
-}
+/** The baseplate settings on screen, and a setter that changes and stores them. */
+export const useSavedSettings = baseplates.useSettings;
+/** The share link of baseplate settings. */
+export const shareLinkOf = baseplates.shareLink;
+/** The bin settings on screen, and a setter that changes and stores them. */
+export const useSavedBinSettings = bins.useSettings;
+/** The share link of bin settings. */
+export const binShareLinkOf = bins.shareLink;
 
 const noSubscription = () => () => {};
 
@@ -83,12 +135,6 @@ export function useHydrated(): boolean {
   );
 }
 
-/** The share link of the settings: this page, with the settings in its query string. */
-export function shareLinkOf(settings: BaseplateSettings): string {
-  const { origin, pathname } = window.location;
-  return `${origin}${pathname}?${encodeSettings(settings)}`;
-}
-
 /**
  * The settings after a reset: the defaults of the baseplate. Layer height and line width
  * are kept: they belong to the share link, but they describe the printer, like the
@@ -96,4 +142,9 @@ export function shareLinkOf(settings: BaseplateSettings): string {
  */
 export function resetSettings(settings: BaseplateSettings): BaseplateSettings {
   return { ...DEFAULT_SETTINGS, layerHeight: settings.layerHeight, lineWidth: settings.lineWidth };
+}
+
+/** The bin settings after a reset: the defaults, the print settings kept, like a baseplate. */
+export function resetBinSettings(settings: BinSettings): BinSettings {
+  return { ...DEFAULT_BIN_SETTINGS, layerHeight: settings.layerHeight, lineWidth: settings.lineWidth };
 }

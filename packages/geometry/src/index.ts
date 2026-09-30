@@ -95,3 +95,4 @@ export {
   type BinSettings,
   type StackingLip,
 } from "./bin-settings";
+export { decodeBinSettings, encodeBinSettings, openingBinSettings } from "./bin-share-link";
