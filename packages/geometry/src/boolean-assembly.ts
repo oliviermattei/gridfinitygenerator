@@ -7,13 +7,15 @@ import { withArena, type Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
 import { magnetPositions, magnetTool } from "./magnets";
 import { screwPositions, screwTool } from "./screws";
+import { notchTools } from "./skeleton";
 import { TOOL_OVERSHOOT_MM, cellCentre, gridRect, meshOf, pocketTool, roundedRect, slabOf, type GridFrame } from "./shapes";
 import { latticeOf, type PiecePlan } from "./split";
 
 /**
  * Grouped boolean assembly (ADR 0004 fallback): the slab of the outline (with its bottom
  * chamfer, less the margin's holes) minus every pocket
- * tool and the margin's cut at once, then minus the tops of the lower cells, then minus
+ * tool and the margin's cut at once, then minus the tops of the lower cells, then minus the
+ * notches of the murets of a skeleton (skeleton.ts), then minus
  * every screw hole, every magnet hole and every slot of a clip astride a cut (clips.ts). Works for any grid, including single rows and columns and grids of
  * mixed pocket profiles (the test kit).
  *
@@ -51,6 +53,10 @@ export function assembleWithBooleans(
     if (cut) tools.push(cut);
     let solid = own(slab.subtract(own(wasm.Manifold.compose(tools))));
     if (frame.lowerCells.length > 0) solid = own(solid.subtract(lowerTops(wasm, own, frame)));
+    // The notches of a skeleton reach into the pockets on both sides of their muret: they are
+    // removed apart, as are the screw holes, whose bores may meet them at the top.
+    const notches = notchTools(wasm, own, frame, latticeOf(frame), labels);
+    if (notches) solid = own(solid.subtract(notches));
     // The bore of a screw head meets the corners of the pockets around it, so the screw
     // holes are removed apart; they are far from each other and compose.
     const positions = screwPositions(frame);

@@ -56,11 +56,14 @@ export function TypeIcon({ className }: ArtProps) {
 /**
  * Type of baseplate, in section: a pocket between two murets, the bin foot dashed, on the
  * drawer or the desk. The open grid (normal) has nothing under the pocket; the tray raises
- * the pocket on a floor (in var(--art)), and the foot stays clear of it, on its slopes.
+ * the pocket on a floor (in var(--art)), and the foot stays clear of it, on its slopes; the
+ * skeleton, cut through the middle of its murets, keeps their low band (in var(--art)), the
+ * posts of the corners behind it, dashed.
  */
 export function TypeArt({ kind, className }: ArtProps & { kind: BaseplateType }) {
   // The pockets of the tray rise by 8, on a floor of 11: the foot stays clear of it.
   const lift = kind === "tray" ? 8 : 0;
+  const posts = kind === "skeleton" ? { strokeOpacity: 0.4, strokeDasharray: "2.5 2", fillOpacity: 0.04 } : {};
   const wall = (side: 1 | -1) => {
     const x = (at: number) => (side === 1 ? at : 120 - at);
     return `M${x(2)} ${18 - lift} H${x(14)} L${x(26.9)} ${30.9 - lift} V${41.7 - lift} L${x(31.1)} ${45.9 - lift} V51 H${x(2)} Z`;
@@ -68,9 +71,10 @@ export function TypeArt({ kind, className }: ArtProps & { kind: BaseplateType })
   return (
     <svg viewBox="0 0 120 56" className={className} aria-hidden fill="none">
       <path d="M2 51 H118" {...stroke} strokeOpacity={0.35} />
-      <path d={wall(1)} {...stroke} {...material} />
-      <path d={wall(-1)} {...stroke} {...material} />
+      <path d={wall(1)} {...stroke} {...material} {...posts} />
+      <path d={wall(-1)} {...stroke} {...material} {...posts} />
       {kind === "tray" && <path d="M31.1 40 H88.9 V51 H31.1 Z" fill={ART} />}
+      {kind === "skeleton" && <path d="M2 47.6 H31.1 V51 H2 Z M88.9 47.6 H118 V51 H88.9 Z" fill={ART} />}
       <path
         d="M16.5 9 V18.5 L29 31 V41.3 L33.2 45.5 H86.8 L91 41.3 V31 L103.5 18.5 V9"
         transform={`translate(0 ${-lift})`}

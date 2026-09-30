@@ -1,17 +1,19 @@
 // Types of baseplate (#25, ADR 0013): what each one changes in the baseplate of the settings.
 import type { PocketProfile } from "./pocket-profile";
 import { roundUpToLayer } from "./print";
+import { skeletonOf, type Skeleton } from "./skeleton";
 
 /**
- * Type of baseplate: the open grid (`normal`, by default, the cheapest), or the grid on a
- * solid floor (`tray`), which nothing falls through. Skeleton (#26) and CLICKbase (#27) are
- * planned: the share link already reads their names (`ty`), and the settings bring them back
- * to the default until the engine builds them.
+ * Type of baseplate: the open grid (`normal`, by default), the grid on a solid floor
+ * (`tray`), which nothing falls through, or the open grid with its murets notched between
+ * the crossings (`skeleton`, the least material, ADR 0014). CLICKbase (#27) is planned: the
+ * share link already reads its name (`ty`), and the settings bring it back to the default
+ * until the engine builds it.
  */
-export type BaseplateType = "normal" | "tray";
+export type BaseplateType = "normal" | "tray" | "skeleton";
 
-/** The types of baseplate the engine builds, the default (the cheapest) first. */
-export const BASEPLATE_TYPES: readonly BaseplateType[] = ["normal", "tray"];
+/** The types of baseplate the engine builds, the default first. */
+export const BASEPLATE_TYPES: readonly BaseplateType[] = ["normal", "tray", "skeleton"];
 
 /**
  * What a type changes in a baseplate. Each type is one entry of `BASEPLATE_TYPE_VARIANTS`:
@@ -22,6 +24,8 @@ export interface BaseplateTypeVariant {
   profile(profile: PocketProfile, layerHeight: number): PocketProfile;
   /** Whether a baseplate of this type, cut for the build plate, takes clips (clips.ts). */
   clips: boolean;
+  /** The notches of the murets at a layer height (skeleton.ts), null for a type without. */
+  skeleton(layerHeight: number): Skeleton | null;
 }
 
 /** Thickness of the floor of a tray before rounding up to the layer: 3 layers of 0.2 mm (spec v1.1). */
@@ -65,8 +69,15 @@ export function trayProfile(profile: PocketProfile, { thickness, gap }: TrayFloo
   return { height: at(profile.height + lift), topRadius: profile.topRadius, floor: thickness, points: [[thickness, foot[1]], ...wall] };
 }
 
+/** Whether a baseplate of a type takes clips when it is cut (none in a skeleton: ADR 0014). */
+export function takesClips(type: BaseplateType): boolean {
+  return BASEPLATE_TYPE_VARIANTS[type].clips;
+}
+
 /** The variant of each type of baseplate (`BaseplateSettings.baseplateType`). */
 export const BASEPLATE_TYPE_VARIANTS: Record<BaseplateType, BaseplateTypeVariant> = {
-  normal: { profile: (profile) => profile, clips: true },
-  tray: { profile: (profile, layerHeight) => trayProfile(profile, trayFloorOf(layerHeight)), clips: true },
+  normal: { profile: (profile) => profile, clips: true, skeleton: () => null },
+  tray: { profile: (profile, layerHeight) => trayProfile(profile, trayFloorOf(layerHeight)), clips: true, skeleton: () => null },
+  // The middle of the murets, where the slots of the clips go, is notched away: no clips.
+  skeleton: { profile: (profile) => profile, clips: false, skeleton: skeletonOf },
 };

@@ -126,11 +126,13 @@ const fr = {
     br: "Avant droite",
   },
   baseplateType: "Type",
-  baseplateTypes: { normal: "Normal", tray: "Tray" },
-  baseplateTypeNames: { normal: "Normal, sans fond", tray: "Tray, fond plein" },
-  normalHint: "La grille ajourée, sans fond, posée au fond du tiroir : le moins de matière.",
+  baseplateTypes: { normal: "Normal", tray: "Tray", skeleton: "Skeleton" },
+  baseplateTypeNames: { normal: "Normal, sans fond", tray: "Tray, fond plein", skeleton: "Skeleton, allégée" },
+  normalHint: "La grille ajourée, sans fond, posée au fond du tiroir : chaque bac est tenu sur tout son tour.",
   trayHint: (floor: string, gap: string) =>
     `La grille sur un fond plein de ${floor} mm : rien ne passe dessous, pour un bureau, une étagère ou de petites pièces. Les poches montent de ${floor} mm, plus ${gap} mm de jeu : le bac reste assis sur ses pentes, sans toucher le fond.`,
+  skeletonHint: (band: string) =>
+    `Les murets sont entaillés entre les croisements, jusqu'à une bande de ${band} mm : seuls des poteaux au profil complet restent aux coins des cellules, et le bac n'est guidé que par ses 4 coins. Environ deux fois moins de matière. Le tour de la grille reste entier. Pas de clips.`,
   typeVolumesHint: "Matière de la baseplate avec chaque type, mesurée sur le maillage.",
   margin: "Marge",
   marginShapes: { frame: "Cadre", cells: "Cellules", brackets: "Équerres" },
@@ -157,6 +159,9 @@ const fr = {
     "Agrafes en U qui relient les pièces : elles s'enfoncent par-dessous dans le pied des murets, à cheval sur chaque coupe, et ne se voient pas de dessus. Elles sont dans le fichier, avec les pièces, couchées sur le côté.",
   clipsUncutHint: "La baseplate tient sur votre plateau : pas de découpe, donc pas de clip.",
   clipsOffHint: "Sans clips, les pièces sont posées bout à bout, et le tiroir les tient.",
+  clipsSkeleton: "Sans objet en Skeleton",
+  clipsSkeletonHint:
+    "Pas de clips en Skeleton : le milieu des murets, où ils se logent, est entaillé. Les pièces sont posées bout à bout, et le tiroir les tient.",
   advanced: "Avancé",
   drawerGap: "Jeu au tiroir",
   lessGap: "Moins de jeu",
@@ -335,11 +340,13 @@ const en: Strings = {
     br: "Front right",
   },
   baseplateType: "Type",
-  baseplateTypes: { normal: "Normal", tray: "Tray" },
-  baseplateTypeNames: { normal: "Normal, open", tray: "Tray, solid floor" },
-  normalHint: "The open grid, without a floor, laid on the bottom of the drawer: the least material.",
+  baseplateTypes: { normal: "Normal", tray: "Tray", skeleton: "Skeleton" },
+  baseplateTypeNames: { normal: "Normal, open", tray: "Tray, solid floor", skeleton: "Skeleton, lightened" },
+  normalHint: "The open grid, without a floor, laid on the bottom of the drawer: each bin is held all around.",
   trayHint: (floor: string, gap: string) =>
     `The grid on a solid floor of ${floor} mm: nothing goes through, for a desk, a shelf or small parts. The pockets rise by ${floor} mm, plus ${gap} mm of gap: the bin stays seated on its slopes, clear of the floor.`,
+  skeletonHint: (band: string) =>
+    `The walls between pockets are notched between their crossings, down to a band of ${band} mm: only posts of the whole profile stay at the corners of the cells, and the bin is guided by its 4 corners only. About half the material. The rim of the grid stays whole. No clips.`,
   typeVolumesHint: "Material of the baseplate of each type, measured on the mesh.",
   margin: "Margin",
   marginShapes: { frame: "Frame", cells: "Cells", brackets: "Brackets" },
@@ -366,6 +373,9 @@ const en: Strings = {
     "U-shaped staples that join the pieces: they push up from below into the foot of the walls, astride each cut, and do not show from above. They come in the file with the pieces, lying on their side.",
   clipsUncutHint: "The baseplate fits on your build plate: no cut, so no clip.",
   clipsOffHint: "Without clips, the pieces lie end to end, and the drawer holds them.",
+  clipsSkeleton: "Not with Skeleton",
+  clipsSkeletonHint:
+    "No clips with Skeleton: the middle of the walls, where they sit, is notched. The pieces lie end to end, and the drawer holds them.",
   advanced: "Advanced",
   drawerGap: "Drawer gap",
   lessGap: "Less gap",

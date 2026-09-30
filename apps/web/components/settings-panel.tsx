@@ -6,6 +6,8 @@ import {
   BASEPLATE_TYPES,
   MARGIN_SHAPES,
   changedAdvancedSettings,
+  skeletonOf,
+  takesClips,
   trayFloorOf,
   type BaseplateSettings,
   type BaseplateType,
@@ -263,11 +265,18 @@ export function Families({
         icon={<ClipIcon className="size-[18px]" />}
         title={t.clips}
         summary={clipsSummary(settings, summary, t)}
-        on={settings.clips}
-        control={<ToggleSwitch label={t.clips} checked={settings.clips} onChange={(clips) => onSettingsChange({ clips })} />}
+        on={clipsOn(settings)}
+        control={
+          <ToggleSwitch
+            label={t.clips}
+            checked={clipsOn(settings)}
+            disabled={!takesClips(settings.baseplateType)}
+            onChange={(clips) => onSettingsChange({ clips })}
+          />
+        }
       >
         <div className="flex items-center gap-3">
-          <span className={`grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-surface ${settings.clips ? "text-muted [--art:var(--accent)]" : "text-faint"}`}>
+          <span className={`grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-surface ${clipsOn(settings) ? "text-muted [--art:var(--accent)]" : "text-faint"}`}>
             <ClipArt className="h-9 w-12" />
           </span>
           <p className="text-[12.5px] leading-snug text-muted">{clipsHint(settings, summary, t)}</p>
@@ -364,12 +373,18 @@ function TypeFields({ settings, onSettingsChange, volumes }: FieldsProps & { vol
     return measured === undefined ? "…" : `${f.volumes.format(measured / 1000)} cm³`;
   };
   const floor = trayFloorOf(settings.layerHeight);
+  const hints: Record<BaseplateType, string> = {
+    normal: t.normalHint,
+    tray: t.trayHint(f.fine.format(floor.thickness), f.fine.format(floor.gap)),
+    skeleton: t.skeletonHint(f.fine.format(skeletonOf(settings.layerHeight).band)),
+  };
   return (
     <>
       <ChoiceGroup<BaseplateType>
         label={t.baseplateType}
         value={settings.baseplateType}
         onChange={(baseplateType) => onSettingsChange({ baseplateType })}
+        columns={3}
         options={BASEPLATE_TYPES.map((type) => ({
           value: type,
           label: t.baseplateTypes[type],
@@ -378,7 +393,7 @@ function TypeFields({ settings, onSettingsChange, volumes }: FieldsProps & { vol
         }))}
       />
       <p className="mt-3 text-[12.5px] leading-snug text-muted">
-        {settings.baseplateType === "tray" ? t.trayHint(f.fine.format(floor.thickness), f.fine.format(floor.gap)) : t.normalHint}
+        {hints[settings.baseplateType]}
       </p>
       <p className="mt-1 text-[12px] leading-snug text-muted">{t.typeVolumesHint}</p>
     </>
@@ -457,11 +472,17 @@ function screwsSummary(settings: BaseplateSettings, summary: BaseplateSummary | 
   return t.screwsSummary(count, f.fine.format(settings.screwShank), f.fine.format(settings.screwHead));
 }
 
+/** Whether the baseplate takes clips: they are on, and its type takes them (none in a skeleton). */
+function clipsOn(settings: BaseplateSettings): boolean {
+  return settings.clips && takesClips(settings.baseplateType);
+}
+
 /**
  * "15 clips à imprimer", as laid out by the engine along the cuts; "Sans découpe" for a
  * baseplate in a single piece, which needs none; "…" until the engine answers.
  */
 function clipsSummary(settings: BaseplateSettings, summary: BaseplateSummary | null, t: Strings): string {
+  if (!takesClips(settings.baseplateType)) return t.clipsSkeleton;
   if (!settings.clips) return t.clipsOff;
   if (!summary) return "…";
   return summary.stats.pieces <= 1 ? t.clipsUncut : t.clipsSummary(String(summary.stats.clips));
@@ -469,6 +490,7 @@ function clipsSummary(settings: BaseplateSettings, summary: BaseplateSummary | n
 
 /** What the clips are for, or why there are none. */
 function clipsHint(settings: BaseplateSettings, summary: BaseplateSummary | null, t: Strings): string {
+  if (!takesClips(settings.baseplateType)) return t.clipsSkeletonHint;
   if (!settings.clips) return t.clipsOffHint;
   return summary && summary.stats.pieces <= 1 ? t.clipsUncutHint : t.clipsHint;
 }

@@ -3,8 +3,9 @@ import { strFromU8, unzipSync } from "fflate";
 import { expect, test, type Page } from "@playwright/test";
 import { chooseCells, closeSettings, openSettings, readout } from "./support";
 
-// The type of baseplate (#25): the open grid (Normal, the default) or a tray, the grid on a
-// solid floor, its pockets raised by the floor and a layer of gap (ADR 0013).
+// The type of baseplate (#25): the open grid (Normal, the default), a tray, the grid on a
+// solid floor, its pockets raised by the floor and a layer of gap (ADR 0013), or a skeleton,
+// its murets notched between the crossings (#26, ADR 0014).
 
 /** A statistic of the frame on screen (on the right on desktop, in the sheet on mobile). */
 function stat(page: Page, id: string) {
@@ -12,7 +13,7 @@ function stat(page: Page, id: string) {
 }
 
 /** A type, by its label, in the open type family. */
-function type(page: Page, label: "Normal" | "Tray") {
+function type(page: Page, label: "Normal" | "Tray" | "Skeleton") {
   return page.getByRole("radio", { name: new RegExp(`^${label}`) });
 }
 
@@ -33,6 +34,7 @@ test("choosing the tray raises the baseplate on a floor, in the preview and the 
   await expect(type(page, "Normal")).toBeChecked();
   await expect(type(page, "Normal")).toContainText("79,0 cm³");
   await expect(type(page, "Tray")).toContainText("140,9 cm³");
+  await expect(type(page, "Skeleton")).toContainText("42,2 cm³");
 
   await type(page, "Tray").click();
   await expect(type(page, "Tray")).toBeChecked();
@@ -70,8 +72,13 @@ test("a shared link carries the type, a link without it gives the open grid", as
   await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type Tray, fond plein");
   await expect(stat(page, "volume")).toHaveText("30,4 cm³");
 
-  // A type the engine does not build yet gives the open grid.
   await page.goto("/fr/baseplate?v=1&mode=cells&ty=skeleton");
+  await openSettings(page, testInfo);
+  await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type Skeleton, allégée");
+  await expect(stat(page, "volume")).toHaveText("9,6 cm³");
+
+  // A type the engine does not build yet gives the open grid.
+  await page.goto("/fr/baseplate?v=1&mode=cells&ty=clickbase");
   await openSettings(page, testInfo);
   await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type Normal, sans fond");
   await expect(stat(page, "volume")).toHaveText("16,7 cm³");
@@ -84,4 +91,55 @@ test("without a margin, the types still compare their volumes", async ({ page },
   await page.getByRole("button", { name: /^Type/ }).click();
   await expect(type(page, "Normal")).toContainText("16,7 cm³");
   await expect(type(page, "Tray")).toContainText("30,4 cm³");
+  await expect(type(page, "Skeleton")).toContainText("9,6 cm³");
+});
+
+test("choosing the skeleton notches the murets, halves the material and turns the clips off", async ({ page }, testInfo) => {
+  await page.goto("/fr/baseplate");
+  await openSettings(page, testInfo);
+  const preview = page.getByTestId("mesh-preview");
+  const clips = page.getByRole("switch", { name: "Clips" });
+  await expect(stat(page, "volume")).toHaveText("79,0 cm³");
+  await expect(stat(page, "clips")).toHaveText("15");
+  const normalTriangles = await preview.getAttribute("data-triangles");
+
+  await page.getByRole("button", { name: /^Type/ }).click();
+  await type(page, "Skeleton").click();
+  await expect(type(page, "Skeleton")).toBeChecked();
+  // As high as the open grid, about half its material, measured on the new mesh.
+  await expect(readout(page, "height")).toHaveText("4,6 mm");
+  await expect(stat(page, "volume")).toHaveText("42,2 cm³");
+  await expect(preview).not.toHaveAttribute("data-triangles", normalTriangles ?? "");
+  await expect(page.getByRole("button", { name: /^Type/ })).toHaveAccessibleName("Type Skeleton, allégée");
+  await expect(page.getByText(/jusqu'à une bande de 0,4 mm/).filter({ visible: true })).toBeVisible();
+  // The magnets stay under the crossings, in the posts.
+  await expect(stat(page, "magnets")).toHaveText("28 (Ø 6 × 2 mm)");
+
+  // No clips: the switch is off and disabled, and the family says why.
+  await expect(stat(page, "clips")).toHaveText("aucun");
+  await expect(clips).not.toBeChecked();
+  await expect(clips).toBeDisabled();
+  const family = page.getByRole("button", { name: /^Clips/ });
+  await expect(family).toHaveAccessibleName("Clips Sans objet en Skeleton");
+  await family.click();
+  await expect(page.getByText(/Pas de clips en Skeleton/).filter({ visible: true })).toBeVisible();
+
+  // The file says which type it holds, and holds no clip.
+  await closeSettings(page, testInfo);
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Télécharger le 3MF" }).click(),
+  ]);
+  expect(file.suggestedFilename()).toBe("baseplate-9x6-399x279mm-skeleton.3mf");
+  const model = strFromU8(unzipSync(await readFile(await file.path()))["3D/3dmodel.model"] ?? new Uint8Array());
+  expect(model).toContain("ty=skeleton");
+  expect(model).not.toContain("clip ×");
+
+  // Back to the open grid, the clips come back as they were set.
+  await openSettings(page, testInfo);
+  await page.getByRole("button", { name: /^Type/ }).click();
+  await type(page, "Normal").click();
+  await expect(stat(page, "clips")).toHaveText("15");
+  await expect(clips).toBeChecked();
+  await expect(clips).toBeEnabled();
 });

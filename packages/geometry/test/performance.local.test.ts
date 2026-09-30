@@ -48,6 +48,11 @@ const DRAWERS: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["1 × 24 tray (boolean path)", { sizeMode: "cells", columns: 1, rows: 24, baseplateType: "tray" }],
   ["drawer 1000 × 1000, tray", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray" }],
   ["drawer 1000 × 1000, tray, margin of truncated cells", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray", marginShape: "cells" }],
+  // A skeleton (#26) adds its notches to the pocket once per pattern of notched sides.
+  ["default drawer, skeleton", { baseplateType: "skeleton" }],
+  ["1 × 24 skeleton (boolean path)", { sizeMode: "cells", columns: 1, rows: 24, baseplateType: "skeleton" }],
+  ["drawer 1000 × 1000, skeleton", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "skeleton" }],
+  ["drawer 1000 × 1000, skeleton, margin of truncated cells", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "skeleton", marginShape: "cells" }],
 ];
 
 /** Baseplates cut for a build plate of 256 × 256 mm (#21): held to the same targets. */
@@ -61,6 +66,8 @@ const CUT: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["drawer 1000 × 1000 cut in 16 pieces, with screws", { drawerWidth: 1000, drawerDepth: 1000, screws: true }],
   ["drawer 1000 × 1000 cut in 16 pieces, tray", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray" }],
   ["drawer 1000 × 1000 cut in 16 pieces, tray with screws", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "tray", screws: true }],
+  ["drawer 1000 × 1000 cut in 16 pieces, skeleton", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "skeleton" }],
+  ["drawer 1000 × 1000 cut in 16 pieces, skeleton with screws", { drawerWidth: 1000, drawerDepth: 1000, baseplateType: "skeleton", screws: true }],
 ];
 
 /**

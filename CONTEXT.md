@@ -39,12 +39,20 @@ Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arr
 _Avoid_: échantillon, sample, test print
 
 **Type de baseplate**:
-Ce que la baseplate a sous sa grille, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond, le moins de matière) ou **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces). Skeleton et CLICKbase viendront (#26, #27).
+Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bac guidé par ses 4 coins, pas de clips ; #26, ADR 0014). CLICKbase viendra (#27).
 _Avoid_: style, variante, plateau (réservé au plateau d'impression)
 
 **Fond**:
 La dalle pleine d'un Tray sous chaque poche (0,6 mm, arrondis à la couche), cellules tronquées comprises ; les trous d'une marge en cadre ou en équerres n'en ont pas. La poche monte de son épaisseur plus une couche de jeu, pour que le bac reste assis sur ses pentes, 0,2 mm au-dessus du fond (ADR 0013). À ne pas confondre avec le fond du tiroir, ni avec le fond plat d'une cellule tronquée étroite.
 _Avoid_: plancher, socle, floor (sauf dans le code)
+
+**Poteau**:
+Dans un Skeleton, le croisement des murets et le départ de ses quatre murets, qui gardent tout le profil de poche : 5 mm le long de chaque muret en haut (l'arc de coin de la poche et 1 mm de côté), 45° plus large par millimètre vers le bas. Il porte l'aimant ou la vis, et guide le bac par son coin (ADR 0014).
+_Avoid_: pilier, plot (réservé à la vis), post (sauf dans le code)
+
+**Bande**:
+Dans un Skeleton, ce qui reste d'un muret entre deux poteaux : son pied, de 0,35 mm arrondis à la couche (0,4 mm à 0,2). Le tour de la grille et le bord de cellule qui porte le numéro d'une pièce ne sont pas entaillés (ADR 0014).
+_Avoid_: bande basse (sauf pour la décrire), semelle, band (sauf dans le code)
 
 **Assise**:
 Le contact du pied sur les pentes à 45° de la poche, qui porte et centre le bac ; un bac bien assis n'a aucun jeu latéral.

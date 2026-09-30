@@ -40,10 +40,17 @@ export interface MarginVariant {
  * seams of the cell bricks, ADR 0004).
  */
 export interface MarginCut {
-  /** Holes through the whole height, seen from above: taken off the outline before it is extruded. */
+  /**
+   * Holes through the whole height, seen from above: taken off the outline before it is
+   * extruded, or off a cell brick with its corner holes (brick-assembly.ts).
+   */
   holes(window?: CutWindow): CrossSection | null;
-  /** Solid removed from the extruded slab. */
-  solid(window?: CutWindow): Manifold | null;
+  /**
+   * Solid removed from the extruded slab, less its holes; with `overHoles`, from a slab that
+   * still has them, and that loses them later (the cell bricks): over the holes too, so that it
+   * never has a face on the side of a hole.
+   */
+  solid(window?: CutWindow, overHoles?: boolean): Manifold | null;
 }
 
 /** Height of the frame before rounding to the layer: 10 layers of 0.2 mm (#3). */
@@ -162,16 +169,30 @@ function wallMargin(layoutOf: (frame: GridFrame) => WallLayout): MarginVariant {
           margins.back > 0 ? y1 : 2 * far,
         ),
       );
-      const above = height < profile.height ? own(own(section(rect(-far, -far, far, far)).subtract(keep)).subtract(holes)) : null;
-
-      const clip = (area: CrossSection, window?: CutWindow) => {
-        const clipped = window ? own(area.intersect(section(rect(...window)))) : area;
-        return clipped.isEmpty() ? null : clipped;
+      const above = (window: CutWindow, overHoles: boolean) => {
+        const outside = own(section(rect(...window)).subtract(keep));
+        return overHoles ? outside : own(outside.subtract(holesNear(window)));
       };
+
+      // A cell brick takes its own neighbourhood only: the holes near it, not all of them, so
+      // that a large margin costs each brick no more than a small one.
+      const bounds = pieces.map((piece) => piece.bounds());
+      const holesNear = (window: CutWindow) =>
+        own(
+          wasm.CrossSection.compose(
+            pieces.filter((_, k) => {
+              const { min, max } = bounds[k] as { min: [number, number]; max: [number, number] };
+              return max[0] > window[0] && min[0] < window[2] && max[1] > window[1] && min[1] < window[3];
+            }),
+          ),
+        );
+      const whole: CutWindow = [-far, -far, far, far];
+      const nonEmpty = (area: CrossSection) => (area.isEmpty() ? null : area);
       return {
-        holes: (window) => clip(holes, window),
-        solid(window) {
-          const area = above && clip(above, window);
+        holes: (window) => nonEmpty(window ? own(holesNear(window).intersect(section(rect(...window)))) : holes),
+        solid(window, overHoles = false) {
+          if (height >= profile.height) return null;
+          const area = nonEmpty(above(window ?? whole, overHoles));
           return area && own(own(wasm.Manifold.extrude(area, top - height)).translate([0, 0, height]));
         },
       };

@@ -43,11 +43,12 @@ const cells = (columns: number, rows: number, settings: Partial<BaseplateSetting
 const roundedSquarePolygon = (side: number, radius: number) => side * side - 4 * radius * radius * (1 - 16 * Math.sin(Math.PI / 64));
 
 describe("the type setting", () => {
-  it("offers the open grid by default, and the tray; the planned types fall back to the default", () => {
-    expect(BASEPLATE_TYPES).toEqual(["normal", "tray"]);
+  it("offers the open grid by default, the tray and the skeleton; the planned type falls back to the default", () => {
+    expect(BASEPLATE_TYPES).toEqual(["normal", "tray", "skeleton"]);
     expect(clampSettings({}).baseplateType).toBe("normal");
     expect(clampSettings(TRAY).baseplateType).toBe("tray");
-    expect(clampSettings({ baseplateType: "skeleton" as never }).baseplateType).toBe("normal");
+    expect(clampSettings({ baseplateType: "skeleton" }).baseplateType).toBe("skeleton");
+    expect(clampSettings({ baseplateType: "clickbase" as never }).baseplateType).toBe("normal");
   });
 
   it("rounds the floor and the gap up to the layer", () => {

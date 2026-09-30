@@ -54,8 +54,8 @@ const V1 = {
   /** Shape of the margin (#23): frame of crossbars, truncated cells, or corner brackets. */
   mg: choice(["frame", "cells", "brackets"], "frame"),
   /**
-   * Type of baseplate (#25): the open grid, a tray on a solid floor, and the types planned
-   * (#26, #27), which the engine brings back to the default until it builds them.
+   * Type of baseplate (#25): the open grid, a tray on a solid floor, a skeleton (#26), and
+   * CLICKbase, planned (#27), which the engine brings back to the default until it builds it.
    */
   ty: choice(["normal", "tray", "skeleton", "clickbase"], "normal"),
   /** Pocket profile. */

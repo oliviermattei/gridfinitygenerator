@@ -6,6 +6,7 @@ import { marginOf, type CutWindow, type MarginCut } from "./margin";
 import { withArena, type Own } from "./manifold";
 import { hasMagnet, magnetTool } from "./magnets";
 import { hasScrew, screwTool } from "./screws";
+import { notchedPocketTool, notchedSides } from "./skeleton";
 import { TOOL_OVERSHOOT_MM, assertNoError, cellCentre, meshOf, pocketTool, rect, roundedRect, slabOf, type GridFrame } from "./shapes";
 import { latticeOf, type Lattice, type PiecePlan } from "./split";
 
@@ -65,7 +66,7 @@ export function assembleWithBricks(
   // bricks come out of the same arena, which frees the margin before the bricks are joined.
   const { keys, bricks } = withArena((own) => {
     const margin = marginOf(frame).prepare(wasm, own, frame);
-    const keys = brickKeys(frame, lattice, holeShapes(frame, lattice, margin));
+    const keys = brickKeys(frame, lattice, holeShapes(frame, lattice, margin), labels);
     return { keys, bricks: cellBricks(wasm, own, frame, lattice, keys, labels, margin) };
   });
   return pieces.map((piece, index) => {
@@ -106,12 +107,12 @@ type Side = -1 | 0 | 1;
  * Key of a kind of cell in the table of bricks: its sides, its corners that hold a screw or a magnet,
  * whether it is a cell of the margin on the outline (its pocket comes from the margin's cut,
  * which may differ from the grid's pocket: along a side without margin, the outer wall cuts
- * it; an inner cell of the margin is an inner cell of the grid), and the shape of the
- * margin's holes in it, which differ along a side when the margin does not repeat from cell
- * to cell (brackets, a crossbar doubled on a cut).
+ * it; an inner cell of the margin is an inner cell of the grid), the shape of the margin's
+ * holes in it when they reach its seams (`HoleShape`), and the sides of a skeleton whose muret
+ * is notched (skeleton.ts: not on the edge of the lattice, nor where a piece has its number).
  */
-const kindKey = (sx: Side, sy: Side, corners: number, margin: boolean, holes = "") =>
-  `${sx},${sy},${corners}${margin && (sx !== 0 || sy !== 0) ? ",margin" : ""}${holes ? `,holes:${holes}` : ""}`;
+const kindKey = (sx: Side, sy: Side, corners: number, margin: boolean, holes = "", notches = 0) =>
+  `${sx},${sy},${corners}${margin && (sx !== 0 || sy !== 0) ? ",margin" : ""}${holes ? `,holes:${holes}` : ""}${notches ? `,notches:${notches}` : ""}`;
 
 /** Corners of a cell, as offsets of the intersection of grid lines from the cell index. */
 const CORNERS: readonly (readonly [da: 0 | 1, db: 0 | 1])[] = [
@@ -140,22 +141,34 @@ function holeCorners(i: number, j: number, frame: GridFrame, lattice: Lattice): 
 interface BrickKeys {
   /** Key of the brick of cell (i, j). */
   of(i: number, j: number): string;
-  /** Key of its kind with the given screw and magnet corners (bits of `holeCorners`), without its slots. */
+  /** Key of its kind with the given screw and magnet corners (bits of `holeCorners`), without its margin's holes nor its slots. */
   kind(i: number, j: number, corners: number): string;
   /** Shift of the clip on each side of cell (i, j) along it (undefined without one), undefined for a cell without clips. */
   slots(i: number, j: number): readonly (number | undefined)[] | undefined;
+  /** Whether the margin's holes of cell (i, j) are taken off its slab (`HoleShape.seams`), not with its corner holes. */
+  holesInSlab(i: number, j: number): boolean;
 }
 
-function brickKeys(frame: GridFrame, lattice: Lattice, holes: ReadonlyMap<string, string>): BrickKeys {
+function brickKeys(frame: GridFrame, lattice: Lattice, holes: ReadonlyMap<string, HoleShape>, labels: readonly Label[]): BrickKeys {
   const cells = slotsByCell(frame.clips);
   const slots = (i: number, j: number) => cells.get(`${i},${j}`);
-  const kind = (i: number, j: number, corners: number) =>
-    kindKey(...kindOf(i, j, frame, lattice), corners, !inGrid(i, j, frame), holes.get(`${i},${j}`));
+  const kind = (i: number, j: number, corners: number) => {
+    const shape = holes.get(`${i},${j}`);
+    return kindKey(
+      ...kindOf(i, j, frame, lattice),
+      corners,
+      !inGrid(i, j, frame),
+      shape?.seams ? shape.key : "",
+      notchedSides(frame, lattice, labels, i, j),
+    );
+  };
   return {
     slots,
     kind,
+    holesInSlab: (i, j) => holes.get(`${i},${j}`)?.seams ?? false,
     of(i, j) {
-      const key = kind(i, j, holeCorners(i, j, frame, lattice));
+      const shape = holes.get(`${i},${j}`);
+      const key = `${kind(i, j, holeCorners(i, j, frame, lattice))}${shape && !shape.seams ? `,holes:${shape.key}` : ""}`;
       const sides = slots(i, j);
       return sides ? `${key},clips:${sides.map((offset) => (offset === undefined ? "-" : offset.toFixed(4))).join("|")}` : key;
     },
@@ -182,23 +195,52 @@ function inGrid(i: number, j: number, { columns, rows }: GridFrame): boolean {
 }
 
 /**
- * The shape of the margin's holes in each brick on the outline that has some, by `"i,j"`:
- * their outline around the cell centre, to a tenth of a micrometre, the same for two
- * bricks with the same holes.
+ * The margin's holes in a brick on the outline. Those that stay off its seams (the holes
+ * between crossbars) are removed with its corner holes, from a brick shared by the bricks of
+ * its side, whatever their holes. Those that reach a seam (the holes between brackets) are
+ * taken off its slab, and the margin's cut spares them: the cut then never has a face on the
+ * side of a hole across a seam, whose points would differ between the two bricks.
  */
-function holeShapes(frame: GridFrame, lattice: Lattice, margin: MarginCut | null): Map<string, string> {
-  const shapes = new Map<string, string>();
+interface HoleShape {
+  /** Their outline around the cell centre, to a tenth of a micrometre, the same for two bricks with the same holes. */
+  key: string;
+  /** Whether they reach a seam of the brick. */
+  seams: boolean;
+}
+
+/** The margin's holes of each brick on the outline that has some, by `"i,j"`. */
+function holeShapes(frame: GridFrame, lattice: Lattice, margin: MarginCut | null): Map<string, HoleShape> {
+  const shapes = new Map<string, HoleShape>();
   if (!margin) return shapes;
   for (let i = lattice.columns[0]; i < lattice.columns[1]; i++)
     for (let j = lattice.rows[0]; j < lattice.rows[1]; j++) {
       const [sx, sy] = kindOf(i, j, frame, lattice);
       if (sx === 0 && sy === 0) continue;
       const [cx, cy] = cellCentre(i, j, frame);
-      const [x0, y0, x1, y1] = brickArea(frame, lattice, sx, sy);
-      const holes = margin.holes([cx + x0, cy + y0, cx + x1, cy + y1]);
-      if (holes) shapes.set(`${i},${j}`, shapeKey(holes, cx, cy));
+      const window = holeWindow(frame, lattice, sx, sy, cx, cy);
+      const holes = margin.holes(window);
+      if (!holes) continue;
+      // The sides of the window that are seams: all but those on the outline.
+      const { min, max } = holes.bounds();
+      const seams =
+        (sx !== -1 && min[0] <= window[0] + ON_FACE_MM) ||
+        (sy !== -1 && min[1] <= window[1] + ON_FACE_MM) ||
+        (sx !== 1 && max[0] >= window[2] - ON_FACE_MM) ||
+        (sy !== 1 && max[1] >= window[3] - ON_FACE_MM);
+      shapes.set(`${i},${j}`, { key: shapeKey(holes, cx, cy), seams });
     }
   return shapes;
+}
+
+/**
+ * Where the margin's holes of a brick are taken, in the baseplate's coordinates: the brick, up
+ * to its seams exactly, where the holes of its neighbours meet its own on the same points, and
+ * past the outline on its sides on the outline, which then never lies on the side of a hole.
+ */
+function holeWindow(frame: GridFrame, lattice: Lattice, sx: Side, sy: Side, cx: number, cy: number): CutWindow {
+  const [x0, y0, x1, y1] = brickArea(frame, lattice, sx, sy);
+  const o = TOOL_OVERSHOOT_MM;
+  return [cx + x0 - (sx === -1 ? o : 0), cy + y0 - (sy === -1 ? o : 0), cx + x1 + (sx === 1 ? o : 0), cy + y1 + (sy === 1 ? o : 0)];
 }
 
 /** Outline of a cross-section around (cx, cy), whatever the order of its polygons and of their points. */
@@ -218,11 +260,13 @@ function shapeKey(section: CrossSection, cx: number, cy: number): string {
 /**
  * One brick per kind of cell present in the grid, centred on its cell centre: the inner
  * brick is a cell block minus the pocket tool; the others are the slab of their footprint
- * (cell plus margin, cut by the outline at the corners, less the margin's holes, with the
- * bottom chamfer of the outline) minus the pocket tool and the margin's solid cut (which
- * holds the pocket of a cell of the margin, cut by the outline). Then the
- * quarter of a screw or magnet hole is removed at each corner of the brick that holds one,
- * and its half of a slot on each side that holds a clip.
+ * (cell plus margin, cut by the outline at the corners, with the bottom chamfer of the
+ * outline) minus the pocket tool and the margin's solid cut (which holds the pocket of a cell
+ * of the margin, cut by the outline). The notches of a skeleton go with the pocket, on the
+ * sides of the brick whose muret is notched. Then the quarter of a screw or magnet hole is
+ * removed at each corner of the brick that holds one, its half of a slot on each side that
+ * holds a clip, and the margin's holes in it: the bricks along a side whose holes differ (a
+ * crossbar doubled on a cut, brackets) share the rest.
  */
 function cellBricks(
   wasm: ManifoldToplevel,
@@ -236,6 +280,17 @@ function cellBricks(
   const { cellSize, profile } = frame;
   const half = cellSize / 2;
   const pocket = pocketTool(wasm, own, frame);
+  // The pocket of a cell of a skeleton with the notches of its sides, up to its seams: the two
+  // bricks of a muret notch it the same way, on the same vertices of their faces on the seam.
+  // Built once per pattern of notched sides, without a boolean.
+  const skeleton = frame.skeleton;
+  const notchedPockets = new Map<number, Manifold>();
+  const pocketWith = (sides: number): Manifold => {
+    if (!skeleton || sides === 0) return pocket;
+    const tool = notchedPockets.get(sides) ?? notchedPocketTool(wasm, own, { ...frame, skeleton }, sides);
+    notchedPockets.set(sides, tool);
+    return tool;
+  };
   const screw = frame.screws && screwTool(wasm, own, { ...frame, screws: frame.screws });
   const magnet = frame.magnets && magnetTool(wasm, own, { ...frame, magnets: frame.magnets });
   // The tools of the corners of a brick, of the given bits, around its cell centre.
@@ -257,29 +312,36 @@ function cellBricks(
   // vertices. Without a cut, the ring on the seams is dropped with them.
   const ringed = frame.bottomChamfer > 0 && (frame.cuts.columns.length > 0 || frame.cuts.rows.length > 0);
   const baseOf = (i: number, j: number, sx: Side, sy: Side): Manifold => {
+    const sides = notchedSides(frame, lattice, labels, i, j);
     if (sx === 0 && sy === 0) {
       const square = rect(-half, -half, half, half);
       const block =
         ringed
           ? slabOf(wasm, own, own(new wasm.CrossSection([square])), frame, cellCentre(i, j, frame))
           : own(own(wasm.Manifold.cube([cellSize, cellSize, profile.height])).translate([-half, -half, 0]));
-      return own(block.subtract(pocket));
+      return own(block.subtract(pocketWith(sides)));
     }
     const [cx, cy] = cellCentre(i, j, frame);
     const [x0, y0, x1, y1] = brickArea(frame, lattice, sx, sy);
     // Only the margin's cut around the brick, a little beyond it, so that no edge of the
-    // cut lies on a face of the brick.
+    // cut lies on a face of the brick; over its holes, removed with the corner holes.
     const o = TOOL_OVERSHOOT_MM;
     const window: CutWindow = [cx + x0 - o, cy + y0 - o, cx + x1 + o, cy + y1 + o];
     let area = footprint(wasm, own, frame, lattice, sx, sy, cx, cy);
-    const holes = margin?.holes(window);
+    const inSlab = keys.holesInSlab(i, j);
+    const holes = inSlab && margin?.holes(window);
     if (holes) area = own(area.subtract(own(holes.translate([-cx, -cy]))));
     // The pocket of a cell of the margin comes with the margin's cut, as the margin shapes it.
-    const tools = inGrid(i, j, frame) ? [pocket] : [];
-    const cut = margin?.solid(window);
+    // The notches of an edge brick are on its sides inside the lattice, away from the margin:
+    // they compose with its cut. A whole cell of the margin on the edge of the lattice has its
+    // pocket in the cut: its notched pocket is removed apart.
+    const grid = inGrid(i, j, frame);
+    const tools = grid ? [pocketWith(sides)] : [];
+    const cut = margin?.solid(window, !inSlab);
     if (cut) tools.push(own(cut.translate([-cx, -cy, 0])));
     const slab = slabOf(wasm, own, area, frame, [cx, cy]);
-    return tools.length === 0 ? slab : own(slab.subtract(own(wasm.Manifold.compose(tools))));
+    const base = tools.length === 0 ? slab : own(slab.subtract(own(wasm.Manifold.compose(tools))));
+    return grid || sides === 0 ? base : own(base.subtract(pocketWith(sides)));
   };
   // The slots are far from the corners and from each other: they compose with the holes of
   // the corners, in the same subtraction. The tool of a slot on a side, at a shift along it,
@@ -293,6 +355,15 @@ function cellBricks(
   };
   const sideTools = (sides: readonly (number | undefined)[] | undefined) =>
     (sides ?? []).flatMap((offset, side) => (offset === undefined ? [] : [slotTool(side as BrickSide, offset)]));
+  // The margin's holes in a brick on the outline, through the whole height; far from its
+  // corners and from the grid, they compose with the corner holes and the slots.
+  const marginHoles = (i: number, j: number, sx: Side, sy: Side): Manifold[] => {
+    const [cx, cy] = cellCentre(i, j, frame);
+    const holes = (sx !== 0 || sy !== 0) && !keys.holesInSlab(i, j) && margin?.holes(holeWindow(frame, lattice, sx, sy, cx, cy));
+    if (!holes) return [];
+    const o = TOOL_OVERSHOOT_MM;
+    return [own(own(wasm.Manifold.extrude(own(holes.translate([-cx, -cy])), profile.height + 2 * o)).translate([0, 0, -o]))];
+  };
   const solids = new Map<string, Manifold>();
   for (let i = lattice.columns[0]; i < lattice.columns[1]; i++)
     for (let j = lattice.rows[0]; j < lattice.rows[1]; j++) {
@@ -302,7 +373,7 @@ function cellBricks(
       const kind = keys.kind(i, j, 0);
       const base = bases.get(kind) ?? baseOf(i, j, sx, sy);
       bases.set(kind, base);
-      const tools = [...holeTools(holeCorners(i, j, frame, lattice)), ...sideTools(keys.slots(i, j))];
+      const tools = [...holeTools(holeCorners(i, j, frame, lattice)), ...sideTools(keys.slots(i, j)), ...marginHoles(i, j, sx, sy)];
       solids.set(key, tools.length === 0 ? base : own(base.subtract(own(wasm.Manifold.compose(tools)))));
     }
   for (const label of labels) {

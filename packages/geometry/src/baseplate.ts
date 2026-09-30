@@ -189,6 +189,7 @@ async function buildBaseplate(
     magnets: options.magnets === false || lowerCells.length > 0 ? null : magnetHolesOf(settings),
     cuts: { columns: [], rows: [] },
     clips: null,
+    skeleton: type.skeleton(settings.layerHeight),
     layerHeight: settings.layerHeight,
     lineWidth: settings.lineWidth,
   };

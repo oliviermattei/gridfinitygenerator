@@ -8,6 +8,7 @@ import type { Own } from "./manifold";
 import type { PocketProfile } from "./pocket-profile";
 import type { MagnetHoles } from "./magnets";
 import type { ScrewHoles } from "./screws";
+import type { Skeleton } from "./skeleton";
 
 /**
  * What an assembly strategy needs to build a baseplate: its grid, its margins and its
@@ -55,6 +56,11 @@ export interface GridFrame {
   cuts: { columns: readonly number[]; rows: readonly number[] };
   /** Clips astride the cuts, whose slots the pieces carry (clips.ts); null without them. */
   clips: ClipLayout | null;
+  /**
+   * The notches of a skeleton baseplate between the crossings of the murets (skeleton.ts,
+   * the type of baseplate), null for every other type.
+   */
+  skeleton: Skeleton | null;
   /** Print settings the thicknesses and widths chosen by the generator follow. */
   layerHeight: number;
   lineWidth: number;
@@ -206,22 +212,27 @@ function footOfChamfer({ width, depth, outerRadius: radius, bottomChamfer: chamf
  */
 export function pocketTool(wasm: ManifoldToplevel, own: Own, frame: GridFrame, profile = frame.profile): Manifold {
   const { cellSize, segmentsPerQuarter } = frame;
+  const layers = pocketLevels(profile).map(([z, inset]) => ({
+    z,
+    points: roundedRect(cellSize - 2 * inset, cellSize - 2 * inset, profile.topRadius - inset, segmentsPerQuarter),
+  }));
+  const { positions, indices } = loft(layers);
+  return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: positions, triVerts: indices })));
+}
+
+/**
+ * The levels of the pocket tool of a profile, [z, inset] from bottom to top: the points of
+ * the profile, the first one carried on below the frame (or the floor of a tray), and the
+ * top flat carried on above it.
+ */
+export function pocketLevels(profile: PocketProfile): (readonly [z: number, inset: number])[] {
   const [first, second] = profile.points;
   const last = profile.points[profile.points.length - 1];
   if (!first || !second || !last) throw new Error("A pocket profile needs at least two points");
   if (second[0] <= first[0]) throw new Error("A pocket profile rises from its first point to its second");
   const slope = (second[1] - first[1]) / (second[0] - first[0]);
   const bottom = profile.floor ? first : ([first[0] - TOOL_OVERSHOOT_MM, first[1] - slope * TOOL_OVERSHOOT_MM] as const);
-  const layers = [
-    bottom,
-    ...profile.points.slice(1),
-    [last[0] + TOOL_OVERSHOOT_MM, last[1]] as const,
-  ].map(([z, inset]) => ({
-    z,
-    points: roundedRect(cellSize - 2 * inset, cellSize - 2 * inset, profile.topRadius - inset, segmentsPerQuarter),
-  }));
-  const { positions, indices } = loft(layers);
-  return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: positions, triVerts: indices })));
+  return [bottom, ...profile.points.slice(1), [last[0] + TOOL_OVERSHOOT_MM, last[1]] as const];
 }
 
 /**
