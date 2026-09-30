@@ -261,7 +261,7 @@ Le numéro gravé sous une pièce, dans un demi-muret, en chiffres de 3 mm empil
 _Avoid_: étiquette (réservé aux bins), label, repère
 
 **Pile**:
-Des pièces d'une baseplate découpée imprimées l'une sur l'autre en une seule impression, en mono-matière : la première à l'endroit, les autres retournées sur celle du dessous, une couche d'air entre deux (le **pas** de la pile : la hauteur d'une pièce plus une couche). Une pièce ne se pose que sur une pièce qui la porte ; sinon elle commence une autre pile (#28, ADR 0016).
+Des pièces d'une baseplate découpée imprimées l'une sur l'autre en une seule impression, en mono-matière : la première à l'endroit, les autres retournées sur celle du dessous, une couche d'air entre deux (le **pas** de la pile : la hauteur d'une pièce plus une couche). Une pièce ne se pose que sur une pièce qui la porte ; sinon elle commence une autre pile (#28, ADR 0016). Elle est retournée autour de X ou de Y : le **sens de retournement** retenu est celui qui laisse le moins de son dessous en l'air, mesuré (#39).
 _Avoid_: stack (sauf dans le code), empilement (sauf pour l'action), pile de plaques
 
 **Oreille**:

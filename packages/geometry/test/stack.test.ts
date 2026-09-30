@@ -3,6 +3,7 @@ import {
   EAR_RADIUS_MM,
   PIN_DIAMETER_MM,
   generateBaseplate,
+  orientStacks,
   printClips,
   printStacks,
   serialize3mf,
@@ -204,6 +205,66 @@ describe("printed stacks", () => {
     const { min, max } = (await checkMesh(stack?.mesh as TriangleMesh)).bounds;
     // Its bottom piece lies along Y, as it fits on the plate.
     expect(max[1] - min[1]).toBeGreaterThan(max[0] - min[0]);
+  });
+});
+
+describe("orientation", () => {
+  /** The unheld area of each joint of each stack, measured on the printed shells, and the checks of the shells. */
+  async function joints(baseplate: Baseplate, plan: StackPlan) {
+    const printed = await printStacks(baseplate, plan, OPTIONS);
+    const result: { unheld: number; face: number }[][] = [];
+    for (const [s, stack] of plan.stacks.entries()) {
+      const shells = shellsOf((printed[s] as { mesh: TriangleMesh }).mesh, baseplate, stack);
+      for (const [k, shell] of shells.entries()) {
+        const check = await checkMesh(shell);
+        expect(check.status).toBe("NoError");
+        expect(badEdges(shell)).toBe(0);
+        // Its height in the stack is kept: its rank times the pitch, one piece high.
+        expect(check.bounds.min[2]).toBeCloseTo(k * plan.pitch, 4);
+        expect(check.bounds.max[2]).toBeCloseTo(k * plan.pitch + baseplate.stats.dimensions.height, 4);
+      }
+      const measured: { unheld: number; face: number }[] = [];
+      for (let k = 1; k < shells.length; k++) {
+        const { gap, unheld, face } = await joint(shells[k - 1] as TriangleMesh, shells[k] as TriangleMesh);
+        expect(gap).toBeCloseTo(LAYER, 4);
+        measured.push({ unheld, face });
+      }
+      result.push(measured);
+    }
+    return result;
+  }
+  const total = (measured: { unheld: number }[][]) => measured.flat().reduce((sum, { unheld }) => sum + unheld, 0);
+
+  it("turns the second of two pieces of one cell about Y: its square corners on the square ones, held all over", async () => {
+    // The pile of prototypes/stack-1x1: 2 × 1 cells without margin, cut in two by a plate of 50 mm.
+    const baseplate = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 1 }, "final", { buildPlate: { width: 50, depth: 50 } });
+    const planned = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+    const plan = await orientStacks(baseplate, planned);
+    expect(plan.stacks.map((stack) => stack.map(({ number, flip }) => `${number}${flip}`))).toEqual([["1none", "2y"]]);
+    const [before] = (await joints(baseplate, planned)).flat() as [{ unheld: number; face: number }];
+    const [after] = (await joints(baseplate, plan)).flat() as [{ unheld: number; face: number }];
+    // About X, its square corners of the cut over the rounded corners of the outline.
+    expect(before.unheld).toBeGreaterThan(5);
+    expect(after.unheld).toBeLessThan(0.05);
+    expect(after.face).toBeGreaterThan(60);
+  });
+
+  it("holds the default drawer at least as well as the first flips, in the same stacks", async () => {
+    const baseplate = await generateBaseplate({ marginShape: "cells" }, "final", { buildPlate: PLATE_256 });
+    const planned = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+    const plan = await orientStacks(baseplate, planned);
+    expect(plan.stacks.map((stack) => stack.map(({ number }) => number))).toEqual(planned.stacks.map((stack) => stack.map(({ number }) => number)));
+    expect(plan.stacks.map((stack) => stack.map(({ z }) => z))).toEqual(planned.stacks.map((stack) => stack.map(({ z }) => z)));
+    const [before, after] = [total(await joints(baseplate, planned)), total(await joints(baseplate, plan))];
+    expect(after).toBeLessThanOrEqual(before + 1e-3);
+  });
+
+  it("holds the pile of the acceptance at least as well as the first flips", async () => {
+    const baseplate = await generateBaseplate(PILE_OF_3, "final", { buildPlate: PLATE_60 });
+    const planned = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+    const plan = await orientStacks(baseplate, planned);
+    const [before, after] = [total(await joints(baseplate, planned)), total(await joints(baseplate, plan))];
+    expect(after).toBeLessThanOrEqual(before + 1e-3);
   });
 });
 

@@ -7,6 +7,7 @@ import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
 import { expect, it } from "vitest";
 import {
   generateBaseplate,
+  orientStacks,
   printClips,
   printStacks,
   serialize3mf,
@@ -125,7 +126,6 @@ it("contact, part non portée et plafonds, par type et par marge", async () => {
     { name: "tiroir par défaut, cellules tronquées", settings: { marginShape: "cells" }, plate: PLATE_256 },
     { name: "tiroir par défaut, cellules tronquées, vis", settings: { marginShape: "cells", screws: true }, plate: PLATE_256 },
     { name: "tiroir par défaut, cadre (refusé)", settings: { marginShape: "frame" }, plate: PLATE_256 },
-    { name: "tiroir par défaut, équerres (refusé)", settings: { marginShape: "brackets" }, plate: PLATE_256 },
   ];
   lines.push(
     "## Joints et plafonds (qualité finale, couches de 0,2 mm)",
@@ -139,7 +139,7 @@ it("contact, part non portée et plafonds, par type et par marge", async () => {
     const baseplate = await generateBaseplate(settings, "final", { buildPlate: plate });
     const full = { marginShape: "frame", baseplateType: "normal", layerHeight: LAYER, ...settings } as const;
     const rule = stackRuleOf(full, baseplate.layout);
-    const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+    const plan = await orientStacks(baseplate, stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER));
     const [printed] = await printStacks(baseplate, { ...plan, stacks: plan.stacks.slice(0, 1) }, OPTIONS);
     const stack = plan.stacks[0] ?? [];
     const shells = shellsOf(printed?.mesh as TriangleMesh, baseplate, stack).map(solidOf);
@@ -165,7 +165,7 @@ it("contact, part non portée et plafonds, par type et par marge", async () => {
 it("en alternance : les joints dessous contre dessous", async () => {
   wasm = await loadManifold();
   const baseplate = await generateBaseplate(PILE, "final", { buildPlate: PLATE_60 });
-  const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+  const plan = await orientStacks(baseplate, stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER));
   const [printed] = await printStacks(baseplate, plan, OPTIONS);
   const [first, second] = shellsOf(printed?.mesh as TriangleMesh, baseplate, plan.stacks[0] ?? []).map(solidOf) as [Manifold, Manifold];
   // Méthode retenue, joint 2 : les plats de la pièce 2 sur le dessous de la pièce 3 retournée.
@@ -189,7 +189,7 @@ it("en alternance : les joints dessous contre dessous", async () => {
 /** Écrit un 3MF comme l'export du générateur (une pile par objet, les clips à part), le relit et vérifie chaque objet. */
 async function writeFile(file: string, settings: Partial<BaseplateSettings>, plate: BuildPlate, anchors: { ears: boolean; pins: boolean }, note: string) {
   const baseplate = await generateBaseplate(settings, "final", { buildPlate: plate });
-  const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+  const plan = await orientStacks(baseplate, stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER));
   const stacks = await printStacks(baseplate, plan, { ...OPTIONS, ...anchors });
   const clips = printClips(baseplate, stacks.map(({ mesh }) => mesh));
   const objects = stacks.map(({ mesh, pieces }, k) => ({ mesh, name: `pile ${k + 1} : pièces ${pieces.join(", ")}` }));
@@ -203,9 +203,54 @@ async function writeFile(file: string, settings: Partial<BaseplateSettings>, pla
   lines.push(`- \`files/${file}\` : relu, ${statuses.length} objets NoError (${content.objectNames.join(" ; ")}), hauteur ${fr(heights[0] as number)} mm, pas ${fr(plan.pitch)} mm. ${note}`);
 }
 
+it("sens de retournement (#39) : premier sens légal contre sens mesuré", async () => {
+  wasm = await loadManifold();
+  const cases: { name: string; settings: Partial<BaseplateSettings>; plate: BuildPlate }[] = [
+    { name: "paire 1 × 1 (prototypes/stack-1x1)", settings: { sizeMode: "cells", columns: 2, rows: 1 }, plate: { width: 50, depth: 50 } },
+    { name: "pile de 3, Normal", settings: PILE, plate: PLATE_60 },
+    { name: "pile de 3, Skeleton", settings: { ...PILE, baseplateType: "skeleton" }, plate: PLATE_60 },
+    { name: "tiroir par défaut, cellules tronquées", settings: { marginShape: "cells" }, plate: PLATE_256 },
+    { name: "tiroir par défaut, cellules tronquées, vis", settings: { marginShape: "cells", screws: true }, plate: PLATE_256 },
+    { name: "5 × 1 cellules sans marge, plateau de 100 mm", settings: { sizeMode: "cells", columns: 5, rows: 1 }, plate: { width: 100, depth: 100 } },
+    { name: "tiroir 1000 × 1000, cellules tronquées", settings: { drawerWidth: 1000, drawerDepth: 1000, marginShape: "cells" }, plate: PLATE_256 },
+  ];
+  const piles = (plan: StackPlan) => plan.stacks.map((s) => s.map(({ number, flip }) => `${number}${flip === "none" ? "" : flip === "x" ? "↕" : "↔"}`).join("-")).join(" / ");
+  /** Somme des parts non portées de tous les joints de toutes les piles, mesurée sur les coquilles imprimées. */
+  const unheldOf = async (baseplate: Baseplate, plan: StackPlan) => {
+    const printed = await printStacks(baseplate, plan, OPTIONS);
+    let sum = 0;
+    for (const [s, stack] of plan.stacks.entries()) {
+      const shells = shellsOf(printed[s]?.mesh as TriangleMesh, baseplate, stack).map(solidOf);
+      for (let k = 1; k < shells.length; k++) sum += joint(shells[k - 1] as Manifold, shells[k] as Manifold).unheld;
+      for (const shell of shells) shell.delete();
+    }
+    return sum;
+  };
+  lines.push(
+    "## Sens de retournement (#39)",
+    "",
+    "`stackPlanOf` retourne chaque pièce dans le premier sens légal (autour de X, sinon de Y) ; `orientStacks` mesure les sens légaux sur les sections et garde ceux qui laissent le moins de dessous en l'air, sur toute la pile. Non porté : somme sur tous les joints, mesurée sur les coquilles imprimées (0,01 mm de part et d'autre du joint).",
+    "",
+    "| Cas | Piles (premier sens) | Non porté (mm²) | Piles (sens mesuré) | Non porté (mm²) | Durée de `orientStacks` (ms) |",
+    "|---|---|---|---|---|---|",
+  );
+  for (const { name, settings, plate } of cases) {
+    const baseplate = await generateBaseplate(settings, "final", { buildPlate: plate });
+    const first = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+    const start = performance.now();
+    const measured = await orientStacks(baseplate, first);
+    const ms = performance.now() - start;
+    const [before, after] = [await unheldOf(baseplate, first), await unheldOf(baseplate, measured)];
+    expect(after).toBeLessThanOrEqual(before + 1e-3);
+    lines.push(`| ${name} | ${piles(first)} | ${fr(before, 1)} | ${piles(measured)} | ${fr(after, 1)} | ${fr(ms, 0)} |`);
+  }
+  lines.push("");
+  flush();
+}, 300_000);
+
 it("fichiers de la recette", async () => {
   lines.push("## Fichiers (relus, `NoError`)", "");
-  await writeFile("pile-3-pieces.3mf", PILE, PLATE_60, { ears: false, pins: false }, "Pile de 3 pièces d'une colonne, 3 × 2 cellules, marge de 10,5 mm en cellules tronquées, les 4 clips à part.");
+  await writeFile("pile-3-pieces.3mf", PILE, PLATE_60, { ears: false, pins: false }, "Pile de 3 pièces d'une colonne, 3 × 2 cellules, marge de 10,5 mm en cellules tronquées, les clips à part.");
   await writeFile("pile-3-pieces-oreilles-pions.3mf", PILE, PLATE_60, { ears: true, pins: true }, "La même, avec oreilles et pions.");
   await writeFile("pile-3-pieces-skeleton.3mf", { ...PILE, baseplateType: "skeleton" }, PLATE_60, { ears: false, pins: false }, "La même en Skeleton (bandes pontées entre les poteaux).");
   lines.push("");

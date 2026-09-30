@@ -58,6 +58,7 @@ export {
   EAR_RADIUS_MM,
   PIN_DIAMETER_MM,
   STACK_MAX_LAYER_MM,
+  orientStacks,
   printStacks,
   stackPitch,
   stackPlanOf,

@@ -2,7 +2,7 @@
 // 1re à l'endroit, la 2e retournée, une couche d'air entre elles (ADR 0016), dans toutes les
 // versions à tester : 4 types × 2 profils, et pour Normal hybride les oreilles et pions et deux
 // marges empilables. Les fichiers sont ceux du site : baseplate 2 × 1 en mode cellules, découpée
-// par un plateau de 50 × 50 mm en 2 pièces d'une cellule, puis `stackPlanOf` / `printStacks` /
+// par un plateau de 50 × 50 mm en 2 pièces d'une cellule, puis `stackPlanOf` / `orientStacks` / `printStacks` /
 // `printClips` / `serialize3mf` comme l'export « Empiler les pièces ». Seule entorse : la règle
 // `stackRuleOf` n'est PAS appliquée (le site refuse Tray et CLICKbase), à la demande du
 // mainteneur. Variante « autonome » : 2 exemplaires d'une baseplate 1 × 1 non découpée, par un
@@ -14,6 +14,7 @@ import { expect, it } from "vitest";
 import {
   DEFAULT_SETTINGS,
   generateBaseplate,
+  orientStacks,
   printClips,
   printStacks,
   serialize3mf,
@@ -203,12 +204,16 @@ it("piles de 2 plaques d'une cellule : fichiers relus et mesures", async () => {
     const settings = { ...DEFAULT_SETTINGS, ...c.settings };
     const height = baseplate.stats.dimensions.height;
     const rule = stackRuleOf(settings, baseplate.layout);
-    const plan: StackPlan = c.twin
-      ? (() => {
-          const { pitch } = stackPlanOf(baseplate.layout, height, LAYER);
-          return { pitch, stacks: [[{ index: 0, number: 1, flip: "none", offset: [0, 0], z: 0 }, { index: 0, number: 1, flip: "x", offset: [0, 0], z: pitch }]] };
-        })()
-      : stackPlanOf(baseplate.layout, height, LAYER);
+    // Comme l'export : les piles de `stackPlanOf`, chaque pièce retournée dans le sens qui la porte le mieux (#39).
+    const plan: StackPlan = await orientStacks(
+      baseplate,
+      c.twin
+        ? (() => {
+            const { pitch } = stackPlanOf(baseplate.layout, height, LAYER);
+            return { pitch, stacks: [[{ index: 0, number: 1, flip: "none", offset: [0, 0], z: 0 }, { index: 0, number: 1, flip: "x", offset: [0, 0], z: pitch }]] };
+          })()
+        : stackPlanOf(baseplate.layout, height, LAYER),
+    );
     expect(plan.stacks).toHaveLength(1);
     expect(plan.stacks[0]).toHaveLength(2);
     const stack = plan.stacks[0] as StackPlan["stacks"][number];
@@ -293,9 +298,9 @@ it("deux constats : le Skeleton d'une cellule n'a pas de muret entaillé ; retou
   lines.push(
     `- Skeleton, pièces d'une cellule : sans fentes ni aimants, ${fr(skeleton, 1)} mm³ contre ${fr(normal, 1)} mm³ en Normal (écart ${fr(skeleton - normal, 3)} mm³). Le tour du treillis n'est jamais entaillé, et le seul muret intérieur (la coupe) porte le numéro de la pièce, donc reste entier : une plaque Skeleton d'une cellule n'a aucune bande (vérifié aussi, à la main, avec 10,5 mm de marge en cellules tronquées : 7,99 contre 7,98 cm³ avec fentes, soit le seul écart des fentes plus courtes), ses seules différences sont des fentes de clip plus courtes (4,0 mm au lieu de 5). La bande retournée se juge sur \`prototypes/stack/files/pile-3-pieces-skeleton.3mf\`.`,
   );
-  // La paire découpée, 2e plaque retournée autour de Y au lieu de X (plan écrit à la main).
+  // La paire découpée, 2e plaque retournée dans chaque sens (plan écrit à la main).
   const baseplate = await generateBaseplate(PAIR, "final", { buildPlate: PLATE_50 });
-  const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+  const plan = await orientStacks(baseplate, stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER));
   const measure = async (flip: "x" | "y") => {
     const stack = (plan.stacks[0] as StackPlan["stacks"][number]).map((piece, k) => (k === 0 ? piece : { ...piece, flip, offset: [flip === "x" ? -42 : 0, 0] as [number, number] }));
     const [printed] = await printStacks(baseplate, { ...plan, stacks: [stack] }, { layerHeight: LAYER, lineWidth: LINE, ears: false, pins: false });
@@ -306,7 +311,7 @@ it("deux constats : le Skeleton d'une cellule n'a pas de muret entaillé ; retou
   expect(x.gap).toBeCloseTo(LAYER, 4);
   expect(y.gap).toBeCloseTo(LAYER, 4);
   lines.push(
-    `- Paire découpée, Normal hybride : le moteur retourne la 2e plaque autour de X (↕). Ses deux coins de coupe, carrés, tombent alors sur les coins arrondis (rayon 4 mm) du contour de la 1re : ${fr(x.unheld, 1)} mm² en l'air sur ${fr(x.face, 0)} mm² de dessous. Retournée autour de Y (↔), coins carrés sur coins carrés : ${fr(y.unheld, 1)} mm² en l'air, contact ${fr(y.contact, 0)} mm². \`stackPlanOf\` essaie X d'abord et ne regarde pas les coins arrondis : à trancher (ce banc ne modifie pas le moteur).`,
+    `- Paire découpée, Normal hybride : retournée autour de X (↕), la 2e plaque pose ses deux coins de coupe, carrés, sur les coins arrondis (rayon 4 mm) du contour de la 1re : ${fr(x.unheld, 1)} mm² en l'air sur ${fr(x.face, 0)} mm² de dessous. Retournée autour de Y (↔), coins carrés sur coins carrés : ${fr(y.unheld, 1)} mm² en l'air, contact ${fr(y.contact, 0)} mm². \`stackPlanOf\` la retourne d'abord autour de X ; depuis #39, \`orientStacks\` mesure les deux sens et garde Y (colonne « Pile » : ${(plan.stacks[0] ?? []).map(({ number, flip }) => `${number}${flip === "none" ? "" : flip === "x" ? "↕" : "↔"}`).join("-")}).`,
     "",
   );
   writeFileSync(new URL("results.md", OUT), `${readFileSync(new URL("results.md", OUT), "utf8")}\n${lines.join("\n")}`);

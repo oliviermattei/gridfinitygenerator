@@ -4,6 +4,7 @@ import {
   generateClip,
   generateTestKit,
   loadEngine,
+  orientStacks,
   printClips,
   printPieces,
   printStacks,
@@ -80,7 +81,8 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
         // The pieces, each its own object, or the stacks, each an object of a shell per piece.
         let parts: { mesh: TriangleMesh; name: string; file: string }[];
         if (stacked && request.stack) {
-          const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, request.settings.layerHeight);
+          // The stacks of the page (`stackPlanOf`), each piece turned the way that holds it best (#39).
+          const plan = await orientStacks(generated, stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, request.settings.layerHeight));
           const printed = await printStacks(generated, plan, { ...request.stack, layerHeight: request.settings.layerHeight, lineWidth: request.settings.lineWidth });
           stacks = printed.length;
           parts = printed.map(({ mesh: stackMesh, pieces }, index) => ({

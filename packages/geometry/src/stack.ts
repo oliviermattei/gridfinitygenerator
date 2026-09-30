@@ -1,5 +1,6 @@
 // Stacked print of the pieces of a cut baseplate (#28, ADR 0016): the pieces printed one on
 // top of another in a single run, in one material, a layer of air between two of them.
+import type { CrossSection } from "manifold-3d";
 import type { Baseplate } from "./baseplate";
 import type { BaseplateLayout } from "./layout";
 import { loadManifold, withArena } from "./manifold";
@@ -12,7 +13,8 @@ import { circle, meshOf, rect } from "./shapes";
  * How a piece lies in a stack: the first one upright (`"none"`), every other one upside
  * down, turned half a turn about the X axis (`"x"`, its back to the front) or the Y axis
  * (`"y"`, its left to the right), so that its murets grow from their flats and every slope
- * prints over the one beneath (Stu142's method).
+ * prints over the one beneath (Stu142's method). Half a turn in the plane on top of one gives
+ * the other: these are the only two ways to lay a piece upside down on the same lattice.
  */
 export type StackFlip = "none" | "x" | "y";
 
@@ -225,7 +227,9 @@ function translated({ box: [x0, y0, x1, y1], phase: [px, py], walls, supports }:
  * keeps (its supports, #29) on the same of the other. The largest pieces go
  * first; each piece goes on the stack whose top holds it and is the smallest, or starts a new
  * stack. A mirror of a piece about one axis only: the pieces with a margin on two opposite
- * corners of the baseplate cannot all share one stack.
+ * corners of the baseplate cannot all share one stack. Each piece is turned the first way
+ * that lays it (about X, else Y); `orientStacks` then picks, on the meshes, the ways that
+ * hold the pieces best, without changing the stacks.
  */
 export function stackPlanOf(
   layout: Pick<BaseplateLayout, "columns" | "rows" | "cellSize" | "margins" | "split"> & Partial<Pick<BaseplateLayout, "supports">>,
@@ -258,6 +262,155 @@ export function stackPlanOf(
     }
   }
   return { pitch, stacks: stacks.map(({ pieces: stacked }) => stacked) };
+}
+
+/** How far inside its top or its bottom a piece is cut to measure the face it rests on or shows, in millimetres. */
+const FACE_DEPTH_MM = 0.01;
+/** Smallest saving of unheld area worth other flips than those of the plan, in mm². */
+const AREA_SLACK_MM2 = 0.01;
+
+/**
+ * `plan` with each piece upside down turned the way that holds the stack best (#39): the
+ * flips (and their translations) whose undersides rest the least on nothing, the area of the
+ * underside of each piece out of the face of the piece beneath, summed over the stack and
+ * measured on the sections of the meshes just inside the joint. The stacks, their order and
+ * the rules of `stackPlanOf` stay: every candidate lays the piece as `stackPlanOf` would on
+ * the piece beneath. The flips of `plan` are kept unless others leave more than
+ * `AREA_SLACK_MM2` less in the air. Why it matters: the corners of a cut are square and those
+ * of the outline rounded; turned about X, the upper of two pieces of one cell lays its square
+ * corners over the rounded ones of the lower (6.9 mm² in the air), about Y over its square ones.
+ */
+export async function orientStacks(baseplate: Pick<Baseplate, "mesh" | "layout" | "pieces" | "stats">, plan: StackPlan): Promise<StackPlan> {
+  const wasm = await loadManifold();
+  const { layout } = baseplate;
+  const { cellSize } = layout;
+  const height = baseplate.stats.dimensions.height;
+  const pieces = piecesOf(layout);
+  return withArena((own) => {
+    // The top and the bottom face of each piece, in the plane of the baseplate: sliced once.
+    const faces = new Map<string, CrossSection>();
+    const faceOf = (index: number, face: "top" | "bottom") => {
+      const key = `${index} ${face}`;
+      let section = faces.get(key);
+      if (!section) {
+        const mesh = pieceMesh(baseplate, baseplate.pieces[index] as Baseplate["pieces"][number]);
+        section = own(new wasm.CrossSection(sectionOf(mesh, face === "top" ? height - FACE_DEPTH_MM : FACE_DEPTH_MM), "EvenOdd"));
+        faces.set(key, section);
+      }
+      return section;
+    };
+    // A face where its piece lies in the stack, mirrored as its piece then moved: its top upright,
+    // its bottom upside down, facing up; its top upside down, facing down.
+    const placedFace = ({ index, flip, offset }: Pick<StackedPiece, "index" | "flip" | "offset">, face: "top" | "bottom") => {
+      const section = faceOf(index, face);
+      const mirrored = flip === "none" ? section : own(section.mirror(flip === "x" ? [0, 1] : [1, 0]));
+      return own(mirrored.translate(offset));
+    };
+    // The area of the underside of `upper` that does not rest on `lower`, the piece beneath it.
+    const known = new Map<string, number>();
+    const unheld = (lower: Pick<StackedPiece, "index" | "flip" | "offset">, upper: Pick<StackedPiece, "index" | "flip" | "offset">) => {
+      const key = [lower.index, lower.flip, ...lower.offset, upper.index, upper.flip, ...upper.offset].join(" ");
+      let area = known.get(key);
+      if (area === undefined) {
+        area = own(placedFace(upper, "top").subtract(placedFace(lower, lower.flip === "none" ? "top" : "bottom"))).area();
+        known.set(key, area);
+      }
+      return area;
+    };
+
+    const oriented = plan.stacks.map((stack) => {
+      const [first] = stack;
+      if (!first || stack.length < 2) return stack;
+      // The ways each piece can lie, from the bottom up, each with the least unheld area below it
+      // and the way beneath it that gives it; one per flip and translation, since what comes above
+      // depends on nothing else.
+      interface Way {
+        flip: StackFlip;
+        offset: [number, number];
+        top: Placed;
+        unheld: number;
+        beneath: Way | null;
+      }
+      let ways: Way[] = [{ flip: first.flip, offset: first.offset, top: translated(flipped(pieces[first.index] as Placed, first.flip, cellSize), first.offset, cellSize), unheld: 0, beneath: null }];
+      for (let k = 1; k < stack.length; k++) {
+        const { index } = stack[k] as StackedPiece;
+        const below = (stack[k - 1] as StackedPiece).index;
+        const next: Way[] = [];
+        for (const way of ways)
+          for (const flip of ["x", "y"] as const) {
+            const upside = flipped(pieces[index] as Placed, flip, cellSize);
+            const dx = shiftAlong(way.top, upside, 0, cellSize);
+            const dy = shiftAlong(way.top, upside, 1, cellSize);
+            if (dx === null || dy === null) continue;
+            const top = translated(upside, [dx, dy], cellSize);
+            if (!supportsHeld(way.top, top)) continue;
+            const offset: [number, number] = [dx, dy];
+            const total = way.unheld + unheld({ index: below, flip: way.flip, offset: way.offset }, { index, flip, offset });
+            const same = next.find((other) => other.flip === flip && Math.abs(other.offset[0] - dx) < EPSILON_MM && Math.abs(other.offset[1] - dy) < EPSILON_MM);
+            if (!same) next.push({ flip, offset, top, unheld: total, beneath: way });
+            else if (total < same.unheld - AREA_SLACK_MM2) Object.assign(same, { unheld: total, beneath: way });
+          }
+        if (next.length === 0) return stack; // not a plan of stackPlanOf: left as it is
+        ways = next;
+      }
+      // The unheld area of the plan's own flips: kept unless another way holds strictly more.
+      let planned = 0;
+      for (let k = 1; k < stack.length; k++) planned += unheld(stack[k - 1] as StackedPiece, stack[k] as StackedPiece);
+      const best = ways.reduce((a, b) => (b.unheld < a.unheld - AREA_SLACK_MM2 ? b : a));
+      if (best.unheld >= planned - AREA_SLACK_MM2) return stack;
+      const chosen: Way[] = [];
+      for (let way: Way | null = best; way; way = way.beneath) chosen.unshift(way);
+      return stack.map((piece, k) => ({ ...piece, flip: (chosen[k] as Way).flip, offset: (chosen[k] as Way).offset }));
+    });
+    return { ...plan, stacks: oriented };
+  });
+}
+
+/**
+ * The section of a closed mesh by the horizontal plane at `z`: its contours, each vertex where
+ * an edge of the mesh crosses the plane. A vertex on the plane counts as below it. Much cheaper
+ * than a manifold solid sliced, whose construction checks the whole mesh.
+ */
+function sectionOf({ positions, indices }: TriangleMesh, z: number): [number, number][][] {
+  const count = positions.length / 3;
+  const above = (v: number) => (positions[3 * v + 2] as number) > z;
+  const key = (a: number, b: number) => Math.min(a, b) * count + Math.max(a, b);
+  const points = new Map<number, [number, number]>();
+  const crossing = (a: number, b: number) => {
+    const at = key(a, b);
+    if (!points.has(at)) {
+      const [za, zb] = [positions[3 * a + 2] as number, positions[3 * b + 2] as number];
+      const t = (z - za) / (zb - za);
+      const [xa, ya] = [positions[3 * a] as number, positions[3 * a + 1] as number];
+      points.set(at, [xa + t * ((positions[3 * b] as number) - xa), ya + t * ((positions[3 * b + 1] as number) - ya)]);
+    }
+    return at;
+  };
+  // Each triangle across the plane gives a segment, from the edge that goes down to the one that
+  // goes up (counter-clockwise triangles: the material on its left); the edge a segment ends on
+  // starts the segment of the triangle beyond it.
+  const next = new Map<number, number>();
+  for (let t = 0; t < indices.length; t += 3) {
+    const corners = [indices[t] as number, indices[t + 1] as number, indices[t + 2] as number];
+    let [down, up] = [-1, -1];
+    for (let k = 0; k < 3; k++) {
+      const [a, b] = [corners[k] as number, corners[(k + 1) % 3] as number];
+      if (above(a) && !above(b)) down = crossing(a, b);
+      else if (!above(a) && above(b)) up = crossing(a, b);
+    }
+    if (down >= 0 && up >= 0) next.set(down, up);
+  }
+  const contours: [number, number][][] = [];
+  for (const start of next.keys()) {
+    if (!points.has(start)) continue; // already in a contour
+    const contour: [number, number][] = [];
+    for (let at: number | undefined = start; at !== undefined && points.has(at); at = next.get(at)) {
+      contour.push(points.get(at) as [number, number]);
+      points.delete(at);
+    }
+    if (contour.length >= 3) contours.push(contour);
+  }
+  return contours;
 }
 
 /** Options of a printed stack. */
