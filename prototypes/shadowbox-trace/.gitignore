@@ -1,4 +1,4 @@
-# Téléchargés par `pnpm assets` : servis depuis notre origine, mais pas versionnés (11 à 60 Mo).
+# Téléchargés par `pnpm assets` : servis depuis notre origine, mais pas versionnés (≈ 820 Mo en tout).
 public/vendor/
 public/models/
 # Régénérée par `pnpm bench` (14 Mo).

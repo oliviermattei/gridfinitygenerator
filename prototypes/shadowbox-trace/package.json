@@ -6,6 +6,7 @@
   "scripts": {
     "assets": "node scripts/fetch-assets.mjs",
     "dev": "vite",
+    "page": "node scripts/run-page.mjs",
     "bench": "vitest run"
   },
   "dependencies": {

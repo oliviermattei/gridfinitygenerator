@@ -7,21 +7,30 @@
     <link rel="icon" href="data:," />
     <style>
       :root { color-scheme: light dark; --line: #8884; --accent: #1a7f37; --warn: #b35900; font: 14px/1.4 system-ui, sans-serif; }
-      body { margin: 0; display: grid; grid-template-columns: 360px 1fr; min-height: 100vh; }
+      body { margin: 0; display: grid; grid-template-columns: 340px 1fr; min-height: 100vh; }
       aside { padding: 12px 16px; border-right: 1px solid var(--line); overflow-y: auto; max-height: 100vh; box-sizing: border-box; }
       main { padding: 12px; overflow: auto; max-height: 100vh; box-sizing: border-box; }
       h1 { font-size: 15px; margin: 0 0 4px; }
       h2 { font-size: 13px; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
       .banner { background: #b3590022; border: 1px solid #b3590066; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
+      .hint { font-size: 12px; opacity: .7; }
       label { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin: 4px 0; }
       input[type=number] { width: 80px; }
-      button { margin: 4px 4px 0 0; }
       canvas { max-width: 100%; display: block; border: 1px solid var(--line); }
-      #photo { cursor: crosshair; }
-      #rectified { cursor: copy; margin-top: 12px; }
+      #photo { cursor: crosshair; max-height: 220px; }
+      /* Une colonne par méthode, côte à côte : on compare d'un coup d'œil ; un clic agrandit une image. */
+      .panels { display: grid; grid-template-columns: repeat(5, minmax(240px, 1fr)); gap: 8px; margin-top: 12px; align-items: start; }
+      .panel { border: 1px solid var(--line); border-radius: 6px; padding: 8px; min-width: 0; overflow-x: auto; }
+      .panel.zoom { grid-column: 1 / -1; }
+      .panel h2 { margin: 0; }
+      .panel canvas { cursor: zoom-in; margin: 6px 0; width: 100%; }
+      .panel.zoom canvas { cursor: zoom-out; }
+      .status { font-size: 12px; min-height: 1.4em; }
       pre, .state { font: 12px/1.4 ui-monospace, monospace; white-space: pre-wrap; background: #8881; padding: 6px 8px; border-radius: 6px; margin: 6px 0; }
-      table { border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+      table { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
       td, th { border: 1px solid var(--line); padding: 2px 6px; text-align: right; }
+      td small { opacity: .7; }
+      .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
       .ok { color: var(--accent); } .warn { color: var(--warn); }
       @media (max-width: 800px) { body { grid-template-columns: 1fr; } aside { max-height: none; border-right: 0; } }
     </style>
@@ -29,51 +38,68 @@
   <body>
     <aside>
       <h1>Contour de shadowbox, 100 % navigateur</h1>
-      <div class="banner">PROTOTYPE JETABLE (#36). Aucune image ni requête ne quitte cette page : OpenCV.js, SlimSAM et le runtime ONNX sont servis par cette origine.</div>
+      <div class="banner">PROTOTYPE JETABLE (#36). Aucune image ni requête ne quitte cette page : OpenCV.js, les modèles et le runtime ONNX sont servis par cette origine.</div>
 
-      <h2>1. Photo</h2>
+      <h2>Photo</h2>
       <input id="file" type="file" accept="image/*" />
+      <div class="hint">Tout se lance seul : coins, redressement, objets, puis chaque méthode. Un réglage modifié relance le calcul.</div>
       <label>Feuille
-        <select id="sheet"><option value="A4">A4 (210 × 297)</option><option value="Letter">Letter (215,9 × 279,4)</option><option value="custom">Cotes mesurées</option></select>
+        <select id="sheet"><option value="auto">Automatique (A4 ou Letter)</option><option value="A4">A4 (210 × 297)</option><option value="Letter">Letter (215,9 × 279,4)</option><option value="custom">Cotes mesurées</option></select>
       </label>
       <label>Largeur mesurée (mm) <input id="sheetW" type="number" step="0.1" value="210" /></label>
       <label>Hauteur mesurée (mm) <input id="sheetH" type="number" step="0.1" value="297" /></label>
 
-      <h2>2. Coins de la feuille</h2>
-      <div>Détectés automatiquement ; glisser un coin pour le corriger.</div>
-      <button id="rectify">Redresser</button>
-
-      <h2>3. Tracer (clic sur un outil)</h2>
-      <label>Méthode
-        <select id="method">
-          <option value="classical">Classique (défaut)</option>
-          <option value="sam">SlimSAM, 2 passes</option>
-          <option value="sam-refined">SlimSAM + bord recalé</option>
-        </select>
-      </label>
+      <h2>Classique</h2>
       <label>Seuil manuel (vide = auto) <input id="threshold" type="number" min="1" max="255" placeholder="auto" /></label>
-      <label>SlimSAM : poids
+      <label>Ouverture, bruit (mm) <input id="open" type="number" min="0" step="0.1" value="0.3" /></label>
+      <label>Fermeture, trous du bord (mm) <input id="close" type="number" min="0" step="0.1" value="0.5" /></label>
+
+      <h2>SlimSAM, 2 passes</h2>
+      <label>Lancer SlimSAM <input id="samOn" type="checkbox" /></label>
+      <div class="hint">Décoché : sur les vraies photos il est lent et se trompe souvent (outil coupé, ou feuille entière prise pour l'objet), voir le README.</div>
+      <label>Poids
         <select id="dtype"><option value="auto">auto (fp16 en WebGPU, fp32 en WASM)</option><option value="fp16">fp16 (20,8 Mo)</option><option value="q8">quantifié (13,8 Mo)</option><option value="fp32">fp32 (39,9 Mo)</option></select>
       </label>
-      <label>SlimSAM : moteur
+      <label>Moteur
         <select id="device"><option value="webgpu">WebGPU</option><option value="wasm">WASM (CPU)</option></select>
       </label>
+      <label>Points d'amorce par objet <input id="seedCount" type="number" min="1" max="8" step="1" value="3" /></label>
+      <label>Marge de la fenêtre, passe 2 (mm) <input id="pad" type="number" min="0" step="1" value="5" /></label>
 
-      <h2>4. Mesures</h2>
-      <label>Épaisseur de l'objet h (mm) <input id="height" type="number" step="0.5" value="10" /></label>
-      <label>Distance photo d (mm) <input id="distance" type="number" step="10" value="500" /></label>
-      <label>Longueur au pied à coulisse <input id="caliperL" type="number" step="0.01" /></label>
-      <label>Largeur au pied à coulisse <input id="caliperW" type="number" step="0.01" /></label>
-      <label>Conditions <input id="conditions" type="text" placeholder="fond, lumière, zoom…" /></label>
-      <button id="record">Ajouter au tableau</button>
-      <button id="copy">Copier le tableau (Markdown)</button>
+      <h2>SlimSAM + bord recalé</h2>
+      <label>Lancer SlimSAM + bord recalé <input id="refinedOn" type="checkbox" /></label>
+      <div class="hint">Refait son propre passage de SlimSAM (mêmes poids, moteur, amorces et marge), puis recale le bord.</div>
+      <label>Bande autour du bord (mm) <input id="band" type="number" min="0.5" step="0.5" value="1.5" /></label>
 
-      <h2>5. Gabarit d'essai</h2>
-      <label>Jeu (mm) <input id="clearance" type="number" step="0.1" value="0.5" /></label>
-      <label>Paroi (mm) <input id="wall" type="number" step="0.5" value="3" /></label>
-      <label>Profondeur (mm) <input id="depth" type="number" step="0.2" value="2" /></label>
-      <label>Fond (mm, 0 = ajouré) <input id="floor" type="number" step="0.2" value="0" /></label>
-      <button id="stl">Télécharger le STL</button>
+      <h2>IS-Net</h2>
+      <label>Lancer IS-Net <input id="isnetOn" type="checkbox" checked /></label>
+      <label>Poids
+        <select id="isnetDtype"><option value="auto">auto (fp16 en WebGPU, fp32 en WASM)</option><option value="fp16">fp16 (88,1 Mo)</option><option value="q8">quantifié (44,3 Mo)</option><option value="fp32">fp32 (176,1 Mo)</option></select>
+      </label>
+      <label>Moteur
+        <select id="isnetDevice"><option value="webgpu">WebGPU</option><option value="wasm">WASM (CPU)</option></select>
+      </label>
+      <label>Seuil du masque (1 à 255) <input id="isnetThreshold" type="number" min="1" max="255" value="128" /></label>
+      <label>Passe 2 autour de chaque objet <input id="isnetTwo" type="checkbox" /></label>
+      <label>Marge de la fenêtre, passe 2 (mm) <input id="isnetPad" type="number" min="0" step="1" value="5" /></label>
+
+      <h2>BiRefNet Lite</h2>
+      <label>Lancer BiRefNet <input id="birefnetOn" type="checkbox" /></label>
+      <div class="hint">Décoché : il ne tourne pas dans le navigateur à ce jour (mémoire WASM de 4 Go dépassée, voir le README).</div>
+      <label>Poids
+        <select id="birefnetDtype"><option value="auto">auto (fp16 en WebGPU, fp32 en WASM)</option><option value="fp16">fp16 (114,5 Mo)</option><option value="fp32">fp32 (224,0 Mo)</option></select>
+      </label>
+      <label>Moteur
+        <select id="birefnetDevice"><option value="webgpu">WebGPU</option><option value="wasm">WASM (CPU)</option></select>
+      </label>
+      <label>Seuil du masque (1 à 255) <input id="birefnetThreshold" type="number" min="1" max="255" value="128" /></label>
+      <label>Passe 2 autour de chaque objet <input id="birefnetTwo" type="checkbox" /></label>
+      <label>Marge de la fenêtre, passe 2 (mm) <input id="birefnetPad" type="number" min="0" step="1" value="5" /></label>
+
+      <h2>Contour (toutes les méthodes)</h2>
+      <label>Surface minimale d'un objet (mm²) <input id="minArea" type="number" min="1" step="5" value="20" /></label>
+      <label>Simplification (mm) <input id="tolerance" type="number" min="0" step="0.05" value="0.1" /></label>
+      <label>Trou bouché sous (mm²) <input id="minHole" type="number" min="0" step="5" value="20" /></label>
 
       <h2>État</h2>
       <div id="state" class="state">Chargement d'OpenCV.js…</div>
@@ -82,8 +108,14 @@
     </aside>
     <main>
       <canvas id="photo"></canvas>
-      <canvas id="rectified"></canvas>
-      <table id="log"><thead><tr><th>#</th><th>Méthode</th><th>Conditions</th><th>L trouvée</th><th>l trouvée</th><th>L pied</th><th>l pied</th><th>ΔL</th><th>Δl</th><th>Parallaxe estimée</th><th>Temps</th></tr></thead><tbody></tbody></table>
+      <div class="hint">Coins de la feuille détectés automatiquement ; glisser un coin pour le corriger.</div>
+      <div class="panels">
+        <section class="panel" id="classical"><h2>Classique</h2><div class="status"></div><canvas></canvas><table></table></section>
+        <section class="panel" id="sam"><h2>SlimSAM, 2 passes</h2><div class="status"></div><canvas></canvas><table></table></section>
+        <section class="panel" id="sam-refined"><h2>SlimSAM + bord recalé</h2><div class="status"></div><canvas></canvas><table></table></section>
+        <section class="panel" id="isnet"><h2>IS-Net</h2><div class="status"></div><canvas></canvas><table></table></section>
+        <section class="panel" id="birefnet"><h2>BiRefNet Lite</h2><div class="status"></div><canvas></canvas><table></table></section>
+      </div>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

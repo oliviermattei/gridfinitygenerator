@@ -18,12 +18,14 @@ export interface Measure {
   width: number;
   /** Aire nette (trous déduits), en mm². */
   area: number;
+  /** Les 4 coins de ce rectangle, dans le repère du contour. */
+  box: Point[];
 }
 
 export function measure(outline: CrossSection): Measure {
   const points = outline.toPolygons().flat() as Point[];
-  const { length, width } = minAreaRect(points);
-  return { length, width, area: outline.area() };
+  const { length, width, corners } = minAreaRect(points);
+  return { length, width, area: outline.area(), box: corners };
 }
 
 export interface PocketOptions {
