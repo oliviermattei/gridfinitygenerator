@@ -43,7 +43,7 @@ Limites de ce tout-automatique :
 - **Un seul point d'amorce ne suffit pas** : posé au cœur du manche du tournevis, il fait parfois garder à SAM le manche sans la tige (96 × 28 mm au lieu de 190 × 28), d'un lancement à l'autre. Avec 3 points répartis dans l'objet, il le garde entier.
 - **La passe 2 recadrée dessert IS-Net** : sur une fenêtre autour d'un seul outil, il ne garde plus qu'une partie du tournevis (135 mm au lieu de 190) et perd la clé Allen, alors qu'en une passe sur la feuille il trace les quatre outils.
 - **BiRefNet Lite ne tourne pas** avec `onnxruntime-web` 1.31.0-dev (PC à GPU Intel Xe, Chrome) : en WebGPU, les `Split` à 16 et 32 sorties de son décodeur dépassent les 16 tampons permis par shader (« Too many storage buffers in shader »), et cet échec casse aussi les modèles lancés ensuite sur WebGPU ; ces nœuds renvoyés au CPU, c'est la mémoire WASM de 4 Go qui déborde (`std::bad_alloc`), comme en WASM seul. Son entrée est fixée à 1024 × 1024 : on ne peut pas la réduire.
-- **Licence d'IS-Net à trancher** : le dépôt `onnx-community/ISNet-ONNX` est étiqueté AGPL-3.0 (le code d'origine est Apache-2.0, voir la note de recherche) ; bon pour ce banc, pas acquis pour le site (MIT).
+- **Les poids d'IS-Net n'ont pas de licence de leurs auteurs** (vérifié le 2026-10-02, détail dans la note de recherche) : Apache-2.0 ne couvre que le code et la métrique, le jeu DIS5K est réservé à l'usage non commercial, et la question posée aux auteurs (`xuebinqin/DIS` #150) est sans réponse. L'étiquette AGPL-3.0 d'`onnx-community/ISNet-ONNX` et l'étiquette MIT d'`imgly/isnet-general-onnx` viennent de tiers et se contredisent. Bon pour ce banc, **pas embarquable dans le site (MIT) en l'état**.
 
 La page ne fait plus le clic sur un outil, le tableau des cotes au pied à coulisse, l'estimation de la parallaxe ni le gabarit STL : ils sont dans l'historique git (`pocketBlock` et `toStl` restent dans `src/pocket.ts`, vérifiés par le banc).
 
@@ -51,7 +51,7 @@ La page ne fait plus le clic sur un outil, le tableau des cotes au pied à couli
 
 **Oui, tout tient dans le navigateur.** Sur des photos de synthèse (12 MP, sans parallaxe), la chaîne classique tient les cotes à ±0,16 mm dans presque tous les cas, 0,31 mm au pire. La page ne contacte que sa propre origine.
 
-**Mais sur de vraies photos, la méthode la plus fiable du premier coup est IS-Net, pas la classique** (détail ci-dessous) : il trace le bon nombre d'outils sur les 11 photos conformes et rien sur la feuille vide, là où la classique prend une ombre ou un dégradé d'éclairage pour un objet sur 2 photos, et où SlimSAM se trompe sur 8. Sa licence reste à trancher avant de l'embarquer.
+**Mais sur de vraies photos, la méthode la plus fiable du premier coup est IS-Net, pas la classique** (détail ci-dessous) : il trace le bon nombre d'outils sur les 11 photos conformes et rien sur la feuille vide, là où la classique prend une ombre ou un dégradé d'éclairage pour un objet sur 2 photos, et où SlimSAM se trompe sur 8. Ses poids n'ont cependant pas de licence de leurs auteurs : il n'est pas embarquable dans le site en l'état (voir « Limites de ce tout-automatique »).
 
 ### Sur de vraies photos (13 photos de trois dépôts open source)
 
