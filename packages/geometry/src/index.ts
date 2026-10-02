@@ -90,9 +90,13 @@ export {
   BIN_SETTINGS,
   DEFAULT_BIN_SETTINGS,
   MAX_COMPARTMENTS_PER_CELL,
+  BIN_SIDES,
   STACKING_LIPS,
   clampBinSettings,
+  labelSideOf,
+  oppositeSide,
   type BinSettings,
+  type BinSide,
   type StackingLip,
 } from "./bin-settings";
 export { decodeBinSettings, encodeBinSettings, openingBinSettings } from "./bin-share-link";

@@ -353,3 +353,24 @@ export function LipIcon({ className }: ArtProps) {
     </svg>
   );
 }
+
+/** Family icon "Pelle": a compartment seen from the side, its floor curving up into the front wall. */
+export function ScoopIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <path d="M4 5 V19 H20 V5" strokeOpacity={0.55} />
+      <path d="M4 9 Q4 19 14 19" />
+    </svg>
+  );
+}
+
+/** Family icon "Étiquette": a shelf against the wall, its console under it, and a label on it. */
+export function LabelIcon({ className }: ArtProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
+      <path d="M20 4 V20" strokeOpacity={0.55} />
+      <path d="M8 8 H20 M8 8 V6.5 M20 14 L14 8" />
+      <path d="M10 6.5 H18" strokeWidth={2.2} />
+    </svg>
+  );
+}

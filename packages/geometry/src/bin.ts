@@ -1,10 +1,10 @@
 import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
 import type { Quality } from "./baseplate";
-import { clampBinSettings, type BinSettings, type StackingLip } from "./bin-settings";
+import { clampBinSettings, labelSideOf, type BinSettings, type BinSide, type StackingLip } from "./bin-settings";
 import { loadManifold, withArena, type Own } from "./manifold";
 import type { TriangleMesh } from "./mesh";
 import { fitsOnBuildPlate, layerCount, roundUpToLayer, type BuildPlate } from "./print";
-import { circle, loft, meshOf, roundedRect } from "./shapes";
+import { loft, meshOf, roundedRect } from "./shapes";
 
 /**
  * A Gridfinity bin (spec v2, #32): a socle of one standard foot per cell, walls, a stacking
@@ -81,8 +81,19 @@ export function lipHeight(lip: StackingLip): number {
 export const FILLET_RADIUS_MM = 5;
 /** Radius of the scoop (pelle), when it fits. */
 export const SCOOP_RADIUS_MM = 12;
-/** Depth of a label tab from the back wall (onglet d'étiquette), and the thickness of its front edge. */
-export const LABEL_TAB = { depth: 12, edge: 1.2 } as const;
+/**
+ * The label tab (onglet d'étiquette), a ribbed shelf: its thickness; the rim (liseré) along its
+ * front edge, whose top is the top of the useful space; the 45° fillet under its root; and the
+ * consoles at 45° under it, one in the middle of each cell along its wall, none closer than
+ * `consoleClearance` to the end of the compartment, where a wall or a divider already holds it.
+ */
+export const LABEL_TAB = {
+  shelf: 1.6,
+  rim: { width: 0.8, height: 1 },
+  root: 2,
+  console: 1.2,
+  consoleClearance: 5,
+} as const;
 
 /** Segments per quarter circle (the baseplate's: 8 in preview, 32 in final). */
 const SEGMENTS_PER_QUARTER: Record<Quality, number> = { preview: 8, final: 32 };
@@ -110,7 +121,12 @@ export interface BinLayout {
   /** Radii actually used (0 when off or when there is no room). */
   fillet: number;
   scoop: number;
+  scoopSide: BinSide;
+  /** Depth of the label tab actually used (0 when off or when there is no room), and its side. */
   labelTab: number;
+  labelSide: BinSide;
+  /** How far the consoles of the label tab reach under it, from its wall (at 45°, as deep as high). */
+  consoleReach: number;
 }
 
 export interface BinStats {
@@ -218,10 +234,14 @@ export function binLayoutOf(settings: BinSettings, options: GenerateBinOptions =
   const room = usefulTop - floor;
   const half = Math.min(compartment.width, compartment.depth) / 2;
   const fillet = settings.fillet ? Math.max(0, Math.min(options.filletRadius ?? FILLET_RADIUS_MM, half - 0.5, room / 2)) : 0;
-  const scoop = settings.scoop ? Math.max(0, Math.min(SCOOP_RADIUS_MM, compartment.depth / 2, room - 1)) : 0;
-  // The label tab: its underside at 45° must stay above the floor, and leave room in front of it.
-  const tabRoom = room - LABEL_TAB.edge - 1;
-  const tab = settings.labelTab ? Math.min(LABEL_TAB.depth, compartment.depth * 0.45, tabRoom) : 0;
+  // Across the compartment from its side: the depth for the front and the back, the width for the sides.
+  const across = (side: BinSide) => (side === "front" || side === "back" ? compartment.depth : compartment.width);
+  const scoop = settings.scoop ? Math.max(0, Math.min(SCOOP_RADIUS_MM, across(settings.scoopSide) / 2, room - 1)) : 0;
+  // The label tab, under half the compartment across; its consoles, at 45°, reach as far as
+  // the height under the shelf allows, 1 mm above the floor.
+  const labelSide = labelSideOf(settings);
+  const tab = settings.labelTab ? Math.min(settings.labelDepth, across(labelSide) * 0.45) : 0;
+  const consoleReach = Math.max(0, Math.min(tab - 1, room - LABEL_TAB.rim.height - LABEL_TAB.shelf - 1));
   return {
     width,
     depth,
@@ -234,7 +254,10 @@ export function binLayoutOf(settings: BinSettings, options: GenerateBinOptions =
     compartment,
     fillet,
     scoop: scoop >= 2 ? scoop : 0,
+    scoopSide: settings.scoopSide,
     labelTab: tab >= 3 ? tab : 0,
+    labelSide,
+    consoleReach,
   };
 }
 
@@ -292,7 +315,7 @@ function buildBin(
 ): { solid: Manifold; usefulVolume: number } {
   const segments = SEGMENTS_PER_QUARTER[quality];
   const { cellSize, columns, rows, lip } = settings;
-  const { width, depth, wallTop, height, wall, divider, floor, usefulTop, compartment } = layout;
+  const { width, depth, wallTop, height, wall, divider, usefulTop, compartment } = layout;
   const footSize = cellSize - FOOT.gap;
 
   // The feet, one per cell, under a body with the outline of the bin.
@@ -323,19 +346,17 @@ function buildBin(
     solid = own(solid.subtract(own(wasm.Manifold.compose(cavities))));
   }
 
-  // The compartments, each a box rounded at its floor and in its vertical corners. Without a
-  // lip they go through the top; under a lip they stop where its support starts.
+  // The compartments, each a box rounded at its floor (the fillet), its scoop side rounded
+  // wider (the scoop, which turns into its two corners), and rounded in its vertical corners.
+  // Without a lip they go through the top; under a lip they stop where its support starts.
   const through = lip === "none" ? 1 : 0;
   const boxTop = usefulTop + through;
   const verticalRadius = Math.min(Math.max(layout.fillet, FOOT.topRadius - wall), Math.min(compartment.width, compartment.depth) / 2 - 0.25);
-  const filletLevels: [number, number][] = [];
-  const steps = layout.fillet > 0 ? FILLET_STEPS[quality] : 0;
-  for (let k = 0; steps > 0 && k <= steps; k++) {
-    const angle = (k / steps) * (Math.PI / 2);
-    filletLevels.push([floor + layout.fillet * (1 - Math.cos(angle)), layout.fillet * (1 - Math.sin(angle))]);
-  }
-  if (steps === 0) filletLevels.push([floor, 0]);
-  const boxLevels: [number, number][] = [...filletLevels, [boxTop, 0]];
+  const boxLevels = compartmentLevels(layout, verticalRadius, boxTop, FILLET_STEPS[quality]);
+  const cellsAlong = (side: BinSide) =>
+    side === "front" || side === "back"
+      ? Array.from({ length: columns }, (_, i) => (i + 0.5) * cellSize - (columns * cellSize) / 2)
+      : Array.from({ length: rows }, (_, j) => (j + 0.5) * cellSize - (rows * cellSize) / 2);
   const x0 = -width / 2 + wall;
   const y0 = -depth / 2 + wall;
   const boxes: Manifold[] = [];
@@ -345,45 +366,13 @@ function buildBin(
     for (let j = 0; j < settings.compartmentRows; j++) {
       const cx0 = x0 + i * (compartment.width + divider);
       const cy0 = y0 + j * (compartment.depth + divider);
-      const [cx1, cy1] = [cx0 + compartment.width, cy0 + compartment.depth];
-      const box = roundedLoft(
-        wasm,
-        own,
-        [(cx0 + cx1) / 2, (cy0 + cy1) / 2],
-        compartment.width,
-        compartment.depth,
-        verticalRadius,
-        boxLevels,
-        segments,
-      );
+      const bounds: Bounds = [cx0, cx0 + compartment.width, cy0, cy0 + compartment.depth];
+      const box = compartmentBox(wasm, own, bounds, boxLevels, layout.scoop > 0 ? layout.scoopSide : null, segments);
       boxes.push(box);
       usefulVolume += box.volume();
       if (through > 0) usefulVolume -= through * roundedRectArea(compartment.width, compartment.depth, verticalRadius);
-      // The scoop: a quarter round of material against the front of the compartment.
-      if (layout.scoop > 0) {
-        const r = layout.scoop;
-        const block = own(wasm.CrossSection.ofPolygons([[[cy0 - 1, floor - 1], [cy0 + r, floor - 1], [cy0 + r, floor + r], [cy0 - 1, floor + r]]]));
-        const round = own(wasm.CrossSection.ofPolygons([circle(r, 4 * segments).map(([y, z]) => [y + cy0 + r, z + floor + r] as [number, number])]));
-        const scoop = own(alongX(wasm, own, own(block.subtract(round)), cx0 - 1, cx1 + 1).intersect(box));
-        extras.push(scoop);
-        usefulVolume -= scoop.volume();
-      }
-      // The label tab: a shelf against the back of the compartment, its underside at 45°.
       if (layout.labelTab > 0) {
-        const d = layout.labelTab;
-        const top = usefulTop;
-        const shelf = own(
-          wasm.CrossSection.ofPolygons([
-            [
-              [cy1 + 1, top + 1 - LABEL_TAB.edge - d - 1],
-              [cy1 + 1, top],
-              [cy1 - d, top],
-              [cy1 - d, top - LABEL_TAB.edge],
-              [cy1, top - LABEL_TAB.edge - d],
-            ],
-          ]),
-        );
-        const tab = own(alongX(wasm, own, shelf, cx0 - 1, cx1 + 1).intersect(box));
+        const tab = own(labelTabOf(wasm, own, bounds, layout.labelSide, layout.labelTab, layout.consoleReach, usefulTop - LABEL_TAB.rim.height, cellsAlong(layout.labelSide)).intersect(box));
         extras.push(tab);
         usefulVolume -= tab.volume();
       }
@@ -398,6 +387,116 @@ function buildBin(
   solid = own(solid.subtract(own(wasm.Manifold.union(tools))));
   if (extras.length > 0) solid = own(wasm.Manifold.union([solid, ...extras]));
   return { solid, usefulVolume };
+}
+
+/** A compartment inside, seen from above: [x0, x1, y0, y1]. */
+type Bounds = [x0: number, x1: number, y0: number, y1: number];
+
+/** A level of a compartment box: its height, the set-in of its scoop side and of its other sides, and its corner radii. */
+interface CompartmentLevel {
+  z: number;
+  scoopInset: number;
+  inset: number;
+  /** Radius of the two corners on the scoop side, and of the two others. */
+  scoopCorner: number;
+  corner: number;
+}
+
+/** Set-in of a wall `h` above the floor, in an arc of radius `r` from the floor to the wall. */
+function arcInset(r: number, h: number): number {
+  return h >= r ? 0 : r - Math.sqrt(r * r - (r - h) * (r - h));
+}
+
+/**
+ * The levels of a compartment box, from its floor to `top`. Each side sets in by the arc of
+ * the fillet, the scoop side by the wider arc of the scoop; the two corners of the scoop side
+ * widen by the difference, so that the scoop turns into them and meets the vertical corners
+ * of the fillet at its top.
+ */
+function compartmentLevels(layout: BinLayout, verticalRadius: number, top: number, steps: number): CompartmentLevel[] {
+  const { floor, fillet, scoop } = layout;
+  const heights = new Set<number>([0]);
+  for (const r of [fillet, scoop]) for (let k = 1; r > 0 && k <= steps * (r === scoop ? 2 : 1); k++) heights.add((r * k) / (steps * (r === scoop ? 2 : 1)));
+  const levels = [...heights].sort((a, b) => a - b).map((h) => {
+    const inset = arcInset(fillet, h);
+    const scoopInset = scoop > 0 ? arcInset(scoop, h) : inset;
+    return { z: floor + h, inset, scoopInset, corner: verticalRadius - inset, scoopCorner: verticalRadius - inset + Math.max(0, scoopInset - inset) };
+  });
+  levels.push({ z: top, inset: 0, scoopInset: 0, corner: verticalRadius, scoopCorner: verticalRadius });
+  return levels;
+}
+
+/**
+ * Counter-clockwise rectangle with its own radius at each corner, always the same number of
+ * points (for a loft): corners front left, front right, back right, back left.
+ */
+function cornerRect([x0, x1, y0, y1]: Bounds, radii: readonly [number, number, number, number], segments: number): [number, number][] {
+  // Never more than half the shorter side: a narrow compartment gets round ends.
+  const most = Math.min(x1 - x0, y1 - y0) / 2 - 1e-3;
+  const r = radii.map((radius) => Math.min(Math.max(radius, MIN_RADIUS_MM), most)) as [number, number, number, number];
+  const arcs: [cx: number, cy: number, radius: number, start: number][] = [
+    [x1 - r[1], y0 + r[1], r[1], -Math.PI / 2],
+    [x1 - r[2], y1 - r[2], r[2], 0],
+    [x0 + r[3], y1 - r[3], r[3], Math.PI / 2],
+    [x0 + r[0], y0 + r[0], r[0], Math.PI],
+  ];
+  const points: [number, number][] = [];
+  for (const [cx, cy, radius, start] of arcs) {
+    for (let k = 0; k <= segments; k++) {
+      const angle = start + (k / segments) * (Math.PI / 2);
+      points.push([cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)]);
+    }
+  }
+  return points;
+}
+
+/** The box of a compartment through its levels, its scoop on `scoopSide` (null without one). */
+function compartmentBox(wasm: ManifoldToplevel, own: Own, [x0, x1, y0, y1]: Bounds, levels: readonly CompartmentLevel[], scoopSide: BinSide | null, segments: number): Manifold {
+  const layers = levels.map(({ z, inset, scoopInset, corner, scoopCorner }) => {
+    const set = (side: BinSide) => (side === scoopSide ? scoopInset : inset);
+    const bounds: Bounds = [x0 + set("left"), x1 - set("right"), y0 + set("front"), y1 - set("back")];
+    const near = (a: BinSide, b: BinSide) => (scoopSide === a || scoopSide === b ? scoopCorner : corner);
+    const radii = [near("front", "left"), near("front", "right"), near("back", "right"), near("back", "left")] as const;
+    return { z, points: cornerRect(bounds, radii, segments) };
+  });
+  return solidOfMesh(wasm, own, loft(layers));
+}
+
+/**
+ * The label tab of a compartment against `side`: a shelf of `depth`, its top at `top`, a rim
+ * on its front edge, a 45° fillet under its root, and a console at 45° reaching `reach` under
+ * it in the middle of each cell along its wall (`cells`, positions along that wall). Drawn for the back wall, then turned
+ * to its side; a millimetre goes into the wall, for the shelf to weld to it.
+ */
+function labelTabOf(wasm: ManifoldToplevel, own: Own, [x0, x1, y0, y1]: Bounds, side: BinSide, depth: number, reach: number, top: number, cells: number[]): Manifold {
+  const { shelf, rim, root, console: thickness, consoleClearance } = LABEL_TAB;
+  // Along the wall: from `a` to `b`; the wall at v = 0, the compartment towards v < 0.
+  const [a, b] = side === "front" || side === "back" ? [x0, x1] : [y0, y1];
+  const section = (points: [number, number][]) => own(wasm.CrossSection.ofPolygons([points]));
+  const parts: Manifold[] = [
+    alongX(wasm, own, section([[1, top - shelf], [1, top], [-depth, top], [-depth, top - shelf]]), a, b),
+    alongX(wasm, own, section([[-depth + rim.width, top], [-depth + rim.width, top + rim.height], [-depth, top + rim.height], [-depth, top]]), a, b),
+    alongX(wasm, own, section([[1, top - shelf - root], [1, top - shelf + 0.01], [-root, top - shelf + 0.01], [0, top - shelf - root]]), a, b),
+  ];
+  for (const centre of reach >= 2 ? cells : []) {
+    if (centre - thickness / 2 < a + consoleClearance || centre + thickness / 2 > b - consoleClearance) continue;
+    parts.push(alongX(wasm, own, section([[1, top - shelf - reach], [1, top - shelf + 0.01], [-reach, top - shelf + 0.01], [0, top - shelf - reach]]), centre - thickness / 2, centre + thickness / 2));
+  }
+  const tab = own(wasm.Manifold.union(parts));
+  // Turned to its side: x along the wall stays x for the back, mirrored for the front; for the
+  // sides, the wall runs along y.
+  switch (side) {
+    case "back":
+      return own(tab.translate([0, y1, 0]));
+    case "front":
+      return own(own(tab.mirror([0, 1, 0])).translate([0, y0, 0]));
+    case "left":
+      // (x, y) → (−y, x): along the wall to +y, the compartment towards +x.
+      return own(own(tab.rotate([0, 0, 90])).translate([x0, 0, 0]));
+    case "right":
+      // (x, y) → (y, x) mirrored: along the wall to +y, the compartment towards −x.
+      return own(own(own(tab.rotate([0, 0, 90])).mirror([1, 0, 0])).translate([x1, 0, 0]));
+  }
 }
 
 /** Area of a rounded rectangle. */

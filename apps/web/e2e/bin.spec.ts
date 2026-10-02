@@ -29,6 +29,8 @@ test("the bin page opens on the default bin, 2 × 1 cells of 3 U, and downloads 
 test("compartments, finishes and lip change the bin, and its share link carries them", async ({ page, context }, testInfo) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/fr/bin");
+  // The first bin computed: the page is hydrated, and a typed value is no longer lost.
+  await expect(readout(page, "dimensions")).toHaveText("83,5 × 41,5 mm");
   await openSettings(page, testInfo);
   await page.getByRole("button", { name: /^Compartiments/ }).click();
   await numberField(page, "En largeur").fill("3");
@@ -36,9 +38,8 @@ test("compartments, finishes and lip change the bin, and its share link carries 
   await numberField(page, "En profondeur").press("Tab");
   await expect(page.getByTestId("stat-compartments").filter({ visible: true })).toHaveText("6");
 
-  await page.getByRole("button", { name: /^Finitions/ }).click();
   await page.getByRole("switch", { name: "Pelle" }).click();
-  await page.getByRole("switch", { name: "Onglet d'étiquette" }).click();
+  await page.getByRole("switch", { name: "Étiquette" }).click();
   await page.getByRole("button", { name: /^Rebord d'empilage/ }).click();
   await page.getByRole("radio", { name: "Aucun" }).click();
   await expect(page.getByTestId("stat-height").filter({ visible: true })).toHaveText("21 mm");
@@ -80,4 +81,26 @@ test("the bin page in English, and back to the index", async ({ page }) => {
   await expect(page).toHaveURL(/\/en$/);
   await page.getByRole("link", { name: /Bins/ }).click();
   await expect(page).toHaveURL(/\/en\/bin$/);
+});
+
+test("the scoop goes on the side chosen, the label across from it, as high as the label stuck on it", async ({ page, context }, testInfo) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/fr/bin");
+  await expect(readout(page, "dimensions")).toHaveText("83,5 × 41,5 mm");
+  await openSettings(page, testInfo);
+  await page.getByRole("switch", { name: "Pelle" }).click();
+  // Turned on, the family opens on its side.
+  await page.getByRole("radio", { name: "Gauche" }).click();
+  await expect(page.getByRole("button", { name: /^Pelle/ })).toContainText("Côté gauche");
+
+  await page.getByRole("switch", { name: "Étiquette" }).click();
+  await expect(page.getByTestId("label-across").filter({ visible: true })).toHaveText("En face de la pelle : côté droite.");
+  await numberField(page, "Hauteur de l'étiquette").fill("16");
+  await numberField(page, "Hauteur de l'étiquette").press("Tab");
+  await expect(page.getByRole("button", { name: /^Étiquette \d/ })).toContainText("16 mm, côté droite");
+  await closeSettings(page, testInfo);
+
+  await runAction(page, testInfo, "Partager");
+  const link = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+  expect(link.search).toBe("?v=1&sc=1&lt=1&ss=left&ld=16");
 });

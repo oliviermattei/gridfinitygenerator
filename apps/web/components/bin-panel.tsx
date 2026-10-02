@@ -1,20 +1,18 @@
 "use client";
 
-import { BIN_SETTINGS, MAX_COMPARTMENTS_PER_CELL, STACKING_LIPS, type Bin, type BinSettings, type StackingLip } from "@repo/geometry";
+import { BIN_SETTINGS, BIN_SIDES, FILLET_RADIUS_MM, MAX_COMPARTMENTS_PER_CELL, STACKING_LIPS, labelSideOf, type Bin, type BinSettings, type BinSide, type StackingLip } from "@repo/geometry";
 import { NumberStepper, Segmented, ToggleSwitch } from "@repo/ui";
 import { TriangleAlert } from "lucide-react";
-import type { ReactNode } from "react";
 import type { Formats } from "@/lib/format";
 import { useFormats, useStrings } from "@/lib/locale";
-import type { Strings } from "@/lib/strings";
-import { AdvancedIcon, CompartmentIcon, FinishIcon, LipIcon, SizeIcon } from "./illustrations";
+import { AdvancedIcon, CompartmentIcon, FinishIcon, LabelIcon, LipIcon, ScoopIcon, SizeIcon } from "./illustrations";
 import { FamilyItem } from "./settings-panel";
 
 /** A bin without its mesh: what the panel reads. */
 export type BinSummary = Omit<Bin, "mesh">;
 
 /** Families of settings of the bin panel. */
-export type BinFamily = "size" | "compartments" | "finish" | "lip" | "advanced";
+export type BinFamily = "size" | "compartments" | "fillet" | "scoop" | "label" | "lip" | "advanced";
 
 /** "83,5 × 41,5 mm", measured on the mesh. */
 function footprint(summary: BinSummary, f: Formats): string {
@@ -76,13 +74,6 @@ export interface BinFamiliesProps {
   maxCells: { short: number; long: number };
   open: BinFamily | null;
   onOpenChange: (family: BinFamily | null) => void;
-}
-
-/** "Congé, pelle", or "Aucune": the finishes that are on. */
-function finishSummary(settings: BinSettings, t: Strings): string {
-  const on = [settings.fillet && t.bin.fillet, settings.scoop && t.bin.scoop, settings.labelTab && t.bin.labelTab].filter(Boolean) as string[];
-  if (on.length === 0) return t.bin.finishNone;
-  return capitalized(on.join(", ").toLowerCase());
 }
 
 /** Families of settings of the bin, as an exclusive accordion. */
@@ -159,11 +150,86 @@ export function BinFamilies({ settings, onSettingsChange, summary, maxCells, ope
           <p className="text-[12px] leading-snug text-muted">{t.bin.compartmentsHint}</p>
         </div>
       </FamilyItem>
-      <FamilyItem {...bind("finish")} icon={<FinishIcon className="size-[18px]" />} title={t.bin.finish} summary={finishSummary(settings, t)}>
-        <div className="flex flex-col gap-3.5">
-          <Toggle label={t.bin.fillet} hint={t.bin.filletHint} checked={settings.fillet} onChange={(fillet) => onSettingsChange({ fillet })} />
-          <Toggle label={t.bin.scoop} hint={t.bin.scoopHint} checked={settings.scoop} onChange={(scoop) => onSettingsChange({ scoop })} />
-          <Toggle label={t.bin.labelTab} hint={t.bin.labelTabHint} checked={settings.labelTab} onChange={(labelTab) => onSettingsChange({ labelTab })} />
+      <FamilyItem
+        {...bind("fillet")}
+        icon={<FinishIcon className="size-[18px]" />}
+        title={t.bin.fillet}
+        summary={settings.fillet ? t.bin.filletOn(f.fine.format(summary?.layout.fillet || FILLET_RADIUS_MM)) : t.bin.filletOff}
+        on={settings.fillet}
+        control={<ToggleSwitch label={t.bin.fillet} checked={settings.fillet} onChange={(fillet) => onSettingsChange({ fillet })} />}
+      >
+        <p className="text-[12.5px] leading-snug text-muted">{settings.fillet ? t.bin.filletHint : t.bin.filletOffHint}</p>
+      </FamilyItem>
+      <FamilyItem
+        {...bind("scoop")}
+        icon={<ScoopIcon className="size-[18px]" />}
+        title={t.bin.scoop}
+        summary={settings.scoop ? t.bin.scoopSummary(t.bin.sides[settings.scoopSide]) : t.bin.scoopOff}
+        on={settings.scoop}
+        control={
+          <ToggleSwitch
+            label={t.bin.scoop}
+            checked={settings.scoop}
+            onChange={(scoop) => {
+              onSettingsChange({ scoop });
+              // Turned on, the family opens: its side is in sight at once.
+              if (scoop) onOpenChange("scoop");
+            }}
+          />
+        }
+      >
+        <div className="flex flex-col gap-2.5">
+          <SideChoice label={t.bin.scoopSide} value={settings.scoopSide} onChange={(scoopSide) => onSettingsChange({ scoopSide, scoop: true })} />
+          <p className="text-[12px] leading-snug text-muted">{t.bin.scoopHint}</p>
+        </div>
+      </FamilyItem>
+      <FamilyItem
+        {...bind("label")}
+        icon={<LabelIcon className="size-[18px]" />}
+        title={t.bin.labelTab}
+        summary={settings.labelTab ? t.bin.labelSummary(f.fine.format(settings.labelDepth), t.bin.sides[labelSideOf(settings)]) : t.bin.labelOff}
+        on={settings.labelTab}
+        control={
+          <ToggleSwitch
+            label={t.bin.labelTab}
+            checked={settings.labelTab}
+            onChange={(labelTab) => {
+              onSettingsChange({ labelTab });
+              if (labelTab) onOpenChange("label");
+            }}
+          />
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <NumberStepper
+              label={t.bin.labelHeight}
+              decrementLabel={t.bin.lowerLabel}
+              incrementLabel={t.bin.higherLabel}
+              value={settings.labelDepth}
+              min={BIN_SETTINGS.labelDepth.min}
+              max={BIN_SETTINGS.labelDepth.max}
+              step={1}
+              unit="mm"
+              locale={t.locale}
+              fractionDigits={1}
+              onChange={(labelDepth) => onSettingsChange({ labelDepth, labelTab: true })}
+            />
+            <p className="text-[12px] leading-snug text-muted">{t.bin.labelHeightHint}</p>
+            {summary && settings.labelTab && summary.layout.labelTab > 0 && summary.layout.labelTab < settings.labelDepth - 1e-6 && (
+              <p className="text-[12px] leading-snug font-medium text-accent-strong" data-testid="label-clamped">
+                {t.bin.labelClamped(f.fine.format(summary.layout.labelTab))}
+              </p>
+            )}
+          </div>
+          {settings.scoop ? (
+            <p className="text-[12.5px] text-ink-soft" data-testid="label-across">
+              {t.bin.labelAcross(t.bin.sides[labelSideOf(settings)])}
+            </p>
+          ) : (
+            <SideChoice label={t.bin.labelSide} value={settings.labelSide} onChange={(labelSide) => onSettingsChange({ labelSide, labelTab: true })} />
+          )}
+          <p className="text-[12px] leading-snug text-muted">{t.bin.labelTabHint}</p>
         </div>
       </FamilyItem>
       <FamilyItem {...bind("lip")} icon={<LipIcon className="size-[18px]" />} title={t.bin.lip} summary={t.bin.lips[settings.lip]}>
@@ -206,15 +272,13 @@ export function BinFamilies({ settings, onSettingsChange, summary, maxCells, ope
 
 const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
-/** A finish that is on or off, with what it does. */
-function Toggle({ label, hint, checked, onChange }: { label: string; hint: ReactNode; checked: boolean; onChange: (checked: boolean) => void }) {
+/** A side of the compartments: the four, as a segmented choice. */
+function SideChoice({ label, value, onChange }: { label: string; value: BinSide; onChange: (side: BinSide) => void }) {
+  const t = useStrings();
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-[13.5px] font-semibold">{label}</p>
-        <p className="mt-0.5 text-[12px] leading-snug text-muted">{hint}</p>
-      </div>
-      <ToggleSwitch label={label} checked={checked} onChange={onChange} />
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[13px] font-medium text-muted">{label}</span>
+      <Segmented<BinSide> label={label} value={value} onChange={onChange} options={BIN_SIDES.map((side) => ({ value: side, label: t.bin.sideNames[side] }))} />
     </div>
   );
 }
