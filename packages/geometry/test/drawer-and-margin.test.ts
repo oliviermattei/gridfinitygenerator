@@ -14,8 +14,8 @@ const FRAME = { marginShape: "frame" } as const;
 const CELLS = { marginShape: "cells" } as const;
 const EXTENDED = { marginShape: "extended" } as const;
 const PLATE_256 = { buildPlate: { width: 256, depth: 256 } };
-/** The prototype of the margins drilled no magnet holes (#24): its volumes are without them. */
-const BARE = { magnets: false };
+/** The prototype of the margins drilled no magnet holes (#24) nor edge slots (#37): its volumes are without them. */
+const BARE = { magnets: false, clips: false };
 
 // Drawer mode, alignment (#10), the three shapes of the margin (#23, #29) and the minimal
 // margin (#29), observed through the public interface only. Reference values:

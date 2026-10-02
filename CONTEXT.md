@@ -241,12 +241,16 @@ Le bord commun à deux pièces voisines, le long d'une coupe. Une jonction reço
 _Avoid_: joint, raccord, liaison
 
 **Clip**:
-Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au bout d'une jonction, collée au coin, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus. Tous les types en prennent (ADR 0010, ADR 0018).
+Une agrafe en U imprimée à part, couchée sur le côté, qui relie deux pièces le long d'une coupe. Elle s'enfonce par-dessous dans le pied du muret, au bout d'une jonction, collée au coin, à cheval sur la coupe : son pont affleure le dessous, et ses jambes enserrent les dents des deux pièces. Rien ne se voit de dessus. Tous les types en prennent. Ce n'est pas un réglage : une baseplate découpée a toujours les siens dans son fichier ; un clip seul se télécharge aussi, pour relier deux baseplates par leurs fentes de bord (ADR 0010, ADR 0018, ADR 0022).
 _Avoid_: agrafe (sauf pour décrire sa forme), connecteur, attache, clip de liaison
 
 **Fente**:
 Le logement d'un clip, creusé par-dessous dans le pied du muret, de part et d'autre d'une coupe : un canal sous la dent pour le pont, et une fente de jambe de chaque côté, sous la pente haute de la poche. Elle part du croisement au bout de la jonction : à 1,92 mm de l'axe d'un croisement de deux coupes (pour laisser la place à la fente de l'autre coupe), à 0,8 mm du bord de la grille (pour ne pas percer la marge).
 _Avoid_: rainure, logement (réservé aux aimants), slot
+
+**Fente de bord**:
+La moitié d'une fente, sa dent et son canal, taillée sur un côté du contour sans marge, là où la grille arrive au bord : un clip y relie la baseplate à une autre, générée à part, posée contre ce côté. Même règle qu'une jonction, sur tout le côté quelle que soit la découpe : deux par côté, collées aux coins, une seule au premier bout si le côté fait une ou deux cellules. Deux baseplates identiques côte à côte ont leurs fentes de bord en vis-à-vis. Pas de fente de bord au-delà de 1,30 mm de chanfrein (ADR 0022).
+_Avoid_: fente de contour, encoche, connecteur de bord
 
 **Dent**:
 La lame de matière de 0,5 mm que chaque pièce garde contre la coupe, dans la fente, entre les jambes du clip.
@@ -257,7 +261,7 @@ Le numéro gravé sous une pièce, dans un demi-muret, en chiffres de 3 mm empil
 _Avoid_: étiquette (réservé aux bins), label, repère
 
 **Pile**:
-Des pièces d'une baseplate découpée imprimées l'une sur l'autre en une seule impression, en mono-matière : la première à l'endroit, les autres retournées sur celle du dessous, une couche d'air entre deux (le **pas** de la pile : la hauteur d'une pièce plus une couche). Une pièce ne se pose que sur une pièce qui la porte ; sinon elle commence une autre pile (#28, ADR 0016).
+Des pièces d'une baseplate découpée imprimées l'une sur l'autre en une seule impression, en mono-matière : la première à l'endroit, les autres retournées sur celle du dessous, une couche d'air entre deux (le **pas** de la pile : la hauteur d'une pièce plus une couche). Une pièce ne se pose que sur une pièce qui la porte ; sinon elle commence une autre pile (#28, ADR 0016). Elle est retournée autour de X ou de Y : le **sens de retournement** retenu est celui qui laisse le moins de son dessous en l'air, mesuré (#39).
 _Avoid_: stack (sauf dans le code), empilement (sauf pour l'action), pile de plaques
 
 **Oreille**:

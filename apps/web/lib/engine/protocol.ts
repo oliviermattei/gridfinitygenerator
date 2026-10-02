@@ -10,11 +10,12 @@ export type ExportFormat = "3mf" | "stl";
 export type FileExtension = ExportFormat | "zip";
 
 /**
- * What a download holds: the baseplate of the settings, or the test kit (a 1 × 2 baseplate
+ * What a download holds: the baseplate of the settings, the test kit (a 1 × 2 baseplate
  * with one cell of each pocket profile, which takes the cell size, the outline and the
- * print settings only).
+ * print settings only), or a single clip (`generateClip`, always an STL), to print clips one
+ * by one, for instance to join two baseplates by their edge slots (#37).
  */
-export type ExportPiece = "baseplate" | "test-kit";
+export type ExportPiece = "baseplate" | "test-kit" | "clip";
 
 /**
  * A baseplate to measure against the one shown (`EngineClient.compare`): its settings, and
@@ -94,7 +95,8 @@ export type EngineResponse =
       stacks: number;
       /** Extension of the file: a zip holds the STL files of the pieces of a cut baseplate, and of its clips. */
       extension: FileExtension;
-      baseplate: BaseplateSummary;
+      /** The baseplate exported; null for a single clip, which takes no baseplate. */
+      baseplate: BaseplateSummary | null;
       /** Triangles of the exported mesh (final quality). */
       triangles: number;
       /** Time spent writing the file, in milliseconds (the mesh computation excluded). */

@@ -17,7 +17,7 @@ import { latticeOf, type PiecePlan } from "./split";
  * chamfer, less the margin's holes) minus every pocket
  * tool (with the lamellas of a CLICKbase, clickbase.ts) and the margin's cut at once, then minus the tops of the lower cells, then minus the
  * notches of the murets of a skeleton (skeleton.ts), then minus
- * every screw hole, every magnet hole and every slot of a clip astride a cut (clips.ts). Works for any grid, including single rows and columns and grids of
+ * every screw hole, every magnet hole and every slot of a clip astride a cut or the outline (clips.ts). Works for any grid, including single rows and columns and grids of
  * mixed pocket profiles (the test kit).
  *
  * A baseplate cut for the build plate is then cut into its pieces, in the order of `pieces`:
@@ -83,7 +83,7 @@ export function assembleWithBooleans(
       const magnet = magnetTool(wasm, own, { ...frame, magnets: frame.magnets });
       solid = own(solid.subtract(own(wasm.Manifold.compose(magnets.map((position) => own(magnet.translate([...position, 0])))))));
     }
-    if (frame.clips && frame.clips.placements.length > 0) solid = own(solid.subtract(slotTools(wasm, own, frame.clips)));
+    if (frame.clips && (frame.clips.placements.length > 0 || frame.clips.edges.length > 0)) solid = own(solid.subtract(slotTools(wasm, own, frame.clips)));
     if (pieces.length <= 1) return [meshOf(solid)];
     const o = TOOL_OVERSHOOT_MM;
     const [outerX, outerY] = [frame.width / 2 + o, frame.depth / 2 + o];

@@ -164,7 +164,7 @@ describe("a CLICKbase cut for the build plate", () => {
   it("starts the lamella next to a clip 0.5 mm past its slot, which meets no slit", async () => {
     const [clipped, unclipped] = await Promise.all([
       generateBaseplate(CLICKBASE, "final", { buildPlate: PLATE_256 }),
-      generateBaseplate({ ...CLICKBASE, clips: false }, "final", { buildPlate: PLATE_256 }),
+      generateBaseplate(CLICKBASE, "final", { buildPlate: PLATE_256, clips: false }),
     ]);
     expect(clipped.stats.pieces).toBe(4);
     expect(clipped.stats.clips).toBe(8);

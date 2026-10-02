@@ -3,6 +3,7 @@ import {
   EAR_RADIUS_MM,
   PIN_DIAMETER_MM,
   generateBaseplate,
+  orientStacks,
   printClips,
   printStacks,
   serialize3mf,
@@ -29,7 +30,7 @@ const PLATE_256: BuildPlate = { width: 256, depth: 256 };
 const PILE_OF_3: Partial<BaseplateSettings> = { sizeMode: "cells", columns: 3, rows: 2, marginWidth: 21, marginDepth: 0, marginShape: "cells" };
 const PLATE_60: BuildPlate = { width: 60, depth: 100 };
 /** Without the holes the piece above bridges (magnets, clip slots): what rests on nothing else. */
-const BARE = { clips: false };
+const BARE = { magnets: false, clips: false };
 const OPTIONS = { layerHeight: LAYER, lineWidth: 0.4, ears: false, pins: false };
 
 /** The closed shells of a stack, one per piece, from the vertex and triangle counts of the pieces. */
@@ -129,7 +130,7 @@ describe("plan", () => {
 
 describe("printed stacks", () => {
   it("lays each piece of the pile one layer above the one beneath, every shell closed, and each held by the one beneath", async () => {
-    const baseplate = await generateBaseplate({ ...PILE_OF_3, ...BARE }, "final", { buildPlate: PLATE_60, magnets: false });
+    const baseplate = await generateBaseplate(PILE_OF_3, "final", { buildPlate: PLATE_60, ...BARE });
     const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
     const [stack] = await printStacks(baseplate, plan, OPTIONS);
     const shells = shellsOf((stack as { mesh: TriangleMesh }).mesh, baseplate, plan.stacks[0] ?? []);
@@ -162,7 +163,7 @@ describe("printed stacks", () => {
     // Upside down, the piece beneath shows its magnet holes (Ø 6.5) and clip slots: the flats
     // above cross them. The same joint without them is fully held.
     expect(second.unheld).toBeGreaterThan(10);
-    const bare = await generateBaseplate({ marginShape: "cells", ...BARE }, "final", { buildPlate: PLATE_256, magnets: false });
+    const bare = await generateBaseplate({ marginShape: "cells" }, "final", { buildPlate: PLATE_256, ...BARE });
     const bareShells = shellsOf((await printStacks(bare, plan, OPTIONS))[0]?.mesh as TriangleMesh, bare, plan.stacks[0] ?? []);
     expect((await joint(bareShells[1] as TriangleMesh, bareShells[2] as TriangleMesh)).unheld).toBeLessThan(0.5);
     for (const { mesh } of stacks) expect((await checkMesh(mesh)).status).toBe("NoError");
@@ -207,9 +208,69 @@ describe("printed stacks", () => {
   });
 });
 
+describe("orientation", () => {
+  /** The unheld area of each joint of each stack, measured on the printed shells, and the checks of the shells. */
+  async function joints(baseplate: Baseplate, plan: StackPlan) {
+    const printed = await printStacks(baseplate, plan, OPTIONS);
+    const result: { unheld: number; face: number }[][] = [];
+    for (const [s, stack] of plan.stacks.entries()) {
+      const shells = shellsOf((printed[s] as { mesh: TriangleMesh }).mesh, baseplate, stack);
+      for (const [k, shell] of shells.entries()) {
+        const check = await checkMesh(shell);
+        expect(check.status).toBe("NoError");
+        expect(badEdges(shell)).toBe(0);
+        // Its height in the stack is kept: its rank times the pitch, one piece high.
+        expect(check.bounds.min[2]).toBeCloseTo(k * plan.pitch, 4);
+        expect(check.bounds.max[2]).toBeCloseTo(k * plan.pitch + baseplate.stats.dimensions.height, 4);
+      }
+      const measured: { unheld: number; face: number }[] = [];
+      for (let k = 1; k < shells.length; k++) {
+        const { gap, unheld, face } = await joint(shells[k - 1] as TriangleMesh, shells[k] as TriangleMesh);
+        expect(gap).toBeCloseTo(LAYER, 4);
+        measured.push({ unheld, face });
+      }
+      result.push(measured);
+    }
+    return result;
+  }
+  const total = (measured: { unheld: number }[][]) => measured.flat().reduce((sum, { unheld }) => sum + unheld, 0);
+
+  it("turns the second of two pieces of one cell about Y: its square corners on the square ones, held all over", async () => {
+    // The pile of prototypes/stack-1x1: 2 × 1 cells without margin, cut in two by a plate of 50 mm.
+    const baseplate = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 1 }, "final", { buildPlate: { width: 50, depth: 50 } });
+    const planned = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+    const plan = await orientStacks(baseplate, planned);
+    expect(plan.stacks.map((stack) => stack.map(({ number, flip }) => `${number}${flip}`))).toEqual([["1none", "2y"]]);
+    const [before] = (await joints(baseplate, planned)).flat() as [{ unheld: number; face: number }];
+    const [after] = (await joints(baseplate, plan)).flat() as [{ unheld: number; face: number }];
+    // About X, its square corners of the cut over the rounded corners of the outline.
+    expect(before.unheld).toBeGreaterThan(5);
+    expect(after.unheld).toBeLessThan(0.05);
+    expect(after.face).toBeGreaterThan(60);
+  });
+
+  it("holds the default drawer at least as well as the first flips, in the same stacks", async () => {
+    const baseplate = await generateBaseplate({ marginShape: "cells" }, "final", { buildPlate: PLATE_256 });
+    const planned = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+    const plan = await orientStacks(baseplate, planned);
+    expect(plan.stacks.map((stack) => stack.map(({ number }) => number))).toEqual(planned.stacks.map((stack) => stack.map(({ number }) => number)));
+    expect(plan.stacks.map((stack) => stack.map(({ z }) => z))).toEqual(planned.stacks.map((stack) => stack.map(({ z }) => z)));
+    const [before, after] = [total(await joints(baseplate, planned)), total(await joints(baseplate, plan))];
+    expect(after).toBeLessThanOrEqual(before + 1e-3);
+  });
+
+  it("holds the pile of the acceptance at least as well as the first flips", async () => {
+    const baseplate = await generateBaseplate(PILE_OF_3, "final", { buildPlate: PLATE_60 });
+    const planned = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
+    const plan = await orientStacks(baseplate, planned);
+    const [before, after] = [total(await joints(baseplate, planned)), total(await joints(baseplate, plan))];
+    expect(after).toBeLessThanOrEqual(before + 1e-3);
+  });
+});
+
 describe("ears and pins", () => {
   it("add a one-layer ear on each corner of the bottom piece", async () => {
-    const baseplate = await generateBaseplate({ ...PILE_OF_3, ...BARE }, "final", { buildPlate: PLATE_60, magnets: false });
+    const baseplate = await generateBaseplate(PILE_OF_3, "final", { buildPlate: PLATE_60, ...BARE });
     const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
     const [plain] = await printStacks(baseplate, plan, OPTIONS);
     const [eared] = await printStacks(baseplate, plan, { ...OPTIONS, ears: true });
@@ -225,7 +286,7 @@ describe("ears and pins", () => {
   });
 
   it("tie with a pin of 0.8 mm the ears of the corners the pieces above share", async () => {
-    const baseplate = await generateBaseplate({ ...PILE_OF_3, ...BARE }, "final", { buildPlate: PLATE_60, magnets: false });
+    const baseplate = await generateBaseplate(PILE_OF_3, "final", { buildPlate: PLATE_60, ...BARE });
     const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, LAYER);
     const [pinned] = await printStacks(baseplate, plan, { ...OPTIONS, ears: true, pins: true });
     const check = await checkMesh(pinned?.mesh as TriangleMesh, [2, 7, 12]);

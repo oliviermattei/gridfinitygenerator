@@ -305,6 +305,55 @@ export function notchedPocketTool(wasm: ManifoldToplevel, own: Own, frame: GridF
   return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: new Float32Array(positions), triVerts: new Uint32Array(indices) })));
 }
 
+/** How far the reach of a notch (`notchReach`) stands off its flanks, along the muret. */
+const REACH_SLACK_MM = 0.1;
+
+/**
+ * Where the notches of a cell's `sides` (bits `1 << side`) lie, around its centre (the cell
+ * bricks): on each notched side, from the pocket wall at its widest inset out past the seam,
+ * as long along the muret as its notch at every height and `REACH_SLACK_MM` more, from below
+ * the frame up past the top of the notched pocket tool. Its faces never meet those of a tab
+ * (`notchedPocketTool`), and it stays clear of the posts, and so of the corners of the cell,
+ * by nearly 5 mm within the frame.
+ *
+ * A whole cell of the margin on the edge of the lattice gets its pocket from the margin's cut,
+ * which keeps what the margin keeps of it: along a side of the lattice without margin, the
+ * outer wall of the truncated cells or the band of the extended grid (#38), at most a wall and
+ * the bottom chamfer wide. Its notched pocket is removed within this reach only, which never
+ * meets them. Null without a notch.
+ */
+export function notchReach(wasm: ManifoldToplevel, own: Own, frame: GridFrame & { skeleton: Skeleton }, sides: number): Manifold | null {
+  const { cellSize, profile, skeleton } = frame;
+  if (sides === 0 || notchLength(frame, skeleton.band) <= 0) return null;
+  const half = cellSize / 2;
+  const o = TOOL_OVERSHOOT_MM;
+  const from = half - Math.max(...profile.points.map(([, inset]) => inset)) - REACH_SLACK_MM;
+  const top = flankTop(frame);
+  // Built for the +X side (the muret along Y), then turned; below the band, as long as at the band.
+  const layer = (side: number, z: number, at = z) => {
+    const length = notchLength(frame, at) + REACH_SLACK_MM;
+    return {
+      z,
+      points: [
+        [from, -length],
+        [half + o, -length],
+        [half + o, length],
+        [from, length],
+      ].map((point) => turn(point as [number, number], side)),
+    };
+  };
+  const reaches = [0, 1, 2, 3]
+    .filter((side) => sides & (1 << side))
+    .map((side) => {
+      const layers = [layer(side, -2 * o, skeleton.band), layer(side, skeleton.band), layer(side, top), layer(side, top + o, top)];
+      const { positions, indices } = loft(layers);
+      return own(new wasm.Manifold(new wasm.Mesh({ numProp: 3, vertProperties: positions, triVerts: indices })));
+    });
+  // Two reaches would meet near a corner of the pocket for a profile whose widest inset came
+  // near its corner radius: a union.
+  return own(wasm.Manifold.union(reaches));
+}
+
 /**
  * Every notch of a skeleton baseplate at once, in the coordinates of the outline (the boolean
  * assembly): one per muret between two cells of the lattice, on its +X or +Y side; null

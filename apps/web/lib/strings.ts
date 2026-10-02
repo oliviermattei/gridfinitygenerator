@@ -196,7 +196,6 @@ const fr = {
   statPieces: "Pièces",
   statClips: "Clips",
   none: "aucune",
-  noClip: "aucun",
   computing: "calcul en cours",
   layers: (count: number, layerHeight: string) => `${count} couches de ${layerHeight} mm`,
   margins: (left: string, right: string, back: string, front: string, unit: string) =>
@@ -289,12 +288,6 @@ const fr = {
   screwShank: "Ø tige",
   screwHead: "Ø tête",
   screwsHint: "La tête se loge dans le croisement des murets, sous les pentes des poches. Le jeu des trous se règle dans Avancé.",
-  clips: "Clips",
-  clipsOff: "Désactivés",
-  clipsSummary: (count: string) => `${count} clips à imprimer`,
-  clipsHint:
-    "Agrafes en U qui relient les pièces, deux par jonction, une à chaque bout, collées au coin : elles s'enfoncent par-dessous dans le pied des murets, à cheval sur la coupe, et ne se voient pas de dessus. Elles sont dans le fichier, avec les pièces, couchées sur le côté.",
-  clipsOffHint: "Sans clips, les pièces sont posées bout à bout, et le tiroir les tient.",
   stack: "Empiler les pièces",
   stackOff: "Désactivé",
   stackSummary: (pieces: number, stacks: number) => (stacks === 1 ? `${pieces} pièces en une pile` : `${pieces} pièces en ${stacks} piles`),
@@ -375,6 +368,9 @@ const fr = {
   download: { "3mf": "Télécharger le 3MF", stl: "Télécharger le STL" },
   preparing: { "3mf": "Préparation du 3MF…", stl: "Préparation du STL…" },
   otherFormats: "Autres formats",
+  downloadClip: "Télécharger le clip (STL)",
+  clipDescription:
+    "Un clip seul, à imprimer à l'unité. Découpée, la baseplate a déjà les siens dans son fichier. Un bord sans marge a aussi ses fentes : deux baseplates se clipsent l'une à l'autre.",
   threeMfDescription: "Recommandé : s'ouvre dans le trancheur, avec le lien de ses réglages.",
   stlDescription: "Pour les trancheurs qui ne lisent pas le 3MF. Découpée, la baseplate vient en zip, un fichier par pièce, plus les clips.",
   /** Name of a piece of a cut baseplate in the 3MF; `{n}` is its number, engraved under it. */
@@ -570,7 +566,6 @@ const en: Strings = {
   statPieces: "Pieces",
   statClips: "Clips",
   none: "none",
-  noClip: "none",
   computing: "computing",
   layers: (count: number, layerHeight: string) => `${count} layers of ${layerHeight} mm`,
   margins: (left: string, right: string, back: string, front: string, unit: string) =>
@@ -661,12 +656,6 @@ const en: Strings = {
   screwShank: "Shank Ø",
   screwHead: "Head Ø",
   screwsHint: "The head sits where the walls between pockets cross, under the slopes of the pockets. The hole gap is set in Advanced.",
-  clips: "Clips",
-  clipsOff: "Off",
-  clipsSummary: (count: string) => `${count} clips to print`,
-  clipsHint:
-    "U-shaped staples that join the pieces, two per junction, one at each end, against the corner: they push up from below into the foot of the walls, astride the cut, and do not show from above. They come in the file with the pieces, lying on their side.",
-  clipsOffHint: "Without clips, the pieces lie end to end, and the drawer holds them.",
   stack: "Stack the pieces",
   stackOff: "Off",
   stackSummary: (pieces: number, stacks: number) => (stacks === 1 ? `${pieces} pieces in one stack` : `${pieces} pieces in ${stacks} stacks`),
@@ -741,6 +730,9 @@ const en: Strings = {
   download: { "3mf": "Download the 3MF", stl: "Download the STL" },
   preparing: { "3mf": "Preparing the 3MF…", stl: "Preparing the STL…" },
   otherFormats: "Other formats",
+  downloadClip: "Download the clip (STL)",
+  clipDescription:
+    "A single clip, to print one by one. Cut, the baseplate already has its own in its file. A side without margin has slots too: two baseplates clip to each other.",
   threeMfDescription: "Recommended: opens in the slicer, with the link to its settings.",
   stlDescription: "For the slicers that cannot read 3MF. Cut, the baseplate comes as a zip, one file per piece, and the clips.",
   pieceName: "piece {n}",

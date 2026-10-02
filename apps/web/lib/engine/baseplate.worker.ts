@@ -1,8 +1,10 @@
 // Runs the geometry engine (and its manifold-3d WASM) off the main thread.
 import {
   generateBaseplate,
+  generateClip,
   generateTestKit,
   loadEngine,
+  orientStacks,
   printClips,
   printPieces,
   printStacks,
@@ -13,7 +15,7 @@ import {
   zipFiles,
   type TriangleMesh,
 } from "@repo/geometry";
-import { exportName } from "../export-file";
+import { clipExportName, exportName } from "../export-file";
 import type { EngineRequest, EngineResponse, EngineWarmUp, FileExtension } from "./protocol";
 
 // The app compiles against the DOM lib: describe the few worker globals used here.
@@ -50,6 +52,14 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
         triangles = Math.max(triangles, mesh.indices.length / 3);
       }
       reply({ id: request.id, type: "volumes", volumes, clipsVolumes, triangles });
+    } else if (request.piece === "clip") {
+      // A single clip, always an STL: the one the export of a cut baseplate holds.
+      const start = performance.now();
+      const clip = await generateClip(request.settings);
+      const bytes = serializeStl(clip);
+      const serializeMs = performance.now() - start;
+      const name = clipExportName(request.settings);
+      reply({ id: request.id, type: "export", bytes, name, extension: "stl", baseplate: null, triangles: clip.indices.length / 3, serializeMs, stacks: 0 }, [bytes.buffer]);
     } else {
       // Always the final quality: the exported mesh is the one the statistics measure.
       const generated =
@@ -71,7 +81,8 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
         // The pieces, each its own object, or the stacks, each an object of a shell per piece.
         let parts: { mesh: TriangleMesh; name: string; file: string }[];
         if (stacked && request.stack) {
-          const plan = stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, request.settings.layerHeight);
+          // The stacks of the page (`stackPlanOf`), each piece turned the way that holds it best (#39).
+          const plan = await orientStacks(generated, stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, request.settings.layerHeight));
           const printed = await printStacks(generated, plan, { ...request.stack, layerHeight: request.settings.layerHeight, lineWidth: request.settings.lineWidth });
           stacks = printed.length;
           parts = printed.map(({ mesh: stackMesh, pieces }, index) => ({

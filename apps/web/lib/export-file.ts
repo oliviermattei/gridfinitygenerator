@@ -23,6 +23,18 @@ export function exportName(piece: ExportPiece, { layout, stats }: BaseplateSumma
 }
 
 /**
+ * Name of a single clip downloaded alone (#37), without its extension: `baseplate-clip`, with
+ * what shapes it, as for a baseplate: `-skeleton` (a shorter clip, in the posts), `-tray` (a
+ * taller one), `-flush`, and the layer height when it is not 0.2 mm (the height of the bridge).
+ */
+export function clipExportName(settings: BaseplateSettings): string {
+  const type = settings.baseplateType === "skeleton" || settings.baseplateType === "tray" ? `-${settings.baseplateType}` : "";
+  const profile = settings.pocketProfile === "flush" ? "-flush" : "";
+  const layer = settings.layerHeight === 0.2 ? "" : `-${Number(settings.layerHeight.toFixed(2))}mm`;
+  return `baseplate-clip${type}${profile}${layer}`;
+}
+
+/**
  * Name of a downloaded bin without its extension, also the name of its object in a 3MF:
  * `bin-{x}x{y}x{h}u`, then its compartments when there are several (`-3x2`), and its lip
  * when it is not the normal one (`-reduced-lip`, `-no-lip`).

@@ -55,7 +55,7 @@ export interface EngineClient {
       stack: { ears: boolean; pins: boolean } | null;
       stackName: string;
     },
-  ): Promise<{ bytes: Uint8Array; name: string; extension: FileExtension; baseplate: BaseplateSummary; stacks: number }>;
+  ): Promise<{ bytes: Uint8Array; name: string; extension: FileExtension; baseplate: BaseplateSummary | null; stacks: number }>;
   dispose(): void;
 }
 
@@ -79,7 +79,7 @@ const FINAL_AFTER_STILL_MS = 200;
 export const ENGINE_TIMING_PREFIX = "engine:";
 
 /** What a request computes, as named in its User Timing measure. */
-type RequestLabel = Quality | "volumes" | `export-${ExportFormat}` | `export-test-kit-${ExportFormat}`;
+type RequestLabel = Quality | "volumes" | `export-${ExportFormat}` | `export-test-kit-${ExportFormat}` | "export-clip";
 
 interface Pending {
   resolve: (response: EngineResponse) => void;
@@ -295,7 +295,7 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
       }
     },
     async exportFile(piece, settings, format, { link, buildPlate, pieceName, clipName, stack, stackName }) {
-      const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : (`export-${format}` as const);
+      const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : piece === "clip" ? "export-clip" : (`export-${format}` as const);
       const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName, clipName, stack, stackName }, label).response;
       if (response.type !== "export") throw new Error(`Unexpected engine response: ${response.type}`);
       return { bytes: response.bytes, name: response.name, extension: response.extension, baseplate: response.baseplate, stacks: response.stacks };

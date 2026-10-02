@@ -255,7 +255,8 @@ export function BaseplateGenerator() {
    * carries the share link of the settings: the page that generates it again (the test kit
    * from its button, since it takes the cell size, the outline and the print settings). A
    * baseplate cut for the build plate comes as one 3MF with a named object per piece and one
-   * for its clips, or as a zip of one STL per piece and one for the clips.
+   * for its clips, or as a zip of one STL per piece and one for the clips. A single clip comes
+   * as an STL (#37).
    */
   async function exportPiece(piece: ExportPiece, format: ExportFormat) {
     const client = engine.current;
@@ -297,6 +298,7 @@ export function BaseplateGenerator() {
   const downloadButton = (compact: boolean) => (
     <DownloadButton
       onDownload={(format) => void exportPiece("baseplate", format)}
+      onDownloadClip={() => void exportPiece("clip", "stl")}
       exporting={exporting?.piece === "baseplate" ? exporting.format : null}
       disabled={exporting !== null}
       compact={compact}

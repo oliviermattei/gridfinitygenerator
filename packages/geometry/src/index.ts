@@ -2,6 +2,7 @@
 // manifold-3d, with no dependency on React, the DOM or the app.
 export {
   generateBaseplate,
+  generateClip,
   generateTestKit,
   loadEngine,
   type AssemblyStrategy,
@@ -49,7 +50,7 @@ export {
 } from "./share-link";
 export { fitsOnBuildPlate, narrowMargin, roundUpToLayer, type BuildPlate } from "./print";
 export { PRINT_GAP_MM, pieceMesh, printClips, printPieces, spreadPieces } from "./pieces";
-export { CROSSING_START_MM, type ClipPlacement, type ClipSlot } from "./clips";
+export { CROSSING_START_MM, type ClipPlacement, type ClipSlot, type EdgeSlot } from "./clips";
 export { serializeStl } from "./stl";
 export { serialize3mf, type ThreeMfObject, type ThreeMfOptions } from "./three-mf";
 export { zipFiles } from "./zip";
@@ -57,6 +58,7 @@ export {
   EAR_RADIUS_MM,
   PIN_DIAMETER_MM,
   STACK_MAX_LAYER_MM,
+  orientStacks,
   printStacks,
   stackPitch,
   stackPlanOf,
