@@ -44,6 +44,12 @@ export interface BambuProjectOptions extends ThreeMfOptions {
 
 /** Room left between the objects that share a plate, in millimetres. */
 const PLATE_GAP_MM = 5;
+/**
+ * Room kept between an object and the excluded corner of the bed, in millimetres (ADR 0024):
+ * Bambu Studio refuses to slice an object that touches it (« too close to exclusion area »),
+ * and a box measured on a float32 mesh may start a hair inside it.
+ */
+export const EXCLUDED_CORNER_CLEARANCE_MM = 0.5;
 /** Gap between two plates of Bambu Studio, as a share of the bed (`LOGICAL_PART_PLATE_GAP`, PartPlate.cpp). */
 const PLATE_SPACING = 1 / 5;
 
@@ -118,8 +124,9 @@ const fixed = (value: number) => String(Number(value.toFixed(DECIMALS)));
 /**
  * Translation of the objects of each plate onto that plate: Bambu Studio lays its plates out on
  * a grid, and gives an object to the plate under it. The content of a plate is centred on its
- * bed and set down on it, then moved out of the excluded corner of the bed if it fits beside it;
- * with `keep`, it lies on its plate where its vertices put it, moved by the plate's origin alone.
+ * bed and set down on it, then moved `EXCLUDED_CORNER_CLEARANCE_MM` clear of the excluded corner
+ * of the bed if it fits beside it; with `keep`, it lies on its plate where its vertices put it,
+ * moved by the plate's origin alone.
  */
 function placements(plates: readonly BambuPlate[], [width, depth]: [number, number], [excludeX, excludeY]: [number, number], keep: boolean): string[] {
   const columns = columnCount(plates.length);
@@ -132,9 +139,11 @@ function placements(plates: readonly BambuPlate[], [width, depth]: [number, numb
     const size = [max[0] - min[0], max[1] - min[1]];
     let left = (width - size[0]!) / 2;
     let front = (depth - size[1]!) / 2;
-    if (left < excludeX && front < excludeY) {
-      if (excludeX + size[0]! <= width) left = excludeX;
-      else if (excludeY + size[1]! <= depth) front = excludeY;
+    const clearX = excludeX + EXCLUDED_CORNER_CLEARANCE_MM;
+    const clearY = excludeY + EXCLUDED_CORNER_CLEARANCE_MM;
+    if (excludeX > 0 && excludeY > 0 && left < clearX && front < clearY) {
+      if (clearX + size[0]! <= width) left = clearX;
+      else if (clearY + size[1]! <= depth) front = clearY;
     }
     const offset = [originX + left - min[0], originY + front - min[1], -min[2]];
     return plate.objects.map(() => `1 0 0 0 1 0 0 0 1 ${offset.map(fixed).join(" ")}`);

@@ -81,9 +81,19 @@ describe("serializeBambu3mf", () => {
       expect(max[0]! - origin[0]!).toBeLessThanOrEqual(256 + 1e-3);
       expect(max[1]! - origin[1]!).toBeLessThanOrEqual(256 + 1e-3);
       expect(min[2]).toBeCloseTo(0, 4);
-      // Out of the 18 × 28 mm corner of the cutter, at the front left of the bed.
-      expect(min[0]! - origin[0]! >= 18 - 1e-3 || min[1]! - origin[1]! >= 28 - 1e-3).toBe(true);
+      // Half a millimetre clear of the 18 × 28 mm corner of the cutter, at the front left of the bed.
+      expect(min[0]! - origin[0]! >= 18.5 - 1e-3 || min[1]! - origin[1]! >= 28.5 - 1e-3).toBe(true);
     });
+  });
+
+  it("moves a centred object half a millimetre clear of the excluded corner, which Bambu Studio refuses to touch", () => {
+    // 230 × 220 mm centred starts at (13, 18), inside the 18 × 28 mm corner: moved along X.
+    const box: TriangleMesh = {
+      positions: new Float32Array([0, 0, 0, 230, 0, 0, 0, 220, 0, 0, 0, 5]),
+      indices: new Uint32Array([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]),
+    };
+    const content = readThreeMf(serializeBambu3mf([{ name: "bin", objects: [{ mesh: box, name: "bin" }] }], OPTIONS));
+    expect(content.placements).toEqual([[18.5, 18, 0]]);
   });
 
   it("keeps the vertices where the engine puts them: only the build items move the objects", async () => {

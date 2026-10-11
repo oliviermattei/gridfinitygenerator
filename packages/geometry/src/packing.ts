@@ -1,16 +1,11 @@
 // The rangement of a basket on plates (#42, ADR 0024): rectangles laid on as few plates as the
 // search finds, pure (no WASM), so that it runs in a worker of its own and in the tests.
+import { EXCLUDED_CORNER_CLEARANCE_MM } from "./bambu";
 import { PRINT_SPACING_MM } from "./clips";
 import type { BuildPlate } from "./print";
 
 /** Room left between two objects that share a plate, in millimetres (as `partPlates`, ADR 0023). */
 export const PACKING_GAP_MM = 5;
-/**
- * Room kept between an object and the excluded corner of the bed, in millimetres: Bambu Studio
- * refuses to slice an object that touches it (« too close to exclusion area »), and a box
- * measured on a float32 mesh may start a hair inside it.
- */
-export const EXCLUDED_CORNER_CLEARANCE_MM = 0.5;
 /** How long the search for a better rangement runs at most, in milliseconds. */
 export const PACKING_TIME_LIMIT_MS = 60_000;
 
