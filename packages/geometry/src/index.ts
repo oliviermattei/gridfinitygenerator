@@ -52,6 +52,7 @@ export { fitsOnBuildPlate, narrowMargin, roundUpToLayer, type BuildPlate } from 
 export { PRINT_GAP_MM, pieceMesh, printClips, printPieces, spreadPieces } from "./pieces";
 export { CROSSING_START_MM, type ClipPlacement, type ClipSlot, type EdgeSlot } from "./clips";
 export { serializeStl } from "./stl";
+export { partPlates, serializeBambu3mf, type BambuPlate, type BambuProjectOptions } from "./bambu";
 export { serialize3mf, type ThreeMfObject, type ThreeMfOptions } from "./three-mf";
 export { zipFiles } from "./zip";
 export {

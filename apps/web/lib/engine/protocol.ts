@@ -1,4 +1,5 @@
 import type { Baseplate, BaseplateSettings, BuildPlate, Quality } from "@repo/geometry";
+import type { BambuTarget } from "../printers/bambu";
 
 /** A baseplate without its mesh: what the page needs besides the geometry itself. */
 export type BaseplateSummary = Omit<Baseplate, "mesh">;
@@ -64,6 +65,8 @@ export type EngineRequest =
        * of its pieces from the bottom up (« pile {n} : pièces {pieces} »).
        */
       stackName: string;
+      /** The Bambu Studio project a 3MF becomes (ADR 0023): one plate per piece; null for a plain 3MF. */
+      bambu: BambuTarget | null;
     }
   | {
       id: number;

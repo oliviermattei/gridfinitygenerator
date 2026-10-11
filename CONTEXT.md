@@ -273,8 +273,16 @@ Dans une pile, la colonne de 0,8 mm qui monte du plateau à un coin que les piè
 _Avoid_: pin (sauf dans le code), tige (réservé à la vis), pilier
 
 **Plateau**:
-Le plateau d'impression de l'imprimante, uniquement. Sa taille utile est une préférence locale : elle décide de la découpe d'une baseplate et borne la taille d'un bin (contour réel, rebord compris), mais n'entre pas dans le lien de partage.
+Le plateau d'impression de l'imprimante, uniquement. Sa taille utile est une préférence locale : elle décide de la découpe d'une baseplate et borne la taille d'un bin (contour réel, rebord compris), mais n'entre pas dans le lien de partage. Avec une **imprimante** Bambu Lab, c'est le sien (256 × 256 mm pour la P1S), et un **projet Bambu** a un plateau par pièce.
 _Avoid_: build plate, lit, bed (et jamais pour désigner la baseplate)
+
+**Imprimante**:
+Celle pour laquelle on télécharge le 3MF, choisie dans le menu engrenage : « Autre » par défaut (un 3MF que lisent tous les trancheurs), ou une Bambu Lab (la P1S pour l'instant), qui en fait un **projet Bambu**. C'est une préférence de ce navigateur, hors du lien de partage (ADR 0023).
+_Avoid_: machine, modèle (sauf pour un modèle d'imprimante)
+
+**Projet Bambu**:
+Le 3MF téléchargé avec une **imprimante** Bambu Lab : le 3MF standard, plus un plateau par pièce (ou par pile) et la config de l'imprimante, de sa buse, du **filament** et de la hauteur de couche, que Bambu Studio ouvre sans avertir (ADR 0023).
+_Avoid_: fichier Bambu, 3MF Bambu (sauf en passant)
 
 **Filament**:
 La matière d'impression, choisie dans le menu engrenage (PLA par défaut, PETG, ABS, ASA, TPU, ou « Autre » avec sa densité). C'est une préférence de ce navigateur, avec son prix facultatif en €/kg : elle n'entre pas dans le lien de partage, et ne sert qu'à la **masse** et au coût affichés (#31, ADR 0019).

@@ -7,6 +7,7 @@ import { ChevronDown, Coffee, Link2, RotateCcw, Settings } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { LANGUAGE_NAMES, LOCALES, isLocale, type Locale } from "@/lib/i18n";
 import { DONATION_URL } from "@/lib/links";
+import { PRINTERS, type Printer } from "@/lib/printers/bambu";
 import { useFormats, useLocale, useStrings } from "@/lib/locale";
 import { BUILD_PLATE_RANGE, NOZZLES, PREVIEW_COLORS, type Nozzle, type Preferences, type PreviewColor } from "@/lib/preferences";
 import type { Strings } from "@/lib/strings";
@@ -98,7 +99,7 @@ const toThousandths = (value: number) => Math.round(value * 1000) / 1000;
 
 /**
  * Gear menu. On desktop it holds parameters only; on mobile it also holds the actions.
- * The parameters are the language, the units, the print (nozzle, layer height, line width),
+ * The parameters are the language, the units, the print (printer, nozzle, layer height, line width),
  * the build plate, the filament (#31) and the preview colour. Layer height and line width are baseplate
  * settings, shared in the link; the others are preferences of this browser.
  */
@@ -108,7 +109,7 @@ export function SettingsMenu({ preferences, onPreferencesChange, settings, onSet
   const locale = useLocale();
   const languageId = useId();
   const [open, setOpen] = useState(false);
-  const { unit, previewColor, nozzle, buildPlate } = preferences;
+  const { unit, previewColor, printer, nozzle, buildPlate } = preferences;
   const withActions = actions !== null;
   // An action closes the menu first: the reset confirmation or the notification replaces it.
   const closingMenu = (run: () => void) => () => {
@@ -171,6 +172,16 @@ export function SettingsMenu({ preferences, onPreferencesChange, settings, onSet
                 {t.print}
               </h3>
               <div className="flex flex-col gap-1.5">
+                <span className="text-[13px] font-medium text-muted">{t.printer}</span>
+                <Segmented<Printer>
+                  label={t.printer}
+                  value={printer}
+                  onChange={(next) => onPreferencesChange({ printer: next })}
+                  options={PRINTERS.map((value) => ({ value, label: t.printerNames[value] }))}
+                />
+                <p className="text-[12px] leading-snug text-muted">{t.printerHint}</p>
+              </div>
+              <div className="flex flex-col gap-1.5">
                 <span className="text-[13px] font-medium text-muted">{t.nozzle} (mm)</span>
                 <Segmented
                   label={t.nozzle}
@@ -217,34 +228,40 @@ export function SettingsMenu({ preferences, onPreferencesChange, settings, onSet
                 <h3 id="build-plate-title" className="text-[13.5px] font-semibold">
                   {t.buildPlate}
                 </h3>
-                <p className="mt-0.5 text-[12px] leading-snug text-muted">{t.buildPlateHint}</p>
+                <p className="mt-0.5 text-[12px] leading-snug text-muted">
+                  {printer === "other"
+                    ? t.buildPlateHint
+                    : t.printerBuildPlate.replace("{size}", `${f.lengths.format(buildPlate.width)} × ${f.lengths.format(buildPlate.depth)} mm`)}
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                <NumberStepper
-                  label={t.buildPlateWidth}
-                  decrementLabel={t.narrowerPlate}
-                  incrementLabel={t.widerPlate}
-                  value={buildPlate.width}
-                  min={BUILD_PLATE_RANGE.min}
-                  max={BUILD_PLATE_RANGE.max}
-                  step={1}
-                  unit="mm"
-                  locale={t.locale}
-                  onChange={(width) => onPreferencesChange({ buildPlate: { ...buildPlate, width } })}
-                />
-                <NumberStepper
-                  label={t.buildPlateDepth}
-                  decrementLabel={t.shallowerPlate}
-                  incrementLabel={t.deeperPlate}
-                  value={buildPlate.depth}
-                  min={BUILD_PLATE_RANGE.min}
-                  max={BUILD_PLATE_RANGE.max}
-                  step={1}
-                  unit="mm"
-                  locale={t.locale}
-                  onChange={(depth) => onPreferencesChange({ buildPlate: { ...buildPlate, depth } })}
-                />
-              </div>
+              {printer === "other" && (
+                <div className="grid grid-cols-2 gap-2.5">
+                  <NumberStepper
+                    label={t.buildPlateWidth}
+                    decrementLabel={t.narrowerPlate}
+                    incrementLabel={t.widerPlate}
+                    value={buildPlate.width}
+                    min={BUILD_PLATE_RANGE.min}
+                    max={BUILD_PLATE_RANGE.max}
+                    step={1}
+                    unit="mm"
+                    locale={t.locale}
+                    onChange={(width) => onPreferencesChange({ buildPlate: { ...buildPlate, width } })}
+                  />
+                  <NumberStepper
+                    label={t.buildPlateDepth}
+                    decrementLabel={t.shallowerPlate}
+                    incrementLabel={t.deeperPlate}
+                    value={buildPlate.depth}
+                    min={BUILD_PLATE_RANGE.min}
+                    max={BUILD_PLATE_RANGE.max}
+                    step={1}
+                    unit="mm"
+                    locale={t.locale}
+                    onChange={(depth) => onPreferencesChange({ buildPlate: { ...buildPlate, depth } })}
+                  />
+                </div>
+              )}
             </section>
 
             <FilamentSettings value={preferences.filament} onChange={(filament) => onPreferencesChange({ filament })} />

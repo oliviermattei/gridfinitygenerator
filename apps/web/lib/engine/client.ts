@@ -1,5 +1,6 @@
 import type { Baseplate, BaseplateSettings, BuildPlate, Quality } from "@repo/geometry";
 import type { Material } from "../mass";
+import type { BambuTarget } from "../printers/bambu";
 import type { BaseplateSummary, Comparison, EngineRequest, EngineResponse, EngineWarmUp, ExportFormat, ExportPiece, FileExtension } from "./protocol";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
@@ -54,6 +55,7 @@ export interface EngineClient {
       clipName: string;
       stack: { ears: boolean; pins: boolean } | null;
       stackName: string;
+      bambu: BambuTarget | null;
     },
   ): Promise<{ bytes: Uint8Array; name: string; extension: FileExtension; baseplate: BaseplateSummary | null; stacks: number }>;
   dispose(): void;
@@ -294,9 +296,9 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
         void render();
       }
     },
-    async exportFile(piece, settings, format, { link, buildPlate, pieceName, clipName, stack, stackName }) {
+    async exportFile(piece, settings, format, { link, buildPlate, pieceName, clipName, stack, stackName, bambu }) {
       const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : piece === "clip" ? "export-clip" : (`export-${format}` as const);
-      const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName, clipName, stack, stackName }, label).response;
+      const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName, clipName, stack, stackName, bambu }, label).response;
       if (response.type !== "export") throw new Error(`Unexpected engine response: ${response.type}`);
       return { bytes: response.bytes, name: response.name, extension: response.extension, baseplate: response.baseplate, stacks: response.stacks };
     },

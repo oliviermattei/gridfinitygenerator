@@ -12,6 +12,7 @@ import { MEDIA_TYPES, download } from "@/lib/export-file";
 import { binPath, type Locale } from "@/lib/i18n";
 import { useStrings } from "@/lib/locale";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
+import { bambuTargetOf } from "@/lib/printers/bambu";
 import { binShareLinkOf, resetBinSettings, useHydrated, useSavedBinSettings } from "@/lib/saved-settings";
 import { useElementSize } from "@/lib/use-element-size";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
@@ -139,7 +140,7 @@ export function BinGenerator() {
     setExporting(format);
     setError(null);
     try {
-      const { bytes, name } = await client.exportFile(settings, format, binShareLinkOf(settings));
+      const { bytes, name } = await client.exportFile(settings, format, binShareLinkOf(settings), bambuTargetOf(preferences));
       download(bytes as Uint8Array<ArrayBuffer>, `${name}.${format}`, MEDIA_TYPES[format]);
     } catch (reason) {
       console.error(reason);
@@ -165,6 +166,7 @@ export function BinGenerator() {
       disabled={exporting !== null || !fits}
       compact={compact}
       stlDescription={t.bin.stlDescription}
+      threeMfDescription={preferences.printer === "other" ? undefined : t.bin.threeMfBambuDescription}
     />
   );
 

@@ -1,4 +1,5 @@
 import type { Bin, BinSettings, Quality } from "@repo/geometry";
+import type { BambuTarget } from "../printers/bambu";
 import type { ExportFormat } from "./protocol";
 
 /** Requests from the bin page to its engine worker; each one gets a response with its id. */
@@ -11,6 +12,8 @@ export type BinEngineRequest =
       format: ExportFormat;
       /** Absolute link written into the 3MF to generate the bin again: the share link of the settings. */
       link: string;
+      /** The Bambu Studio project a 3MF becomes (ADR 0023); null for a plain 3MF. */
+      bambu: BambuTarget | null;
     };
 
 /** Messages from the bin engine worker back to the page. */

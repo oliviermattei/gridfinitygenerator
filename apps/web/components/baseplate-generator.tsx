@@ -26,6 +26,7 @@ import { baseplatePath, type Locale } from "@/lib/i18n";
 import { materialLess, type Material } from "@/lib/mass";
 import { useStrings } from "@/lib/locale";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
+import { bambuTargetOf } from "@/lib/printers/bambu";
 import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
 import { useElementSize } from "@/lib/use-element-size";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
@@ -273,6 +274,7 @@ export function BaseplateGenerator() {
         clipName: t.clipName,
         stack: stack.on ? { ears: stack.ears || stack.pins, pins: stack.pins } : null,
         stackName: t.stackName,
+        bambu: bambuTargetOf(preferences),
       };
       const { bytes, name, extension } = await client.exportFile(piece, settings, format, options);
       download(bytes as Uint8Array<ArrayBuffer>, `${name}.${extension}`, MEDIA_TYPES[extension]);
@@ -302,6 +304,7 @@ export function BaseplateGenerator() {
       exporting={exporting?.piece === "baseplate" ? exporting.format : null}
       disabled={exporting !== null}
       compact={compact}
+      threeMfDescription={preferences.printer === "other" ? undefined : t.threeMfBambuDescription}
     />
   );
 

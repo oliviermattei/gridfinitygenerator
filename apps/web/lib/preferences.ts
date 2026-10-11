@@ -5,6 +5,7 @@ import { BRAND_ACCENT } from "@repo/ui";
 import { useCallback, useSyncExternalStore } from "react";
 import { isLocale, type Locale } from "./i18n";
 import { DEFAULT_FILAMENT, parseFilament, type FilamentPreference } from "./mass";
+import { isPrinter, PRINTER_BEDS, type Printer } from "./printers/bambu";
 import { PREFERENCES_STORAGE_KEY } from "./storage-keys";
 import { isUnit, type Unit } from "./units";
 
@@ -54,6 +55,11 @@ export interface Preferences {
   /** Unit of the lengths of the drawer and the margins; everything else stays in millimetres. */
   unit: Unit;
   previewColor: PreviewColor;
+  /**
+   * Printer the 3MF is made for (ADR 0023): "other" for a plain 3MF; a Bambu Lab printer makes it
+   * a Bambu Studio project, and its bed is the build plate.
+   */
+  printer: Printer;
   /** Nozzle of the printer, in millimetres: the line width follows it when it changes. */
   nozzle: Nozzle;
   /** Usable area of the build plate, in millimetres. */
@@ -67,6 +73,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   language: null,
   unit: "mm",
   previewColor: "brand",
+  printer: "other",
   nozzle: 0.4,
   buildPlate: { width: 256, depth: 256 },
   stack: { on: false, ears: false, pins: false },
@@ -98,15 +105,18 @@ function parse(raw: string | null): Preferences {
   const plate = (stored.buildPlate ?? {}) as Partial<Record<keyof BuildPlate, unknown>>;
   const stack = (stored.stack ?? {}) as Partial<Record<keyof StackPreference, unknown>>;
   const flag = (value: unknown, fallback: boolean) => (typeof value === "boolean" ? value : fallback);
+  const printer = isPrinter(stored.printer) ? stored.printer : DEFAULT_PREFERENCES.printer;
   return {
     language: isLocale(stored.language) ? stored.language : DEFAULT_PREFERENCES.language,
     unit: isUnit(stored.unit) ? stored.unit : DEFAULT_PREFERENCES.unit,
     previewColor: isPreviewColor(stored.previewColor) ? stored.previewColor : DEFAULT_PREFERENCES.previewColor,
+    printer,
     nozzle: isNozzle(stored.nozzle) ? stored.nozzle : DEFAULT_PREFERENCES.nozzle,
-    buildPlate: {
-      width: plateLength(plate.width, DEFAULT_PREFERENCES.buildPlate.width),
-      depth: plateLength(plate.depth, DEFAULT_PREFERENCES.buildPlate.depth),
-    },
+    // The bed of a known printer, whatever was stored.
+    buildPlate:
+      printer === "other"
+        ? { width: plateLength(plate.width, DEFAULT_PREFERENCES.buildPlate.width), depth: plateLength(plate.depth, DEFAULT_PREFERENCES.buildPlate.depth) }
+        : PRINTER_BEDS[printer],
     stack: {
       on: flag(stack.on, DEFAULT_PREFERENCES.stack.on),
       ears: flag(stack.ears, DEFAULT_PREFERENCES.stack.ears),

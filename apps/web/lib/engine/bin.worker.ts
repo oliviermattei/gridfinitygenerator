@@ -1,6 +1,7 @@
 // Runs the bin engine (and its manifold-3d WASM) off the main thread.
-import { generateBin, loadEngine, serialize3mf, serializeStl } from "@repo/geometry";
+import { generateBin, loadEngine, serialize3mf, serializeBambu3mf, serializeStl } from "@repo/geometry";
 import { binExportName } from "../export-file";
+import { bambuSettings } from "../printers/bambu";
 import type { BinEngineRequest, BinEngineResponse } from "./bin-protocol";
 
 // The app compiles against the DOM lib: describe the few worker globals used here.
@@ -26,7 +27,14 @@ scope.onmessage = async ({ data: request }) => {
       // Always the final quality: the exported mesh is the one the statistics measure.
       const { mesh } = await generateBin(request.settings, "final");
       const name = binExportName(request.settings);
-      const bytes = request.format === "3mf" ? serialize3mf(mesh, { name, shareLink: request.link }) : serializeStl(mesh);
+      // A Bambu Studio project when the printer is a Bambu Lab one (ADR 0023): the bin on its plate.
+      const projectSettings = request.format === "3mf" && request.bambu ? await bambuSettings(request.bambu, request.settings.layerHeight) : null;
+      const bytes =
+        request.format === "stl"
+          ? serializeStl(mesh)
+          : projectSettings
+            ? serializeBambu3mf([{ name, objects: [{ mesh, name }] }], { name, shareLink: request.link, projectSettings })
+            : serialize3mf(mesh, { name, shareLink: request.link });
       scope.postMessage({ id: request.id, type: "export", bytes, name }, [bytes.buffer as ArrayBuffer]);
     }
   } catch (error) {

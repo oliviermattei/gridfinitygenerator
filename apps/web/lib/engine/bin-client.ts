@@ -1,4 +1,5 @@
 import type { Bin, BinSettings, Quality } from "@repo/geometry";
+import type { BambuTarget } from "../printers/bambu";
 import type { BinEngineRequest, BinEngineResponse } from "./bin-protocol";
 import type { ExportFormat } from "./protocol";
 
@@ -18,7 +19,7 @@ export interface BinEngineClient {
    */
   show(settings: BinSettings): void;
   /** The file of the bin of `settings` in `format`, in final quality, and its name without extension. */
-  exportFile(settings: BinSettings, format: ExportFormat, link: string): Promise<{ bytes: Uint8Array; name: string }>;
+  exportFile(settings: BinSettings, format: ExportFormat, link: string, bambu: BambuTarget | null): Promise<{ bytes: Uint8Array; name: string }>;
   dispose(): void;
 }
 
@@ -122,8 +123,8 @@ export function createBinEngineClient(events: BinEngineEvents): BinEngineClient 
       wanted = { settings, next: "preview" };
       pump();
     },
-    async exportFile(settings, format, link) {
-      const response = await send({ type: "export", settings, format, link }, false);
+    async exportFile(settings, format, link, bambu) {
+      const response = await send({ type: "export", settings, format, link, bambu }, false);
       if (response.type !== "export") throw new Error("Unexpected response to an export");
       return { bytes: response.bytes, name: response.name };
     },

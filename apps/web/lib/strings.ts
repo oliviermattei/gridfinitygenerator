@@ -98,6 +98,7 @@ const fr = {
     resetDescription:
       "Le bin revient aux réglages par défaut. Vos paramètres sont conservés : langue, unités, buse, hauteur de couche, largeur de ligne, plateau et couleur de l'aperçu.",
     stlDescription: "Pour les trancheurs qui ne lisent pas le 3MF.",
+    threeMfBambuDescription: "Projet Bambu Studio : réglages d'impression compris, avec le lien de ses réglages.",
     computeFailed: "Le calcul du bin a échoué. Modifiez un réglage pour réessayer.",
   },
   // Top bar and menu
@@ -128,6 +129,9 @@ const fr = {
     sand: "Sable",
   },
   print: "Impression",
+  printer: "Imprimante",
+  printerNames: { other: "Autre", "bambu-p1s": "Bambu Lab P1S" },
+  printerHint: "Bambu Lab P1S : le 3MF devient un projet Bambu Studio, une pièce par plateau, avec les réglages de la buse, du filament et de la hauteur de couche. Autre : un 3MF que lisent tous les trancheurs.",
   nozzle: "Buse",
   nozzleHint: "Choisir une buse règle la largeur de ligne sur son diamètre.",
   layerHeight: "Hauteur de couche",
@@ -138,6 +142,8 @@ const fr = {
   widerLine: "Ligne plus large",
   buildPlate: "Plateau",
   buildPlateHint: "Surface utile du plateau de votre imprimante.",
+  /** Build plate of a known printer: `{size}` is its width × depth. */
+  printerBuildPlate: "{size}, celui de l'imprimante.",
   buildPlateWidth: "Largeur du plateau",
   narrowerPlate: "Plateau moins large",
   widerPlate: "Plateau plus large",
@@ -355,6 +361,7 @@ const fr = {
   clipDescription:
     "Un clip seul, à imprimer à l'unité. Découpée, la baseplate a déjà les siens dans son fichier. Un bord sans marge a aussi ses fentes : deux baseplates se clipsent l'une à l'autre.",
   threeMfDescription: "Recommandé : s'ouvre dans le trancheur, avec le lien de ses réglages.",
+  threeMfBambuDescription: "Projet Bambu Studio : une pièce par plateau, réglages d'impression compris, avec le lien de ses réglages.",
   stlDescription: "Pour les trancheurs qui ne lisent pas le 3MF. Découpée, la baseplate vient en zip, un fichier par pièce, plus les clips.",
   /** Name of a piece of a cut baseplate in the 3MF; `{n}` is its number, engraved under it. */
   pieceName: "pièce {n}",
@@ -458,6 +465,7 @@ const en: Strings = {
     resetDescription:
       "The bin goes back to the default settings. Your parameters are kept: language, units, nozzle, layer height, line width, build plate and preview colour.",
     stlDescription: "For slicers that cannot read 3MF.",
+    threeMfBambuDescription: "Bambu Studio project: print settings included, with the link to its settings.",
     computeFailed: "Computing the bin failed. Change a setting to try again.",
   },
   // Top bar and menu
@@ -488,6 +496,9 @@ const en: Strings = {
     sand: "Sand",
   },
   print: "Print",
+  printer: "Printer",
+  printerNames: { other: "Other", "bambu-p1s": "Bambu Lab P1S" },
+  printerHint: "Bambu Lab P1S: the 3MF becomes a Bambu Studio project, one piece per plate, with the settings of the nozzle, the filament and the layer height. Other: a 3MF every slicer reads.",
   nozzle: "Nozzle",
   nozzleHint: "Choosing a nozzle sets the line width to its diameter.",
   layerHeight: "Layer height",
@@ -498,6 +509,7 @@ const en: Strings = {
   widerLine: "Wider line",
   buildPlate: "Build plate",
   buildPlateHint: "Usable area of your printer's build plate.",
+  printerBuildPlate: "{size}, the printer's own.",
   buildPlateWidth: "Build plate width",
   narrowerPlate: "Narrower build plate",
   widerPlate: "Wider build plate",
@@ -700,6 +712,7 @@ const en: Strings = {
   clipDescription:
     "A single clip, to print one by one. Cut, the baseplate already has its own in its file. A side without margin has slots too: two baseplates clip to each other.",
   threeMfDescription: "Recommended: opens in the slicer, with the link to its settings.",
+  threeMfBambuDescription: "Bambu Studio project: one piece per plate, print settings included, with the link to its settings.",
   stlDescription: "For the slicers that cannot read 3MF. Cut, the baseplate comes as a zip, one file per piece, and the clips.",
   pieceName: "piece {n}",
   clipName: "clip × {n}",

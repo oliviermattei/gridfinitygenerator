@@ -19,6 +19,8 @@ export interface DownloadButtonProps {
   compact?: boolean;
   /** What the STL holds, when it is not the baseplate's (a zip of pieces once cut). */
   stlDescription?: string;
+  /** What the 3MF holds, when it is not a plain one (a Bambu Studio project, ADR 0023). */
+  threeMfDescription?: string;
 }
 
 const FORMATS: readonly { format: ExportFormat; description: "threeMfDescription" | "stlDescription" }[] = [
@@ -31,7 +33,7 @@ const FORMATS: readonly { format: ExportFormat; description: "threeMfDescription
  * slicer (named object, share link inside); its menu also offers the STL, and a single clip,
  * to print clips one by one.
  */
-export function DownloadButton({ onDownload, onDownloadClip, exporting, disabled, compact = false, stlDescription }: DownloadButtonProps) {
+export function DownloadButton({ onDownload, onDownloadClip, exporting, disabled, compact = false, stlDescription, threeMfDescription }: DownloadButtonProps) {
   const t = useStrings();
   const label = exporting ? t.preparing[exporting] : t.download["3mf"];
   const accent = `h-12 bg-accent text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-70 ${focusRing}`;
@@ -68,7 +70,7 @@ export function DownloadButton({ onDownload, onDownloadClip, exporting, disabled
                   <Download className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
                   <span className="min-w-0">
                     <span className="block text-[13.5px] font-semibold">{t.download[format]}</span>
-                    <span className="block text-[12px] leading-snug text-muted">{format === "stl" && stlDescription ? stlDescription : t[description]}</span>
+                    <span className="block text-[12px] leading-snug text-muted">{(format === "stl" ? stlDescription : threeMfDescription) ?? t[description]}</span>
                   </span>
                 </Menu.Item>
               ))}

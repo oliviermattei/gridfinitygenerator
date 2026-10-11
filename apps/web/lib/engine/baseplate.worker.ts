@@ -5,10 +5,12 @@ import {
   generateTestKit,
   loadEngine,
   orientStacks,
+  partPlates,
   printClips,
   printPieces,
   printStacks,
   serialize3mf,
+  serializeBambu3mf,
   serializeStl,
   stackPlanOf,
   stackRuleOf,
@@ -16,6 +18,7 @@ import {
   type TriangleMesh,
 } from "@repo/geometry";
 import { clipExportName, exportName } from "../export-file";
+import { bambuSettings } from "../printers/bambu";
 import type { EngineRequest, EngineResponse, EngineWarmUp, FileExtension } from "./protocol";
 
 // The app compiles against the DOM lib: describe the few worker globals used here.
@@ -71,12 +74,16 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
       // held upside down, a type that prints upside down.
       const stacked = request.piece === "baseplate" && request.stack !== null && stackRuleOf(request.settings, baseplate.layout).blockers.length === 0;
       const name = exportName(request.piece, baseplate, request.settings, stacked);
+      // The settings of the Bambu Studio project the 3MF becomes, or null for a plain 3MF (ADR 0023).
+      const projectSettings = request.format === "3mf" && request.bambu ? await bambuSettings(request.bambu, request.settings.layerHeight) : null;
       const start = performance.now();
       let bytes: Uint8Array;
       let extension: FileExtension = request.format;
       let stacks = 0;
       if (baseplate.pieces.length <= 1) {
-        bytes = request.format === "3mf" ? serialize3mf(mesh, { name, shareLink: request.link }) : serializeStl(mesh);
+        if (request.format === "stl") bytes = serializeStl(mesh);
+        else if (projectSettings) bytes = serializeBambu3mf([{ name, objects: [{ mesh, name }] }], { name, shareLink: request.link, projectSettings });
+        else bytes = serialize3mf(mesh, { name, shareLink: request.link });
       } else {
         // The pieces, each its own object, or the stacks, each an object of a shell per piece.
         let parts: { mesh: TriangleMesh; name: string; file: string }[];
@@ -100,10 +107,16 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
         const clips = printClips(generated, parts.map((part) => part.mesh));
         const count = String(baseplate.stats.clips);
         if (request.format === "3mf") {
-          // One 3MF, one named object per piece (or stack), laid out apart from each other, and one for the clips.
+          // One 3MF, one named object per piece (or stack), laid out apart from each other, and one for the clips;
+          // for Bambu Studio, one plate per piece (or stack), the clips beside the last one when they fit.
           const objects = parts.map(({ mesh: partMesh, name: partName }) => ({ mesh: partMesh, name: partName }));
-          if (clips) objects.push({ mesh: clips, name: request.clipName.replace("{n}", count) });
-          bytes = serialize3mf(objects, { name, shareLink: request.link });
+          const clipObject = clips ? { mesh: clips, name: request.clipName.replace("{n}", count) } : null;
+          if (projectSettings) {
+            bytes = serializeBambu3mf(partPlates(objects, clipObject, request.buildPlate), { name, shareLink: request.link, projectSettings });
+          } else {
+            if (clipObject) objects.push(clipObject);
+            bytes = serialize3mf(objects, { name, shareLink: request.link });
+          }
         } else {
           // STL has no named objects: a zip of one file per piece (or stack), and one for the clips.
           const files = parts.map(({ mesh: partMesh, file }) => [file, serializeStl(partMesh)] as [string, Uint8Array]);

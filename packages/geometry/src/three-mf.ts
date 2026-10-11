@@ -26,16 +26,16 @@ export interface ThreeMfOptions {
   shareLink: string;
 }
 
-const MODEL_PATH = "3D/3dmodel.model";
+export const MODEL_PATH = "3D/3dmodel.model";
 
-const CONTENT_TYPES =
+export const CONTENT_TYPES =
   '<?xml version="1.0" encoding="UTF-8"?>\n' +
   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
   '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>' +
   "</Types>";
 
-const RELATIONSHIPS =
+export const RELATIONSHIPS =
   '<?xml version="1.0" encoding="UTF-8"?>\n' +
   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
   `<Relationship Target="/${MODEL_PATH}" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>` +
@@ -45,16 +45,16 @@ const RELATIONSHIPS =
  * Coordinates are written to 0.00001 mm, finer than the float32 precision of a coordinate
  * of a few hundred millimetres: the model reads back as the same mesh, to 0.000005 mm.
  */
-const DECIMALS = 5;
+export const DECIMALS = 5;
 const SCALE = 10 ** DECIMALS;
 
 /** Slots of the table of recent decimal numbers (a power of two). */
 const DECIMAL_SLOTS_SHIFT = 16;
 const DECIMAL_SLOTS = 2 ** (32 - DECIMAL_SLOTS_SHIFT);
 
-const encoder = new TextEncoder();
+export const encoder = new TextEncoder();
 
-function escapeXml(text: string): string {
+export function escapeXml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -183,8 +183,16 @@ function placement(objects: readonly ThreeMfObject[]): string {
   return `1 0 0 0 1 0 0 0 1 ${offset.join(" ")}`;
 }
 
-/** Writes the model XML of the objects. */
-function writeModel(objects: readonly ThreeMfObject[], { name, shareLink }: ThreeMfOptions, out: DeflateEncoder) {
+/**
+ * Writes the model XML of the objects: `transforms` holds the transform of the build item of
+ * each object, `metadata` more metadata elements of the model, after its title and description.
+ */
+export function writeModel(
+  objects: readonly ThreeMfObject[],
+  { name, shareLink }: ThreeMfOptions,
+  out: DeflateEncoder,
+  { transforms, metadata = "" }: { transforms: readonly string[]; metadata?: string },
+) {
   const numbers = new NumberWriter(out, Math.max(0, ...objects.map(({ mesh }) => mesh.positions.length / 3)));
   // Each element but the first opens by closing the previous one: `"/><vertex x="`.
   const tokens = {
@@ -202,6 +210,7 @@ function writeModel(objects: readonly ThreeMfObject[], { name, shareLink }: Thre
         '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">' +
         `<metadata name="Title">${escapeXml(name)}</metadata>` +
         `<metadata name="Description">${escapeXml(shareLink)}</metadata>` +
+        metadata +
         "<resources>",
     ),
   );
@@ -212,9 +221,8 @@ function writeModel(objects: readonly ThreeMfObject[], { name, shareLink }: Thre
     writeMesh(object.mesh, numbers, tokens, out);
     out.text("</mesh></object>");
   });
-  const transform = placement(objects);
   out.text("</resources><build>");
-  objects.forEach((_, index) => out.text(`<item objectid="${index + 1}" transform="${transform}"/>`));
+  objects.forEach((_, index) => out.text(`<item objectid="${index + 1}" transform="${transforms[index]}"/>`));
   out.text("</build></model>");
 }
 
@@ -257,9 +265,10 @@ function writeMesh(
  */
 export function serialize3mf(mesh: TriangleMesh | readonly ThreeMfObject[], options: ThreeMfOptions): Uint8Array {
   const objects = "positions" in mesh ? [{ mesh, name: options.name }] : mesh;
+  const transform = placement(objects);
   return zipParts([
     ["[Content_Types].xml", (out) => out.bytes(encoder.encode(CONTENT_TYPES))],
     ["_rels/.rels", (out) => out.bytes(encoder.encode(RELATIONSHIPS))],
-    [MODEL_PATH, (out) => writeModel(objects, options, out)],
+    [MODEL_PATH, (out) => writeModel(objects, options, out, { transforms: objects.map(() => transform) })],
   ]);
 }
