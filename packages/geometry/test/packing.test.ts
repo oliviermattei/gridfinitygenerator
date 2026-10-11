@@ -239,6 +239,19 @@ describe("plateKeyOf", () => {
     expect(result.status).toBe("optimal");
     expectRules(problem, result.packing);
   });
+
+  // Provisional (#43): a Bambu Studio project prints each plate at one layer height.
+  it("never puts two layer heights on a plate, in any rangement", () => {
+    for (const mode of ["fewest-plates", "by-category"] as const) {
+      const problem: PackingProblem = {
+        items: objects.map(({ id, category }, k) => ({ id, width: 60, depth: 60, key: plateKeyOf(mode, id, category, k % 2 === 0 ? 0.2 : 0.12) })),
+        plate: PLATE_256,
+      };
+      const { packing } = searchPacking(problem);
+      for (const plate of packing.plates) expect(new Set(plate.items.map((item) => objects.findIndex((o) => o.id === item.id) % 2)).size).toBe(1);
+    }
+    expect(plateKeyOf("fewest-plates", "a", "bins", 0.2)).toBe(plateKeyOf("fewest-plates", "b", "baseplates", 0.2));
+  });
 });
 
 describe("clipBlockOf", () => {

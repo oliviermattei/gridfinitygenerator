@@ -25,6 +25,12 @@ import { zipParts } from "./zip";
 export interface BambuPlate {
   name: string;
   objects: readonly ThreeMfObject[];
+  /**
+   * Provisional (#43): the layer height its objects print at, in millimetres, when it may differ
+   * from the project's (`layer_height` of its settings). Bambu Studio has no layer height per
+   * plate: each object of the plate gets it as its own setting. None by default.
+   */
+  layerHeight?: number;
 }
 
 export interface BambuProjectOptions extends ThreeMfOptions {
@@ -135,17 +141,22 @@ function placements(plates: readonly BambuPlate[], [width, depth]: [number, numb
   });
 }
 
-/** `Metadata/model_settings.config`: the name of each object, and the objects of each plate. */
-function modelSettings(plates: readonly BambuPlate[]): string {
+/**
+ * `Metadata/model_settings.config`: the name of each object, its layer height when its plate's
+ * differs from the project's, and the objects of each plate.
+ */
+function modelSettings(plates: readonly BambuPlate[], projectLayer: string): string {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<config>\n';
   let id = 0;
   const platesXml = plates.map((plate, index) => {
+    const layer = plate.layerHeight === undefined ? projectLayer : String(Number(plate.layerHeight.toFixed(3)));
+    const own = layer === projectLayer ? "" : `    <metadata key="layer_height" value="${layer}"/>\n`;
     let entry = `  <plate>\n    <metadata key="plater_id" value="${index + 1}"/>\n`;
     entry += `    <metadata key="plater_name" value="${escapeXml(plate.name)}"/>\n    <metadata key="locked" value="false"/>\n`;
     for (const object of plate.objects) {
       id++;
       const name = escapeXml(object.name);
-      xml += `  <object id="${id}">\n    <metadata key="name" value="${name}"/>\n    <metadata key="extruder" value="1"/>\n`;
+      xml += `  <object id="${id}">\n    <metadata key="name" value="${name}"/>\n    <metadata key="extruder" value="1"/>\n${own}`;
       xml += `    <part id="${id}" subtype="normal_part">\n      <metadata key="name" value="${name}"/>\n`;
       xml += '      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>\n    </part>\n  </object>\n';
       entry += `    <model_instance>\n      <metadata key="object_id" value="${id}"/>\n      <metadata key="instance_id" value="0"/>\n`;
@@ -174,7 +185,7 @@ export function serializeBambu3mf(plates: readonly BambuPlate[], options: BambuP
     ["[Content_Types].xml", text(CONTENT_TYPES)],
     ["_rels/.rels", text(RELATIONSHIPS)],
     [MODEL_PATH, (out) => writeModel(objects, options, out, { transforms, metadata })],
-    ["Metadata/model_settings.config", text(modelSettings(plates))],
+    ["Metadata/model_settings.config", text(modelSettings(plates, String(projectSettings.layer_height ?? "")))],
     ["Metadata/project_settings.config", text(JSON.stringify(projectSettings, null, 4))],
   ]);
 }

@@ -463,16 +463,19 @@ export type PackingMode = (typeof PACKING_MODES)[number];
 
 /**
  * The key of an object in a rangement (`PackingItem.key`): one for all in « moins de plateaux »,
- * its category « par catégorie », its own in « un objet par plateau ».
+ * its category « par catégorie », its own in « un objet par plateau »; and, provisionally (#43),
+ * its layer height, since a plate of a Bambu Studio project prints at one layer height: two
+ * layer heights never share a plate. Without one, the key is the rangement's alone.
  */
-export function plateKeyOf(mode: PackingMode, id: string, category: string): string {
+export function plateKeyOf(mode: PackingMode, id: string, category: string, layerHeight?: number): string {
+  const layer = layerHeight === undefined ? "" : `|layer:${Number(layerHeight.toFixed(3))}`;
   switch (mode) {
     case "fewest-plates":
-      return "plate";
+      return `plate${layer}`;
     case "by-category":
-      return `category:${category}`;
+      return `category:${category}${layer}`;
     case "one-per-plate":
-      return `object:${id}`;
+      return `object:${id}${layer}`;
   }
 }
 

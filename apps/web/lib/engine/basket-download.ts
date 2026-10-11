@@ -169,8 +169,11 @@ export async function writeBasketDownload(plan: BasketDownloadPlan, options: Bas
     onProgress?.(computed.size, total);
   }
 
+  const articles = new Map(plan.articles.map((article) => [article.id, article]));
   const plates = plan.plates.map((plate) => ({
     name: plate.name,
+    // Provisional (#43): the objects of a plate share their layer height (`plateKeyOf`).
+    layerHeight: plate.objects[0] ? articleLayerHeight(articles.get(plate.objects[0].articleId)!) : undefined,
     objects: plate.objects.map((object): ThreeMfObject => {
       const article = computed.get(object.articleId);
       if (!article) throw new Error(`Article ${object.articleId} is not in the plan`);

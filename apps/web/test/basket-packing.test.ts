@@ -50,7 +50,7 @@ describe("the objects of the basket", () => {
     const block = basket.items.at(-1)!;
     expect(block.width).toBeCloseTo(3 * 2.5 + 2 * 3, 9);
     expect(block.depth).toBeCloseTo(2 * 2.6 + 3, 9);
-    expect(basket.clipBlock!.clips.map((c) => c.id)).toEqual(["plate", "plate", "plate", "plate", "clip", "clip"]);
+    expect(basket.clipBlocks.get("clips")!.clips.map((c) => c.id)).toEqual(["plate", "plate", "plate", "plate", "clip", "clip"]);
     expect(basket.objects.get("plate/1/1")).toMatchObject({ articleId: "plate", exemplar: 1, category: "baseplates", part: { numbers: [2] } });
   });
 
@@ -68,6 +68,22 @@ describe("the objects of the basket", () => {
     expect(keys("fewest-plates")).toBe(1);
     expect(keys("by-category")).toBe(3);
     expect(keys("one-per-plate")).toBe(7);
+  });
+
+  // Provisional (#43): a plate of a Bambu Studio project prints at one layer height.
+  test("two layer heights never share a plate: the clips of each in a block of their own", () => {
+    const fine: Article = { id: "fine", model: "bin", link: "v=1&lh=0.12", quantity: 1 };
+    const fineClip: Article = { id: "fineClip", model: "clip", link: "v=1&lh=0.12", quantity: 1 };
+    const measures = new Map(MEASURES).set("fine", MEASURES.get("bin")!).set("fineClip", MEASURES.get("clip")!);
+    const basket = basketPackingOf([bin, fine, baseplate, fineClip], (a) => measures.get(a.id), "fewest-plates")!;
+    const keyOf = (id: string) => basket.items.find((item) => item.id === id)!.key;
+    expect(keyOf("fine/1/0")).not.toBe(keyOf("bin/1/0"));
+    expect(keyOf("plate/1/0")).toBe(keyOf("bin/1/0"));
+    // The clips of the baseplate at 0.2 mm, the clip alone at 0.12 mm: two blocks.
+    expect(basket.items.filter((item) => basket.objects.get(item.id)!.category === "clips").map((item) => item.id)).toEqual(["clips", "clips-2"]);
+    expect(basket.clipBlocks.get("clips")!.clips.map((c) => c.id)).toEqual(["plate", "plate", "plate", "plate"]);
+    expect(basket.clipBlocks.get("clips-2")!.clips.map((c) => c.id)).toEqual(["fineClip"]);
+    expect(keyOf("clips-2")).toBe(keyOf("fine/1/0"));
   });
 });
 

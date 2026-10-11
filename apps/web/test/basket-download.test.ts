@@ -231,4 +231,33 @@ describe("the plan of the download", () => {
     expect(box.depth).toBeCloseTo(83.5, 3);
     expect(file.name).toBe("panier-1-plateau");
   });
+
+  // Provisional (#43): one layer height per plate, given to its objects in Bambu Studio.
+  test("a plate of another layer height than the project's gives it to its objects", async () => {
+    const normal: Article = { id: "normal", model: "bin", link: "v=1", quantity: 2 };
+    const fine: Article = { id: "fine", model: "bin", link: "v=1&lh=0.12", quantity: 1 };
+    const both = [normal, fine];
+    const known = new Map<string, ArticleMeasure>();
+    for (const article of both) known.set(article.id, await measureArticle(article, PLATE));
+    const mixed = basketPackingOf(both, (article) => known.get(article.id), "fewest-plates")!;
+    const packed = searchPacking({ items: mixed.items, plate: PLATE }).packing.plates;
+    expect(packed).toHaveLength(2);
+    const names = (id: string) => (id === "fine" ? "Bin fin" : "Bin");
+    const file = await writeBasketDownload(
+      basketDownloadPlan(both, mixed, packed, "fewest-plates", { nameOf: names, linkOf, t, basketLink: "" }),
+      { buildPlate: PLATE, stack: null, format: "3mf", bambu: P1S },
+    );
+    const files = unzipSync(file.bytes);
+    // The project at the layer height of most objects; the fine bin at its own.
+    expect(JSON.parse(strFromU8(files["Metadata/project_settings.config"]!))).toMatchObject({ layer_height: "0.2" });
+    const objects = [...strFromU8(files["Metadata/model_settings.config"]!).matchAll(/<object id="\d+">([\s\S]*?)<\/object>/g)].map(([, body]) => [
+      /key="name" value="([^"]*)"/.exec(body!)![1],
+      /key="layer_height" value="([^"]*)"/.exec(body!)?.[1],
+    ]);
+    expect(objects.sort()).toEqual([
+      ["Bin (1)", undefined],
+      ["Bin (2)", undefined],
+      ["Bin fin", "0.12"],
+    ]);
+  });
 });

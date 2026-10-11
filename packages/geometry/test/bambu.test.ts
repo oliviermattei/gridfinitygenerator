@@ -130,4 +130,19 @@ describe("serializeBambu3mf", () => {
     expect(content.objects.map((object) => object.description)).toEqual(["https://example.test/fr/bin?v=1", undefined, "https://example.test/fr/baseplate?v=1"]);
     expect(content.metadata.get("Description")).toBe(OPTIONS.shareLink);
   });
+
+  // Provisional (#43): Bambu Studio has no layer height per plate, but one per object.
+  it("gives the objects of a plate of another layer height than the project's that layer height", () => {
+    const box = (x: number): TriangleMesh => ({
+      positions: new Float32Array([x, 50, 0, x + 10, 50, 0, x, 60, 0, x, 50, 5]),
+      indices: new Uint32Array([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]),
+    });
+    const plates: BambuPlate[] = [
+      { name: "Plateau 1", layerHeight: 0.2, objects: [{ mesh: box(50), name: "a" }] },
+      { name: "Plateau 2", layerHeight: 0.12, objects: [{ mesh: box(50), name: "b" }, { mesh: box(100), name: "c" }] },
+    ];
+    const files = readZip(serializeBambu3mf(plates, { ...OPTIONS, projectSettings: { ...SETTINGS, layer_height: "0.2" }, keepPositions: true }));
+    const objects = [...text(files, "Metadata/model_settings.config").matchAll(/<object id="(\d+)">([\s\S]*?)<\/object>/g)].map(([, , body]) => /key="layer_height" value="([^"]*)"/.exec(body!)?.[1]);
+    expect(objects).toEqual([undefined, "0.12", "0.12"]);
+  });
 });
