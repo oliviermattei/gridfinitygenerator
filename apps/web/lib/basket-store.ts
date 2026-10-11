@@ -96,3 +96,11 @@ export function useEditedArticle(): Article | null {
   const basket = useBasket();
   return id === null ? null : (basket.articles.find((article) => article.id === id) ?? null);
 }
+
+/**
+ * Puts articles of a basket link (#44) in the basket of this browser, each with a new id:
+ * after its articles, or in their place.
+ */
+export function openInBasket(drafts: readonly ArticleDraft[], how: "add" | "replace") {
+  changeBasket((basket) => drafts.reduce((next, draft) => addArticle(next, draft, newArticleId()), how === "replace" ? EMPTY : basket));
+}

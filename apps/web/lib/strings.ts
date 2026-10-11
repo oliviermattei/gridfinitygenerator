@@ -424,6 +424,17 @@ const fr = {
     perUnit: (mass: string) => `${mass} l'unité`,
     doesNotFit: (plate: string) => `Ne tient pas sur votre plateau (${plate}) : exclu du téléchargement.`,
     measureFailed: "Le calcul de cet article a échoué.",
+    /** The basket link (#44). */
+    copyLink: "Copier le lien du panier",
+    openLinkTitle: "Ouvrir le panier de ce lien ?",
+    openLinkDescription: (count: number, current: number) =>
+      `Ce lien apporte ${count} article${count > 1 ? "s" : ""}, et votre panier en a déjà ${current}.`,
+    replaceBasket: "Remplacer mon panier",
+    addToBasket: "Ajouter à mon panier",
+    linkOpened: (count: number) => `Panier ouvert : ${count} article${count > 1 ? "s" : ""}`,
+    linkUnreadable: "Ce lien de panier est illisible : rien n'a été ouvert.",
+    articlesUnreadable: (count: number) =>
+      count > 1 ? `${count} articles du lien sont illisibles et ont été ignorés.` : "Un article du lien est illisible et a été ignoré.",
     totals: "Total",
     totalMass: "Masse",
     totalCost: "Coût du filament",
@@ -830,6 +841,16 @@ const en: Strings = {
     perUnit: (mass: string) => `${mass} each`,
     doesNotFit: (plate: string) => `Does not fit on your build plate (${plate}): left out of the download.`,
     measureFailed: "This article could not be computed.",
+    copyLink: "Copy the basket link",
+    openLinkTitle: "Open the basket of this link?",
+    openLinkDescription: (count: number, current: number) =>
+      `This link brings ${count} article${count > 1 ? "s" : ""}, and your basket already has ${current}.`,
+    replaceBasket: "Replace my basket",
+    addToBasket: "Add to my basket",
+    linkOpened: (count: number) => `Basket opened: ${count} article${count > 1 ? "s" : ""}`,
+    linkUnreadable: "This basket link cannot be read: nothing was opened.",
+    articlesUnreadable: (count: number) =>
+      count > 1 ? `${count} articles of the link cannot be read and were left out.` : "An article of the link cannot be read and was left out.",
     totals: "Total",
     totalMass: "Mass",
     totalCost: "Cost of the filament",

@@ -38,7 +38,7 @@ export interface Basket {
 /** Version of the stored basket written today. */
 const BASKET_VERSION = 1;
 
-const MODELS: readonly ArticleModel[] = ["bin", "baseplate", "test-kit", "clip"];
+export const ARTICLE_MODELS: readonly ArticleModel[] = ["bin", "baseplate", "test-kit", "clip"];
 
 /** What an added article is made of: all but its id. */
 export type ArticleDraft = Omit<Article, "id">;
@@ -52,7 +52,7 @@ export function serializeBasket(basket: Basket): string {
 export const QUANTITY_RANGE = { min: 1, max: 999 } as const;
 
 /** A quantity brought to a whole number in its range. */
-function quantityOf(value: number): number {
+export function quantityOf(value: number): number {
   return Math.min(QUANTITY_RANGE.max, Math.max(QUANTITY_RANGE.min, Math.round(value)));
 }
 
@@ -60,7 +60,7 @@ function quantityOf(value: number): number {
 function articleOf(value: unknown): Article | null {
   if (!value || typeof value !== "object") return null;
   const { id, model, link, quantity } = value as Record<string, unknown>;
-  if (typeof id !== "string" || !MODELS.includes(model as ArticleModel) || typeof link !== "string") return null;
+  if (typeof id !== "string" || !ARTICLE_MODELS.includes(model as ArticleModel) || typeof link !== "string") return null;
   if (typeof quantity !== "number" || !Number.isFinite(quantity)) return null;
   return { id, model: model as ArticleModel, link, quantity: quantityOf(quantity) };
 }
