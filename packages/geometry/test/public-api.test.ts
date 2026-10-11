@@ -14,6 +14,7 @@ import {
   serializeStl,
   type BaseplateSettings,
   type Quality,
+  type TriangleMesh,
 } from "../src/index";
 import { checkMesh, pocketOpening, readBinaryStl, readThreeMf } from "./support/measure";
 
@@ -277,6 +278,27 @@ describe("serialize3mf", () => {
     const baseplate = await generateBaseplate({ sizeMode: "cells", columns: 3, rows: 2 }, "preview");
     const content = readThreeMf(serialize3mf(baseplate.mesh, { name: "baseplate", shareLink }));
     expect([...content.metadata.values()]).toContain(shareLink);
+  });
+
+  it("leaves objects laid on a plate where they lie, each with its own description", () => {
+    // Two boxes where a rangement put them, from the front left of the plate (#43).
+    const box = (x: number, y: number): TriangleMesh => ({
+      positions: new Float32Array([x, y, 0, x + 10, y, 0, x, y + 10, 0, x, y, 5]),
+      indices: new Uint32Array([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]),
+    });
+    const objects = [
+      { mesh: box(120, 80), name: "bin", description: "https://example.org/fr/bin?v=1&x=1" },
+      { mesh: box(40, 30), name: "kit" },
+    ];
+    const content = readThreeMf(serialize3mf(objects, { name: "Plateau 1", shareLink, keepPositions: true }));
+    expect(content.placements).toEqual([
+      [0, 0, 0],
+      [0, 0, 0],
+    ]);
+    expect(Array.from(content.objects[0]!.mesh.positions.slice(0, 3))).toEqual([120, 80, 0]);
+    expect(content.objects.map((object) => object.description)).toEqual(["https://example.org/fr/bin?v=1&x=1", undefined]);
+    // The model keeps its own description.
+    expect(content.metadata.get("Description")).toBe(shareLink);
   });
 
   it.each<[number, number]>([

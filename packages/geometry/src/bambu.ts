@@ -112,16 +112,18 @@ const fixed = (value: number) => String(Number(value.toFixed(DECIMALS)));
 /**
  * Translation of the objects of each plate onto that plate: Bambu Studio lays its plates out on
  * a grid, and gives an object to the plate under it. The content of a plate is centred on its
- * bed and set down on it, then moved out of the excluded corner of the bed if it fits beside it.
+ * bed and set down on it, then moved out of the excluded corner of the bed if it fits beside it;
+ * with `keep`, it lies on its plate where its vertices put it, moved by the plate's origin alone.
  */
-function placements(plates: readonly BambuPlate[], [width, depth]: [number, number], [excludeX, excludeY]: [number, number]): string[] {
+function placements(plates: readonly BambuPlate[], [width, depth]: [number, number], [excludeX, excludeY]: [number, number], keep: boolean): string[] {
   const columns = columnCount(plates.length);
   return plates.flatMap((plate, index) => {
-    const { min, max } = boxOf(plate.objects.map(({ mesh }) => mesh));
-    const size = [max[0] - min[0], max[1] - min[1]];
     // Plate origin: columns left to right, rows towards -Y (`compute_shape_position`).
     const originX = (index % columns) * width * (1 + PLATE_SPACING);
     const originY = -Math.floor(index / columns) * depth * (1 + PLATE_SPACING);
+    if (keep) return plate.objects.map(() => `1 0 0 0 1 0 0 0 1 ${[originX, originY, 0].map(fixed).join(" ")}`);
+    const { min, max } = boxOf(plate.objects.map(({ mesh }) => mesh));
+    const size = [max[0] - min[0], max[1] - min[1]];
     let left = (width - size[0]!) / 2;
     let front = (depth - size[1]!) / 2;
     if (left < excludeX && front < excludeY) {
@@ -156,14 +158,15 @@ function modelSettings(plates: readonly BambuPlate[]): string {
 
 /**
  * Serialises plates of objects as a Bambu Studio project: the 3MF of `serialize3mf` (the meshes,
- * their names, the share link), each object on its plate, the plates named, and the settings of
- * the printer, process and filament given in `options.projectSettings`.
+ * their names and descriptions, the share link), each object on its plate (centred, or where it
+ * lies with `options.keepPositions`), the plates named, and the settings of the printer, process
+ * and filament given in `options.projectSettings`.
  */
 export function serializeBambu3mf(plates: readonly BambuPlate[], options: BambuProjectOptions): Uint8Array {
   const { projectSettings } = options;
   const version = String(projectSettings.version ?? "");
   const objects = plates.flatMap((plate) => plate.objects);
-  const transforms = placements(plates, extentOf(projectSettings.printable_area), extentOf(projectSettings.bed_exclude_area));
+  const transforms = placements(plates, extentOf(projectSettings.printable_area), extentOf(projectSettings.bed_exclude_area), options.keepPositions ?? false);
   const metadata =
     `<metadata name="Application">BambuStudio-${escapeXml(version)}</metadata>` + '<metadata name="BambuStudio:3mfVersion">1</metadata>';
   const text = (content: string) => (out: { bytes(bytes: Uint8Array): void }) => out.bytes(encoder.encode(content));
