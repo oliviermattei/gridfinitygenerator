@@ -57,6 +57,8 @@ export { serializeStl } from "./stl";
 export { partPlates, serializeBambu3mf, type BambuPlate, type BambuProjectOptions } from "./bambu";
 export { serialize3mf, type ThreeMfObject, type ThreeMfOptions } from "./three-mf";
 export { zipFiles } from "./zip";
+export { deflate } from "./deflate";
+export { inflate } from "./inflate";
 export {
   EAR_RADIUS_MM,
   PIN_DIAMETER_MM,

@@ -310,6 +310,10 @@ _Avoid_: cart, commande, lot, liste d'impression
 Une ligne du panier : les réglages d'un modèle et une quantité. Le modèle est recalculé au téléchargement, et l'article se rouvre dans son générateur pour être modifié. Quatre bins identiques font un article de quantité 4 ; une baseplate découpée en pièces reste un article.
 _Avoid_: item, élément, produit
 
+**Lien du panier**:
+Un lien de `/{lang}/panier` qui porte tout le panier dans un seul paramètre versionné (`?p=1.<données>`) : pour chaque article son modèle, son lien de partage tel quel et sa quantité, compressés (deflate puis base64url). Rien d'autre : ni plateau, ni imprimante, ni rangement, préférences de chaque navigateur. Ouvert sur un panier vide, il le remplit ; sinon il demande s'il le remplace ou s'y ajoute (#44).
+_Avoid_: export du panier, panier partagé
+
 **Catégorie**:
 Le genre d'objet d'un article ou d'une partie d'article : **bins**, **baseplates** (kits de test compris) ou **clips** (ceux d'une baseplate découpée comme les clips seuls). Une baseplate découpée met donc ses pièces dans les baseplates et ses clips dans les clips.
 _Avoid_: type (réservé au type de baseplate), famille, générateur

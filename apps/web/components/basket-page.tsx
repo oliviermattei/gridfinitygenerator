@@ -18,8 +18,10 @@ import { PRINTER_EXCLUDED_CORNERS } from "@/lib/printers/bambu";
 import { useHydrated } from "@/lib/saved-settings";
 import { BasketLink } from "./basket-link";
 import { BasketPackingSection, useBasketPacking } from "./basket-packing";
+import { CopyBasketLinkButton, OpenBasketLink } from "./basket-share";
 import { PocketMark } from "./illustrations";
 import { LanguageLinks } from "./language-links";
+import { Notifications } from "./notifications";
 
 /** A measure of an article, or its failure. */
 type Measured = ArticleMeasure | "failed";
@@ -202,6 +204,10 @@ export function BasketPage() {
               {totals !== null && totals.excluded > 0 && <p className="mt-1 text-[12.5px] text-muted">{t.basket.excluded(totals.excluded)}</p>}
             </section>
 
+            <div className="mt-4 flex flex-wrap gap-2">
+              <CopyBasketLinkButton articles={articles} />
+            </div>
+
             <BasketPackingSection
               packing={packing}
               mode={packingMode}
@@ -215,6 +221,8 @@ export function BasketPage() {
 
         <p className="mt-6 max-w-2xl text-[13px] leading-relaxed text-muted">{t.basket.help}</p>
       </main>
+      <OpenBasketLink />
+      <Notifications />
     </div>
   );
 }
