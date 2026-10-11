@@ -107,6 +107,13 @@ describe("searchPacking", () => {
     expectRules(bins, searchPacking(bins).packing);
   });
 
+  it("keeps half a millimetre clear of the excluded corner: Bambu Studio refuses an object touching it", () => {
+    // Centred, 220 mm wide, the content would start at x = 18, against the corner (#43, sliced by the CLI).
+    const problem: PackingProblem = { items: items(1, 220, 240), plate: PLATE_256, excludedCorner: { width: 18, depth: 28 } };
+    const [plate] = searchPacking(problem).packing.plates;
+    expect(plate!.items[0]!.x).toBeCloseTo(18.5, 9);
+  });
+
   it("lays the objects around the excluded corner when the content fills the plate", () => {
     // 256 × 100 and 200 × 150 fill 256 × 255: moved as one, they enter the corner wherever they
     // lie; packed again, the smaller one right of the corner and the wide one behind it, they do not.

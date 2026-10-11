@@ -5,6 +5,12 @@ import type { BuildPlate } from "./print";
 
 /** Room left between two objects that share a plate, in millimetres (as `partPlates`, ADR 0023). */
 export const PACKING_GAP_MM = 5;
+/**
+ * Room kept between an object and the excluded corner of the bed, in millimetres: Bambu Studio
+ * refuses to slice an object that touches it (« too close to exclusion area »), and a box
+ * measured on a float32 mesh may start a hair inside it.
+ */
+export const EXCLUDED_CORNER_CLEARANCE_MM = 0.5;
 /** How long the search for a better rangement runs at most, in milliseconds. */
 export const PACKING_TIME_LIMIT_MS = 60_000;
 
@@ -27,7 +33,8 @@ export interface PackingProblem {
   plate: BuildPlate;
   /**
    * Corner of the bed no object may enter when there is room to keep out of it, from the origin
-   * of the bed (front left): `bed_exclude_area` of a Bambu Lab printer (ADR 0023). None by default.
+   * of the bed (front left): `bed_exclude_area` of a Bambu Lab printer (ADR 0023), kept
+   * `EXCLUDED_CORNER_CLEARANCE_MM` clear. None by default.
    */
   excludedCorner?: { width: number; depth: number } | null;
   /** Room between two objects, `PACKING_GAP_MM` by default. */
@@ -324,7 +331,9 @@ function rectsOf(sheet: Sheet, items: readonly PackingItem[]): PlacedItem[] {
  * they are; centred in it otherwise.
  */
 function platePlacements(sheet: Sheet, problem: PackingProblem, group: Group): PlacedItem[] {
-  const corner = problem.excludedCorner && problem.excludedCorner.width > 0 && problem.excludedCorner.depth > 0 ? problem.excludedCorner : null;
+  const given = problem.excludedCorner;
+  const corner =
+    given && given.width > 0 && given.depth > 0 ? { width: given.width + EXCLUDED_CORNER_CLEARANCE_MM, depth: given.depth + EXCLUDED_CORNER_CLEARANCE_MM } : null;
   const rects = rectsOf(sheet, problem.items);
   const settled = settle(rects, problem.plate, corner);
   if (settled) return settled;

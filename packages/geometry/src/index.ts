@@ -108,6 +108,7 @@ export {
 } from "./bin-settings";
 export { decodeBinSettings, encodeBinSettings, openingBinSettings } from "./bin-share-link";
 export {
+  EXCLUDED_CORNER_CLEARANCE_MM,
   PACKING_GAP_MM,
   clipBlockOf,
   type ClipBlock,
