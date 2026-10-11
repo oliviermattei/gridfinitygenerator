@@ -31,3 +31,8 @@ export function binPath(locale: Locale): `/${Locale}/bin` {
 export function baseplatePath(locale: Locale): `/${Locale}/baseplate` {
   return `/${locale}/baseplate`;
 }
+
+/** The basket in a language (#41, ADR 0024): the same address in every language. */
+export function basketPath(locale: Locale): `/${Locale}/panier` {
+  return `/${locale}/panier`;
+}

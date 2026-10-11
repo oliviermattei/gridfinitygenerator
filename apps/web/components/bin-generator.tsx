@@ -1,21 +1,24 @@
 "use client";
 
-import { BIN_SETTINGS, binFitsOn, maxBinCells, type Bin, type BinSettings, type Quality } from "@repo/geometry";
+import { BIN_SETTINGS, binFitsOn, encodeBinSettings, maxBinCells, type Bin, type BinSettings, type Quality } from "@repo/geometry";
 import { focusRing, glass } from "@repo/ui";
 import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useEditedArticle } from "@/lib/basket-store";
 import { createBinEngineClient, type BinEngineClient } from "@/lib/engine/bin-client";
 import type { ExportFormat } from "@/lib/engine/protocol";
 import { MEDIA_TYPES, download } from "@/lib/export-file";
 import { binPath, type Locale } from "@/lib/i18n";
-import { useStrings } from "@/lib/locale";
+import { useFormats, useStrings } from "@/lib/locale";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
 import { bambuTargetOf } from "@/lib/printers/bambu";
 import { binShareLinkOf, resetBinSettings, useHydrated, useSavedBinSettings } from "@/lib/saved-settings";
 import { useElementSize } from "@/lib/use-element-size";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
+import { BasketActions } from "./basket-actions";
+import { BasketLink } from "./basket-link";
 import { BinDockReadout, BinFamilies, BinReadout, type BinFamily } from "./bin-panel";
 import { BinStatsCard } from "./bin-stats-card";
 import { DownloadButton } from "./download-button";
@@ -51,6 +54,7 @@ type Failure = "computeFailed" | "exportFailed";
  */
 export function BinGenerator() {
   const t = useStrings();
+  const formats = useFormats();
   const router = useRouter();
   const engine = useRef<BinEngineClient | null>(null);
   const [settings, setSettings] = useSavedBinSettings();
@@ -64,6 +68,8 @@ export function BinGenerator() {
   const [recenter, setRecenter] = useState(0);
   const [preferences, setPreferences] = usePreferences();
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
+  // Opened from the basket to edit a bin article (#41).
+  const edited = useEditedArticle();
 
   const [panel, setPanel] = useState<HTMLElement | null>(null);
   const [dock, setDock] = useState<HTMLDivElement | null>(null);
@@ -170,6 +176,17 @@ export function BinGenerator() {
     />
   );
 
+  // Disabled with the download, and for the same reason: the bin is larger than the build plate.
+  const basketActions = (
+    <BasketActions
+      model="bin"
+      link={encodeBinSettings(settings)}
+      edited={edited?.model === "bin" ? edited : null}
+      disabled={!hydrated || !fits}
+      disabledReason={fits ? undefined : t.bin.tooBig(formats.footprint(buildPlate))}
+    />
+  );
+
   const families = (
     <BinFamilies settings={settings} onSettingsChange={updateSettings} summary={bin} maxCells={maxCells} open={openFamily} onOpenChange={setOpenFamily} />
   );
@@ -188,6 +205,7 @@ export function BinGenerator() {
       <GeneratorHeader title={t.bin.generator} />
 
       <div className="absolute top-3 right-3 flex items-center gap-2 md:top-4 md:right-4">
+        <BasketLink />
         <TopActions {...actions} />
         <SettingsMenu
           preferences={preferences}
@@ -213,7 +231,10 @@ export function BinGenerator() {
       >
         <BinReadout summary={bin} settings={settings} live />
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-2.5 pb-3">{families}</div>
-        <div className="border-t border-line p-3.5">{downloadButton(false)}</div>
+        <div className="flex flex-col gap-2 border-t border-line p-3.5">
+          {downloadButton(false)}
+          {basketActions}
+        </div>
       </aside>
 
       <button
@@ -234,6 +255,7 @@ export function BinGenerator() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         download={downloadButton(true)}
+        basket={basketActions}
         dockRef={setDock}
         sheetRef={setSheet}
       >

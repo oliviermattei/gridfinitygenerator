@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { focusRing } from "@repo/ui";
 import { Coffee } from "lucide-react";
 import { PocketMark } from "@/components/illustrations";
+import { BasketLink } from "@/components/basket-link";
 import { LanguageLinks } from "@/components/language-links";
 import { GENERATORS, type Generator } from "@/lib/generators";
 import { indexPath, isLocale, type Locale } from "@/lib/i18n";
@@ -77,7 +78,10 @@ export default async function IndexPage({ params }: PageProps<"/[lang]">) {
           <PocketMark className="size-8 text-ink" />
           <span className="text-[16px] font-semibold tracking-[-0.02em]">{t.title}</span>
         </a>
-        <LanguageLinks />
+        <div className="flex items-center gap-1">
+          <LanguageLinks />
+          <BasketLink />
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 md:px-6">

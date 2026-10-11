@@ -19,7 +19,7 @@ import {
   type SizeMode,
 } from "@repo/geometry";
 import { ChoiceGroup, NumberStepper, Segmented, SliderField, ToggleSwitch, focusRing } from "@repo/ui";
-import { ChevronDown, Download, TriangleAlert } from "lucide-react";
+import { ChevronDown, Download, ShoppingBasket, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import type { Formats } from "@/lib/format";
@@ -145,6 +145,8 @@ export interface FamiliesProps {
   exportingTestKit: boolean;
   /** Whether a download is being prepared: every download waits for it. */
   downloadBusy: boolean;
+  /** Adds the test kit to the basket (#41); null while the page hydrates. */
+  onAddTestKitToBasket: (() => void) | null;
   /**
    * Material each shape of margin adds, the other settings as they are (the minimal margin
    * included), in mm³: the volume of the baseplate with it less that of its grid alone, both
@@ -174,6 +176,7 @@ export function Families({
   onDownloadTestKit,
   exportingTestKit,
   downloadBusy,
+  onAddTestKitToBasket,
   marginSurpluses,
   typeVolumes,
   filament,
@@ -256,6 +259,7 @@ export function Families({
           onDownload={onDownloadTestKit}
           exporting={exportingTestKit}
           disabled={downloadBusy}
+          onAddToBasket={onAddTestKitToBasket}
         />
       </FamilyItem>
       <FamilyItem
@@ -463,16 +467,20 @@ function AdvancedFields({ settings, onSettingsChange }: FieldsProps) {
  * each, to print before a large baseplate. Always a single 3MF, with the cells of the
  * cell size.
  */
+const testKitButton = `flex h-10 items-center gap-2 rounded-ctl border border-line-strong bg-surface px-3 text-[13px] font-semibold transition-colors hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
+
 function TestKit({
   cellSize,
   onDownload,
   exporting,
   disabled,
+  onAddToBasket,
 }: {
   cellSize: number;
   onDownload: () => void;
   exporting: boolean;
   disabled: boolean;
+  onAddToBasket: (() => void) | null;
 }) {
   const t = useStrings();
   const f = useFormats();
@@ -486,15 +494,23 @@ function TestKit({
         <p className="mt-0.5 text-[12px] leading-snug text-muted">
           {t.testKitHint(f.footprint({ width: cellSize, depth: 2 * cellSize }))}
         </p>
-        <button
-          type="button"
-          onClick={onDownload}
-          disabled={disabled}
-          className={`mt-2.5 flex h-10 items-center gap-2 rounded-ctl border border-line-strong bg-surface px-3 text-[13px] font-semibold transition-colors hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
-        >
-          <Download className="size-4 shrink-0" aria-hidden />
-          {exporting ? t.preparingTestKit : t.downloadTestKit}
-        </button>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <button type="button" onClick={onDownload} disabled={disabled} className={testKitButton}>
+            <Download className="size-4 shrink-0" aria-hidden />
+            {exporting ? t.preparingTestKit : t.downloadTestKit}
+          </button>
+          <button
+            type="button"
+            onClick={onAddToBasket ?? undefined}
+            disabled={onAddToBasket === null}
+            aria-label={t.basket.addTestKit}
+            title={t.basket.addTestKit}
+            className={testKitButton}
+          >
+            <ShoppingBasket className="size-4 shrink-0" aria-hidden />
+            {t.basket.add}
+          </button>
+        </div>
       </div>
     </div>
   );

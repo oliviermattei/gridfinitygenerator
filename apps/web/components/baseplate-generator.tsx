@@ -19,17 +19,21 @@ import { MeshPreview, type ViewInsets } from "@repo/viewer";
 import { LocateFixed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { articleName } from "@/lib/basket";
+import { addToBasket, useEditedArticle } from "@/lib/basket-store";
 import { createEngineClient, type EngineClient } from "@/lib/engine/client";
 import type { Comparison, ExportFormat, ExportPiece } from "@/lib/engine/protocol";
 import { MEDIA_TYPES, download } from "@/lib/export-file";
 import { baseplatePath, type Locale } from "@/lib/i18n";
 import { materialLess, type Material } from "@/lib/mass";
-import { useStrings } from "@/lib/locale";
+import { useFormats, useStrings } from "@/lib/locale";
 import { PREVIEW_COLORS, usePreferences } from "@/lib/preferences";
 import { bambuTargetOf } from "@/lib/printers/bambu";
 import { resetSettings, shareLinkOf, useHydrated, useSavedSettings } from "@/lib/saved-settings";
 import { useElementSize } from "@/lib/use-element-size";
 import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
+import { BasketActions } from "./basket-actions";
+import { BasketLink } from "./basket-link";
 import { DownloadButton } from "./download-button";
 import { GeneratorHeader } from "./generator-header";
 import { DOCK_OFFSET, MobileDock } from "./mobile-dock";
@@ -96,6 +100,7 @@ type Failure = "computeFailed" | "exportFailed";
 
 export function BaseplateGenerator() {
   const t = useStrings();
+  const formats = useFormats();
   const router = useRouter();
   const engine = useRef<EngineClient | null>(null);
   // Restored from a shared link or this browser once hydrated; the server renders the defaults.
@@ -113,6 +118,8 @@ export function BaseplateGenerator() {
   // shapes of the margin and the types compare with them.
   const [volumes, setVolumes] = useState<ReadonlyMap<string, Material>>(() => new Map());
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
+  // Opened from the basket to edit a baseplate, test kit or clip article (#41).
+  const edited = useEditedArticle();
 
   const [panel, setPanel] = useState<HTMLElement | null>(null);
   const [dock, setDock] = useState<HTMLDivElement | null>(null);
@@ -296,11 +303,29 @@ export function BaseplateGenerator() {
         left: 0,
       };
 
+  /** Adds the test kit or a single clip of the settings on screen to the basket (#41), confirmed by a notification. */
+  function addPieceToBasket(model: "test-kit" | "clip") {
+    const article = addToBasket({ model, link: encodeSettings(settings), quantity: 1 });
+    notify(t.basket.added(articleName(article, t, formats.lengths)));
+  }
+
+  /** « Ajouter au panier » of the baseplate, or the buttons of the article being edited. */
+  const basketActions = (
+    <BasketActions
+      model="baseplate"
+      link={encodeSettings(settings)}
+      footprint={current?.stats.dimensions ?? null}
+      edited={edited && edited.model !== "bin" ? edited : null}
+      disabled={!hydrated}
+    />
+  );
+
   /** The download of the baseplate: in the panel on desktop, in the dock (compact) on mobile. */
   const downloadButton = (compact: boolean) => (
     <DownloadButton
       onDownload={(format) => void exportPiece("baseplate", format)}
       onDownloadClip={() => void exportPiece("clip", "stl")}
+      onAddClipToBasket={hydrated ? () => addPieceToBasket("clip") : undefined}
       exporting={exporting?.piece === "baseplate" ? exporting.format : null}
       disabled={exporting !== null}
       compact={compact}
@@ -319,6 +344,7 @@ export function BaseplateGenerator() {
       onDownloadTestKit={() => void exportPiece("test-kit", "3mf")}
       exportingTestKit={exporting?.piece === "test-kit"}
       downloadBusy={exporting !== null}
+      onAddTestKitToBasket={hydrated ? () => addPieceToBasket("test-kit") : null}
       marginSurpluses={marginSurpluses}
       typeVolumes={typeVolumes}
       filament={preferences.filament}
@@ -343,6 +369,7 @@ export function BaseplateGenerator() {
       <GeneratorHeader title={t.generator} />
 
       <div className="absolute top-3 right-3 flex items-center gap-2 md:top-4 md:right-4">
+        <BasketLink />
         <TopActions {...actions} />
         <SettingsMenu
           preferences={preferences}
@@ -371,8 +398,9 @@ export function BaseplateGenerator() {
       >
         <Readout summary={baseplate} live />
         <div className="thin-scroll min-h-0 flex-1 overflow-y-auto px-2.5 pb-3">{families}</div>
-        <div className="border-t border-line p-3.5">
+        <div className="flex flex-col gap-2 border-t border-line p-3.5">
           {downloadButton(false)}
+          {basketActions}
         </div>
       </aside>
 
@@ -394,6 +422,7 @@ export function BaseplateGenerator() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         download={downloadButton(true)}
+        basket={basketActions}
         dockRef={setDock}
         sheetRef={setSheet}
       >
