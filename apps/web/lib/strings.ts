@@ -481,6 +481,8 @@ const fr = {
       stlDescription: "Un ZIP d'un STL par plateau, déjà rangé.",
       progress: (done: number, total: number) => `Calcul des articles : ${done} / ${total}`,
       cancel: "Annuler",
+      /** The name of a download that leaves `count` articles out. */
+      withExcluded: (label: string, count: number) => `${label} (${count} article${count > 1 ? "s" : ""} exclu${count > 1 ? "s" : ""})`,
       excluded: (count: number) =>
         count > 1 ? `${count} articles ne tiennent pas sur le plateau : ils ne sont pas téléchargés.` : "Un article ne tient pas sur le plateau : il n'est pas téléchargé.",
     },
@@ -939,6 +941,7 @@ const en: Strings = {
       stlDescription: "A ZIP of one STL per plate, already arranged.",
       progress: (done: number, total: number) => `Computing the articles: ${done} / ${total}`,
       cancel: "Cancel",
+      withExcluded: (label: string, count: number) => `${label} (${count} article${count > 1 ? "s" : ""} left out)`,
       excluded: (count: number) => (count > 1 ? `${count} articles do not fit on the build plate: they are not downloaded.` : "One article does not fit on the build plate: it is not downloaded."),
     },
     help:

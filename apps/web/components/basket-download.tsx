@@ -60,6 +60,8 @@ export function BasketDownload({
   useEffect(() => () => running.current?.dispose(), []);
 
   const plates = packing.progress?.packing.plates ?? [];
+  // The download itself says it leaves articles out.
+  const labelOf = (label: string) => (excluded > 0 ? names.withExcluded(label, excluded) : label);
   const ready = packing.basket !== null && plates.length > 0;
 
   async function start(format: ExportFormat) {
@@ -107,7 +109,7 @@ export function BasketDownload({
           onDownload={start}
           exporting={writing?.format ?? null}
           disabled={!ready || writing !== null}
-          labels={{ "3mf": bambu ? names.bambu : names.threeMf, stl: names.stl }}
+          labels={{ "3mf": labelOf(bambu ? names.bambu : names.threeMf), stl: labelOf(names.stl) }}
           threeMfDescription={bambu ? names.bambuDescription : names.threeMfDescription}
           stlDescription={names.stlDescription}
         />

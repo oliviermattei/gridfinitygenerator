@@ -19,7 +19,7 @@ async function openBasket(page: Page, articles: { model: string; link: string; q
 }
 
 async function download(page: Page, name: string): Promise<{ file: Download; files: Record<string, Uint8Array> }> {
-  const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name }).click()]);
+  const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name, exact: true }).click()]);
   return { file, files: unzipSync(await readFile(await file.path())) };
 }
 
@@ -38,7 +38,8 @@ test("with « Autre », a ZIP of a 3MF per plate, the article too large left out
   const plateNames = await page.getByTestId("plate-name").allTextContents();
   await expect(page.getByTestId("download-excluded")).toHaveText("Un article ne tient pas sur le plateau : il n'est pas téléchargé.");
 
-  const { file, files } = await download(page, "Télécharger les 3MF");
+  // The download itself says it leaves the article out.
+  const { file, files } = await download(page, "Télécharger les 3MF (1 article exclu)");
   expect(file.suggestedFilename()).toBe(`panier-${plateNames.length}-plateaux.zip`);
   expect(Object.keys(files)).toEqual(plateNames.map((_, k) => `panier-plateau-${k + 1}.3mf`));
 
@@ -57,7 +58,7 @@ test("with a Bambu Lab P1S, one Bambu Studio project, a plate per plate of the r
   const plateNames = await page.getByTestId("plate-name").allTextContents();
   expect(plateNames).toHaveLength(5);
 
-  const { file, files } = await download(page, "Télécharger le projet Bambu");
+  const { file, files } = await download(page, "Télécharger le projet Bambu (1 article exclu)");
   expect(file.suggestedFilename()).toBe("panier-5-plateaux.3mf");
   const config = strFromU8(files["Metadata/model_settings.config"] ?? new Uint8Array());
   const plates = [...config.matchAll(/<plate>([\s\S]*?)<\/plate>/g)].map(([, plate]) => ({
