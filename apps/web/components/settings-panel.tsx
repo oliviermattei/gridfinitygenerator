@@ -145,7 +145,7 @@ export interface FamiliesProps {
   exportingTestKit: boolean;
   /** Whether a download is being prepared: every download waits for it. */
   downloadBusy: boolean;
-  /** Adds the test kit to the basket (#41); null while the page hydrates. */
+  /** Adds the test kit to the basket (#41); null while the page hydrates. Disabled with its download. */
   onAddTestKitToBasket: (() => void) | null;
   /**
    * Material each shape of margin adds, the other settings as they are (the minimal margin
@@ -502,7 +502,7 @@ function TestKit({
           <button
             type="button"
             onClick={onAddToBasket ?? undefined}
-            disabled={onAddToBasket === null}
+            disabled={disabled || onAddToBasket === null}
             aria-label={t.basket.addTestKit}
             title={t.basket.addTestKit}
             className={testKitButton}

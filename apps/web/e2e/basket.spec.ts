@@ -107,7 +107,16 @@ test("an edited article can be added as a new one; the test kit and a clip go in
   await page.goto("/en/baseplate");
   await openSettings(page, testInfo);
   await page.getByRole("button", { name: /^Pocket profile/ }).click();
-  await page.getByRole("button", { name: "Add the test kit to the basket" }).click();
+  // Disabled while the test kit downloads, as its download is: seen by an observer, the kit being quick.
+  const addTestKit = page.getByRole("button", { name: "Add the test kit to the basket" });
+  await addTestKit.evaluate((button: HTMLButtonElement) => {
+    const seen = window as Window & { disabledSeen?: boolean };
+    new MutationObserver(() => (seen.disabledSeen ||= button.disabled)).observe(button, { attributes: true, attributeFilter: ["disabled"] });
+  });
+  await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download the test kit" }).click()]);
+  expect(await page.evaluate(() => (window as Window & { disabledSeen?: boolean }).disabledSeen)).toBe(true);
+  await expect(addTestKit).toBeEnabled();
+  await addTestKit.click();
   await expect(page.getByText("“Test kit” added to the basket")).toBeVisible();
   await closeSettings(page, testInfo);
   await page.getByRole("button", { name: "Other formats" }).filter({ visible: true }).click();
