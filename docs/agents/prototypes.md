@@ -32,6 +32,7 @@ Le mainteneur imprime sur une Bambu Lab P1S, depuis Bambu Studio. Ce qu'il impri
 | `bin/` | #34 | Le pied standard du bin s'assoit-il dans chaque type de baseplate et chaque profil, avec quel jeu ; socle plein ou creux (matière et temps au trancheur) ; quel rayon de congé. | ADR 0021 ; générateur de bins #32 | tranché (socle creux à imprimer, #16) |
 | `bin-label/` | #32 | Quel onglet d'étiquette tient un bin plein de vis soulevé par sa tablette sans être plein dessous ; la pelle peut-elle tourner dans ses coins ; le rebord réduit empile-t-il comme le normal. | Moteur du bin (`generateBin`), réécrit d'après le verdict | à imprimer (essai de charge de 2 kg, pelle, empilage) |
 | `shadowbox-trace/` | #36 | D'une photo d'outils sur une feuille à un contour exact à ±0,5 mm, puis à une poche, entièrement dans le navigateur ; vision classique (défaut) contre SlimSAM (option). | Futur générateur de shadowbox ; `docs/research/shadowbox-contour-hors-ligne.md` | provisoire (photos de synthèse ; les vraies photos restent à mesurer) |
+| `poche-sans-biseau/` | — | La poche sans la marche ni le petit 45° du bas (paroi verticale au retrait 2,15 de 0 à 2,85, puis la pente haute) : où s'arrête le pied standard, avec quel jeu, sur quoi ; matière et emprise au plateau ; l'aimant, les vis et la peau des fentes tiennent-ils. | ADR 0002 (profil de poche) ; question du mainteneur du 2026-10-11 | à imprimer (assise, et adhérence du muret de 2,15 mm au pied) |
 
 ## Tenir le registre
 
