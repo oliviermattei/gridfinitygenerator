@@ -4,7 +4,7 @@ import { ARTICLE_MODELS, quantityOf, type ArticleDraft, type ArticleModel } from
 /**
  * The basket link (#44, ADR 0024): the whole basket in one parameter of /{lang}/panier, to send
  * it to someone or open it on another device. It carries the articles only, each its model,
- * its share link as is and its quantity: the build plate, the printer and the arrangement are
+ * its share link as is and its quantity: the build plate, the printer and the rangement are
  * preferences of each browser. Each article's link keeps its own version, so the basket link
  * reads every link its generator reads. Pure: no React, no storage.
  *

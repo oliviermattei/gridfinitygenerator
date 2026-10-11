@@ -80,5 +80,5 @@ test("« Arrêter » keeps the best rangement found", async ({ page }) => {
 test("with a Bambu Lab printer, each plate shows its excluded corner", async ({ page }) => {
   await openBasket(page, [{ model: "bin", link: "v=1", quantity: 1 }], { printer: "bambu-p1s" });
   await expect(page.getByTestId("packing-status")).toHaveText("1 plateau, le minimum possible");
-  await expect(page.getByTestId("plate").locator("title", { hasText: "Zone exclue du lit" })).toHaveCount(1);
+  await expect(page.getByTestId("plate").locator("title", { hasText: "Zone exclue du plateau" })).toHaveCount(1);
 });
