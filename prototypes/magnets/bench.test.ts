@@ -15,7 +15,7 @@ import {
   type TriangleMesh,
 } from "../../packages/geometry/src/index";
 import { loadManifold } from "../../packages/geometry/src/manifold";
-import { insetAt, POCKET_PROFILES, type PocketProfileName } from "../../packages/geometry/src/pocket-profile";
+import { HYBRID_PROFILE, insetAt, type PocketProfile } from "../../packages/geometry/src/pocket-profile";
 import { roundUpToLayer } from "../../packages/geometry/src/print";
 import { checkMesh, readThreeMf } from "../../packages/geometry/test/support/measure";
 
@@ -111,21 +111,24 @@ const DIAGONALS: [number, number][] = [45, 135, 225, 315].map((degrees) => {
   return [Math.cos(angle), Math.sin(angle)];
 });
 
-const NAMES: Record<PocketProfileName, string> = { hybrid: "hybride", flush: "ras" };
+// Le profil ras est retiré du moteur (ADR 0002) : le banc ne mesure plus que le profil hybride ;
+// ses mesures d'origine au profil ras restent dans results.md.
+type PocketProfileName = "hybrid";
+const POCKET_PROFILES: Record<PocketProfileName, PocketProfile> = { hybrid: HYBRID_PROFILE };
+const NAMES: Record<PocketProfileName, string> = { hybrid: "hybride" };
 /** Hauteurs de référence du profil, plus le haut du trou et juste au-dessus. */
 const HEIGHTS: Record<PocketProfileName, number[]> = {
   hybrid: [0.1, 0.7, 1.5, 2.1, 2.3, 2.9, 3.5, 4.5],
-  flush: [0.1, 0.5, 1.5, 2.1, 2.3, 2.6, 3.5, 4.1],
 };
 
 it("croisement intérieur : le trou dans la matière, les poches et la pente haute intactes", async () => {
   const wasm = await loadManifold();
   const rows: string[] = [];
-  for (const name of ["hybrid", "flush"] as const)
+  for (const name of ["hybrid"] as const)
     for (const cellSize of [42, 20]) {
       const profile = POCKET_PROFILES[name];
       // 2 × 2 cellules sans marge : un seul croisement intérieur, en (0, 0).
-      const plain = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 2, cellSize, pocketProfile: name }, "final", BARE);
+      const plain = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 2, cellSize }, "final", BARE);
       const [whole] = wholeOf(wasm, plain) as [Manifold];
       const holed = whole.subtract(holeTool(wasm, [0, 0]));
       // Retiré : exactement le trou, donc rien pris sur une poche.
@@ -306,11 +309,11 @@ it("fichiers de la recette : kit de jeux, bancs 2 × 2, et le moteur perce les m
   }));
   files.push(await write3mf("kit-jeux-aimants.3mf", kit, `4 croisements de 14 × 14 mm, trous de ${fr(DEPTH)} mm, jeux ${gaps.map((g) => fr(g)).join(" / ")} de gauche à droite`));
 
-  // Bancs 2 × 2 percés par le moteur : hybride et ras (1 aimant au centre), et hybride avec une
-  // marge de cellules tronquées de 8 mm, qui porte les 8 croisements du bord.
+  // Bancs 2 × 2 percés par le moteur : hybride (1 aimant au centre), et avec une marge de
+  // cellules tronquées de 8 mm, qui porte les 8 croisements du bord. Le banc ras d'origine est
+  // retiré avec le profil (ADR 0002).
   const benches: [string, Partial<BaseplateSettings>, number][] = [
     ["banc-2x2-hybride.3mf", { sizeMode: "cells", columns: 2, rows: 2 }, 1],
-    ["banc-2x2-ras.3mf", { sizeMode: "cells", columns: 2, rows: 2, pocketProfile: "flush" }, 1],
     ["banc-2x2-marge-cellules.3mf", { sizeMode: "cells", columns: 2, rows: 2, marginShape: "cells", marginWidth: 16, marginDepth: 16 }, 9],
   ];
   for (const [file, settings, count] of benches) {

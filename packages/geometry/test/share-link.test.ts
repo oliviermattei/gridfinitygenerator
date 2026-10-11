@@ -22,8 +22,6 @@ describe("share link round trip", () => {
     expect(decodeSettings(encodeSettings(cells))).toEqual(cells);
     const screwed: BaseplateSettings = { ...DEFAULT_SETTINGS, screws: true, screwShank: 3.5, screwHead: 7.2, holeGap: 0.3 };
     expect(decodeSettings(encodeSettings(screwed))).toEqual(screwed);
-    const flush: BaseplateSettings = { ...DEFAULT_SETTINGS, pocketProfile: "flush" };
-    expect(decodeSettings(encodeSettings(flush))).toEqual(flush);
     const advanced: BaseplateSettings = { ...DEFAULT_SETTINGS, cellSize: 36.5, outerRadius: 0, bottomChamfer: 0.8 };
     expect(decodeSettings(encodeSettings(advanced))).toEqual(advanced);
     const tray: BaseplateSettings = { ...DEFAULT_SETTINGS, baseplateType: "tray" };
@@ -42,9 +40,6 @@ describe("share link content", () => {
     expect(encodeSettings({ ...CELLS, columns: 6, layerHeight: 0.28 })).toBe("v=1&mode=cells&cx=6&lh=0.28");
     expect(encodeSettings({ ...CELLS, marginWidth: 10, marginDepth: 4.5 })).toBe("v=1&mode=cells&mx=10&my=4.5");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, screws: true, screwShank: 4, screwHead: 8, holeGap: 0.3 })).toBe("v=1&sc=1&ss=4&sh=8&tol=0.3");
-    // The hybrid pocket profile is the v1 default: only the flush one is written.
-    expect(encodeSettings({ ...DEFAULT_SETTINGS, pocketProfile: "flush" })).toBe("v=1&pr=flush");
-    expect(encodeSettings({ ...DEFAULT_SETTINGS, pocketProfile: "hybrid" })).toBe("v=1");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, cellSize: 30, outerRadius: 0, bottomChamfer: 1.5 })).toBe("v=1&cs=30&or=0&ch=1.5");
     // The diameters and the hole gap are kept when the screws are off: turning them back on finds them again.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, screwShank: 4 })).toBe("v=1&ss=4");
@@ -57,7 +52,7 @@ describe("share link content", () => {
     expect(encodeSettings({ ...DEFAULT_SETTINGS, marginShape: "cells", minimalMargin: true })).toBe("v=1&mg=cells&min=1");
     // The open grid is the default type (#25): only the tray and the skeleton (#26) are written.
     expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "normal" })).toBe("v=1");
-    expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "tray", pocketProfile: "flush" })).toBe("v=1&ty=tray&pr=flush");
+    expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "tray" })).toBe("v=1&ty=tray");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "skeleton" })).toBe("v=1&ty=skeleton");
     expect(encodeSettings({ ...DEFAULT_SETTINGS, baseplateType: "clickbase" })).toBe("v=1&ty=clickbase");
   });
@@ -81,7 +76,6 @@ describe("frozen v1 links", () => {
       mg: "frame",
       min: false,
       ty: "normal",
-      pr: "hybrid",
       sc: false,
       ss: 3,
       sh: 6,
@@ -113,7 +107,7 @@ describe("frozen v1 links", () => {
       min: false,
       // `ty` came into the v1 table with the types of baseplate (#25), before v1 was published: normal by default.
       ty: "tray",
-      pr: "flush",
+      // `pr`, the pocket profile, is no longer read (ADR 0002): every baseplate has the hybrid one.
       sc: true,
       ss: 4,
       sh: 8,
@@ -138,9 +132,8 @@ describe("frozen v1 links", () => {
       // The corner brackets of #23 are no longer a shape (#29): the frame reduced to its supports.
       marginShape: "frame",
       minimalMargin: true,
+      // `pr=flush` was the flush pocket profile (#12), retired since (ADR 0002): the hybrid one.
       baseplateType: "tray",
-      // `pr` was in the v1 table from the start; the engine reads it since the flush profile (#12).
-      pocketProfile: "flush",
       screws: true,
       screwShank: 4,
       screwHead: 8,
@@ -196,8 +189,18 @@ describe("reading any link", () => {
       expect(decodeSettings(`v=1&cl=${value}`)).toEqual(DEFAULT_SETTINGS);
       expect(readShareLink(`v=1&cl=${value}`)).not.toHaveProperty("cl");
     }
-    expect(decodeSettings("v=1&cl=0&pr=flush")).toEqual({ ...DEFAULT_SETTINGS, pocketProfile: "flush" });
+    expect(decodeSettings("v=1&cl=0&ty=tray")).toEqual({ ...DEFAULT_SETTINGS, baseplateType: "tray" });
     expect(encodeSettings(decodeSettings("v=1&cl=0") as BaseplateSettings)).toBe("v=1");
+  });
+
+  it("ignores `pr`, the pocket profile, no longer a setting since ADR 0002 left only the hybrid one", () => {
+    // A link of the flush profile (#12) opens as the default baseplate, with the hybrid profile.
+    for (const value of ["hybrid", "flush", "rebuilt"]) {
+      expect(decodeSettings(`v=1&pr=${value}`)).toEqual(DEFAULT_SETTINGS);
+      expect(readShareLink(`v=1&pr=${value}`)).not.toHaveProperty("pr");
+    }
+    expect(decodeSettings("v=1&mode=cells&cx=2&cy=1&pr=flush&sc=1")).toEqual({ ...CELLS, columns: 2, rows: 1, screws: true });
+    expect(encodeSettings(decodeSettings("v=1&pr=flush") as BaseplateSettings)).toBe("v=1");
   });
 
   it("keeps the screw head at least as wide as the shank", () => {
@@ -221,7 +224,6 @@ describe("reading any link", () => {
     const brackets = decodeSettings("v=1&mg=brackets&al=t");
     expect(brackets).toEqual({ ...DEFAULT_SETTINGS, alignment: "t", marginShape: "frame", minimalMargin: true });
     expect(encodeSettings(brackets as BaseplateSettings)).toBe("v=1&al=t&min=1");
-    expect(decodeSettings("v=1&pr=rebuilt")).toEqual(DEFAULT_SETTINGS);
     // Every type of the table v1 is built (#27 the last): an unknown one gives the open grid.
     expect(readShareLink("v=1&ty=clickbase")).toMatchObject({ ty: "clickbase" });
     expect(decodeSettings("v=1&ty=clickbase")).toEqual({ ...DEFAULT_SETTINGS, baseplateType: "clickbase" });
@@ -257,6 +259,11 @@ describe("settings on opening", () => {
   it("without a shared link, the stored settings come back", () => {
     expect(openingSettings("", stored)).toEqual({ ...CELLS, columns: 9, rows: 2 });
     expect(openingSettings("?utm_source=forum", stored)).toEqual({ ...CELLS, columns: 9, rows: 2 });
+  });
+
+  it("stored settings of the flush profile, retired, come back with the hybrid one", () => {
+    // Stored before ADR 0002 left a single pocket profile: the link of `pocketProfile: "flush"`.
+    expect(openingSettings("", "v=1&mode=cells&cx=9&cy=2&pr=flush")).toEqual({ ...CELLS, columns: 9, rows: 2 });
   });
 
   it("with neither, or unreadable stored settings, the defaults", () => {

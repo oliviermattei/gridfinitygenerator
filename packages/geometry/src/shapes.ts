@@ -24,12 +24,6 @@ export interface GridFrame {
    * frame is as high as it, and its floor, if any, is under every pocket.
    */
   profile: PocketProfile;
-  /**
-   * Cells cut to a lower profile than `profile` (the test kit): each one is lowered to the
-   * height of its own profile, down to the line between it and its neighbours. Only the
-   * boolean assembly builds them; empty for a baseplate.
-   */
-  lowerCells: readonly LowerCell[];
   margins: Margins;
   /**
    * Shape of the margin (margin.ts): which variant builds it; `"none"` for the grid alone, its
@@ -53,7 +47,7 @@ export interface GridFrame {
   screws: ScrewHoles | null;
   /**
    * Magnet holes under the crossings of the murets the material holds (magnets.ts), where no
-   * screw sits; null without them (the test kit, the benches).
+   * screw sits; null without them (the benches).
    */
   magnets: MagnetHoles | null;
   /**
@@ -79,13 +73,6 @@ export interface GridFrame {
   /** Print settings the thicknesses and widths chosen by the generator follow. */
   layerHeight: number;
   lineWidth: number;
-}
-
-/** A cell (i along X, j along Y) cut to a lower pocket profile than the rest of the grid. */
-export interface LowerCell {
-  i: number;
-  j: number;
-  profile: PocketProfile;
 }
 
 /** Overshoot of cutting tools below and above the frame, to avoid coplanar faces. */
@@ -241,8 +228,8 @@ function footOfChamfer({ width, depth, outerRadius: radius, bottomChamfer: chamf
 }
 
 /**
- * Solid removed for one cell, centred on the origin: a loft of the layers of its profile,
- * the frame's own by default. Below the frame, the first segment of the profile goes on
+ * Solid removed for one cell, centred on the origin: a loft of the layers of the frame's
+ * profile. Below the frame, the first segment of the profile goes on
  * straight (a vertical step stays vertical, a slope widens), so that the bottom of the
  * frame cuts the tool across a face, not along a ring of its edges; above the frame, the
  * tool goes up vertically from the top flat. A profile with a floor (a tray) starts at its
@@ -253,10 +240,9 @@ export function pocketTool(
   wasm: ManifoldToplevel,
   own: Own,
   frame: GridFrame,
-  profile = frame.profile,
   grow: readonly [left: number, right: number, front: number, back: number] = [0, 0, 0, 0],
 ): Manifold {
-  const { cellSize, segmentsPerQuarter } = frame;
+  const { cellSize, segmentsPerQuarter, profile } = frame;
   // A pocket open on some sides (the extended grid, margin.ts) reaches past them by `grow`,
   // with the same levels: no parallel muret on those sides.
   const [left, right, front, back] = grow;

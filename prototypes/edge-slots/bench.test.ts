@@ -9,7 +9,7 @@ import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import { expect, it } from "vitest";
 import { generateBaseplate, pieceMesh, printPieces, serialize3mf, type TriangleMesh } from "../../packages/geometry/src/index";
 import { loadManifold } from "../../packages/geometry/src/manifold";
-import { POCKET_PROFILES, type PocketProfileName } from "../../packages/geometry/src/pocket-profile";
+import { HYBRID_PROFILE, type PocketProfile } from "../../packages/geometry/src/pocket-profile";
 import { roundDownToLayer, roundUpToLayer } from "../../packages/geometry/src/print";
 import { badEdges, checkMesh, readThreeMf } from "../../packages/geometry/test/support/measure";
 
@@ -28,8 +28,12 @@ const SKIN = 0.8;
 const O = 1; // débord des outils
 const CROSSING_START = Math.ceil((HALF_WIDTH + SKIN / Math.SQRT2) * 100) / 100;
 
-const PROFILES: PocketProfileName[] = ["hybrid", "flush"];
-const NAMES: Record<PocketProfileName, string> = { hybrid: "hybride", flush: "ras" };
+// Le profil ras est retiré du moteur (ADR 0002) : le banc ne mesure plus que le profil hybride ;
+// ses mesures d'origine au profil ras restent dans results.md.
+type PocketProfileName = "hybrid";
+const POCKET_PROFILES: Record<PocketProfileName, PocketProfile> = { hybrid: HYBRID_PROFILE };
+const PROFILES: PocketProfileName[] = ["hybrid"];
+const NAMES: Record<PocketProfileName, string> = { hybrid: "hybride" };
 const CHAMFERS = [0, 0.5, 0.8, 1, 1.3, 1.5, 2, 3];
 
 function meshOf(solid: Manifold): TriangleMesh {
@@ -111,7 +115,7 @@ it("chanfrein du dessous : ce qu'il laisse de la dent, du canal et de la peau d'
   const wasm = await loadManifold();
   for (const name of PROFILES)
     for (const chamfer of CHAMFERS) {
-      const plate = await plainPlate({ pocketProfile: name, bottomChamfer: chamfer });
+      const plate = await plainPlate({ bottomChamfer: chamfer });
       const plain = solidOf(wasm, plate.mesh);
       const top = topOf(name);
       // Côté droit (x = 42), au bout avant : départ au-delà du coin arrondi de 4 mm.
@@ -247,7 +251,7 @@ it("moteur (ADR 0022) : les fentes de bord du moteur, en vis-à-vis, et le fichi
   const engine: string[] = [];
   for (const name of PROFILES)
     for (const chamfer of [0, 1, 1.3, 1.5]) {
-      const settings = { pocketProfile: name, bottomChamfer: chamfer };
+      const settings = { bottomChamfer: chamfer };
       const [slotted, plain] = await Promise.all([
         generateBaseplate({ sizeMode: "cells", columns: 2, rows: 2, ...settings }, "final"),
         plainPlate(settings),

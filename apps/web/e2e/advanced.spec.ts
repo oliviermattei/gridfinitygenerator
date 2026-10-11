@@ -59,7 +59,7 @@ test("changing an advanced setting shows the warning; the defaults again remove 
   await expect(advanced).toHaveAccessibleName("Avancé Valeurs par défaut");
 });
 
-test("the cell size is kept on reload and the test kit follows it", async ({ page }, testInfo) => {
+test("the cell size is kept on reload", async ({ page }, testInfo) => {
   await page.goto("/fr/baseplate");
   await openSettings(page, testInfo);
   await page.getByRole("button", { name: /^Avancé/ }).click();
@@ -71,6 +71,4 @@ test("the cell size is kept on reload and the test kit follows it", async ({ pag
   await openSettings(page, testInfo);
   await expect(readout(page, "cells")).toHaveText("7 × 5 cellules");
   await expect(advancedWarning(page)).toBeVisible();
-  await page.getByRole("button", { name: /^Profil de poche/ }).click();
-  await expect(page.getByText("Une baseplate 1 × 2 de 50 × 100 mm", { exact: false }).filter({ visible: true })).toBeVisible();
 });

@@ -252,10 +252,8 @@ export function BaseplateGenerator() {
   }
 
   /**
-   * Downloads the baseplate of the settings, or the test kit (always a single 3MF). The 3MF
-   * carries the share link of the settings: the page that generates it again (the test kit
-   * from its button, since it takes the cell size, the outline and the print settings). A
-   * baseplate cut for the build plate comes as one 3MF with a named object per piece and one
+   * Downloads the baseplate of the settings. The 3MF carries the share link of the settings:
+   * the page that generates it again. A baseplate cut for the build plate comes as one 3MF with a named object per piece and one
    * for its clips, or as a zip of one STL per piece and one for the clips. A single clip comes
    * as an STL (#37).
    */
@@ -316,9 +314,6 @@ export function BaseplateGenerator() {
       summary={baseplate}
       open={openFamily}
       onOpenChange={setOpenFamily}
-      onDownloadTestKit={() => void exportPiece("test-kit", "3mf")}
-      exportingTestKit={exporting?.piece === "test-kit"}
-      downloadBusy={exporting !== null}
       marginSurpluses={marginSurpluses}
       typeVolumes={typeVolumes}
       filament={preferences.filament}

@@ -20,7 +20,7 @@ export const BASEPLATE_TYPES: readonly BaseplateType[] = ["normal", "tray", "ske
  * a new type adds its entry, and whatever it changes as a field here.
  */
 export interface BaseplateTypeVariant {
-  /** The pocket profile of the cells, from the profile of the settings, at a layer height. */
+  /** The pocket profile of the cells, from the hybrid profile (ADR 0002), at a layer height. */
   profile(profile: PocketProfile, layerHeight: number): PocketProfile;
   /** The notches of the murets at a layer height (skeleton.ts), null for a type without. */
   skeleton(layerHeight: number): Skeleton | null;

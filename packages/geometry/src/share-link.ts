@@ -35,7 +35,8 @@ export const flag = (value: boolean): FlagSetting => ({ kind: "flag", default: v
 /**
  * Every setting a v1 link can carry, by its link key, with its v1 range and default: the
  * table of settings of spec v1, frozen. Never edit it: a change of default or range makes
- * a new version, with its own table, so that v1 links keep their meaning.
+ * a new version, with its own table, so that v1 links keep their meaning. Only a setting
+ * that no longer exists leaves it, its key then ignored like any unknown one (`pr`, `cl`).
  */
 const V1 = {
   /** Size mode: from the drawer, or from a number of cells. */
@@ -61,8 +62,9 @@ const V1 = {
   min: flag(false),
   /** Type of baseplate (#25): the open grid, a tray on a solid floor, a skeleton (#26), or CLICKbase (#27). */
   ty: choice(["normal", "tray", "skeleton", "clickbase"], "normal"),
-  /** Pocket profile. */
-  pr: choice(["hybrid", "flush"], "hybrid"),
+  // `pr`, the pocket profile (hybrid or flush, #12), is no longer a setting: every baseplate
+  // has the hybrid profile (ADR 0002). An old link that has it ignores it, as any unknown key,
+  // and opens with the hybrid profile.
   /** Screw holes, and their shank and head diameters in millimetres (head ≥ shank). */
   sc: flag(false),
   ss: number(2, 6, 3),
@@ -105,7 +107,6 @@ const LINK_KEYS = {
   marginShape: "mg",
   minimalMargin: "min",
   baseplateType: "ty",
-  pocketProfile: "pr",
   screws: "sc",
   screwShank: "ss",
   screwHead: "sh",

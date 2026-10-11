@@ -4,6 +4,8 @@ status: accepted
 
 # Le pied standard exact, seul contrat entre un bin et une baseplate
 
+> **Profil ras et kit de test retirés** (2026-10-11, ADR 0002) : les baseplates n'ont plus que le profil hybride, celui où le pied standard s'assoit sans jeu (banc #34 ci-dessous). Les mentions du ras et du kit de test sont historiques.
+
 On veut un écosystème homogène : nos bins doivent s'adapter parfaitement à nos baseplates, de tous les types (Normal, Tray, Skeleton, CLICKbase) et des deux profils de poche (hybride, ras). On pourrait ajuster le pied du bin à nos poches. On décide l'inverse : **le pied d'un bin est le pied Gridfinity standard exact** (0,8 / 1,8 / 2,15 mm, 41,5 mm de côté en haut pour une cellule de 42), sans variante ni réglage de profil. C'est la baseplate qui s'adapte au pied standard, comme elle le fait déjà (ADR 0002 : jeu horizontal de 0,25 mm, pentes qui portent ; ADR 0015 : l'ergot serre la bande verticale du pied, entre z = 1,2 et 2,0 mm).
 
 ## Décision

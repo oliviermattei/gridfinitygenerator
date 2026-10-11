@@ -63,10 +63,8 @@ const TYPES = [
   { type: "tray", name: "Tray" },
   { type: "clickbase", name: "CLICKbase" },
 ] as const;
-const PROFILES = [
-  { profile: "hybrid", name: "hybride" },
-  { profile: "flush", name: "ras" },
-] as const;
+// Le profil ras, mesuré ici à l'origine (results.md), est retiré du moteur (ADR 0002).
+const PROFILES = [{ profile: "hybrid", name: "hybride" }] as const;
 
 const JUDGE: Record<string, string> = {
   normal: "Séparation à la main ou à la lame, sans casse ; face retournée (dessus des murets, pentes à 45° en surplomb) ; un bac standard dans la plaque retournée (jeu, bascule).",
@@ -77,13 +75,13 @@ const JUDGE: Record<string, string> = {
 
 const CASES: Case[] = [
   ...TYPES.flatMap(({ type, name }) =>
-    PROFILES.map(({ profile, name: profileName }): Case => ({
+    PROFILES.map(({ name: profileName }): Case => ({
       file: `pile-1x1-${type}-${profileName}.3mf`,
-      priority: { normal: 1, skeleton: 3, tray: 6, clickbase: 6 }[type] + (profile === "flush" && type === "normal" ? 1 : 0),
+      priority: { normal: 1, skeleton: 3, tray: 6, clickbase: 6 }[type],
       construction: `${name} ${profileName}`,
-      settings: { ...PAIR, baseplateType: type, pocketProfile: profile },
+      settings: { ...PAIR, baseplateType: type },
       plate: PLATE_50,
-      judge: profile === "flush" && type === "normal" ? "Comme Normal hybride ; pas de 4,45 mm (hauteur 4,25 mm, pas un nombre entier de couches) : une seule couche vide, séparation." : JUDGE[type] as string,
+      judge: JUDGE[type] as string,
     })),
   ),
   {

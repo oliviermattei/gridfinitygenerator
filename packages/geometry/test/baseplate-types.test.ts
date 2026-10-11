@@ -4,7 +4,6 @@ import {
   MARGIN_SHAPES,
   clampSettings,
   generateBaseplate,
-  generateTestKit,
   pieceMesh,
   trayFloorOf,
   type BaseplateSettings,
@@ -105,13 +104,7 @@ describe("a tray is the open baseplate raised on a floor", () => {
     }
   });
 
-  it("raises the flush profile the same way, and follows the layer height", async () => {
-    const flush = await generateBaseplate(cells(2, 2, { ...TRAY, pocketProfile: "flush" }), "final");
-    expectWithin(flush.stats.dimensions.height, 4.25 + LIFT_MM);
-    const { sections } = await checkMesh(flush.mesh, [0.7, 0.8 + 0.35, 0.8 + 1.6]);
-    expectWithin(pocketOpening(sections.get(0.7) ?? [], [21, 21])?.width, 42 - 2 * 2.85);
-    expectWithin(pocketOpening(sections.get(0.8 + 0.35) ?? [], [21, 21])?.width, 42 - 2 * 2.5);
-    expectWithin(pocketOpening(sections.get(0.8 + 1.6) ?? [], [21, 21])?.width, 42 - 2 * 2.15);
+  it("follows the layer height", async () => {
     const coarse = await generateBaseplate(cells(2, 2, { ...TRAY, layerHeight: 0.28 }), "preview");
     expectWithin(coarse.stats.dimensions.height, 4.6 + 0.84 + 0.28);
     expect(coarse.stats.layers).toBe(21);
@@ -135,10 +128,6 @@ describe("a tray is the open baseplate raised on a floor", () => {
     expect(inSection(holes.sections.get(2.3) ?? [], magnet)).toBe(true);
   });
 
-  it("gives the test kit no floor: it tries the pockets of an open baseplate", async () => {
-    const [open, tray] = await Promise.all([generateTestKit({}, "final"), generateTestKit(TRAY, "final")]);
-    expect(tray.stats.volume).toBe(open.stats.volume);
-  });
 });
 
 describe("a tray cut for the build plate, with clips", () => {
@@ -168,7 +157,7 @@ describe("the same tray by the cell bricks and by the booleans (ADR 0004)", () =
     ...MARGIN_SHAPES.map((marginShape): [string, Partial<BaseplateSettings>, BuildPlate | null] => [`default drawer, ${marginShape}`, { marginShape }, null]),
     ...MARGIN_SHAPES.map((marginShape): [string, Partial<BaseplateSettings>, BuildPlate | null] => [`default drawer cut, ${marginShape}`, { marginShape }, PLATE_256]),
     ["chamfered and screwed, cut", { bottomChamfer: 0.8, screws: true }, PLATE_256],
-    ["flush, truncated cells of 30 mm", { pocketProfile: "flush", cellSize: 30, marginShape: "cells" }, null],
+    ["truncated cells of 30 mm", { cellSize: 30, marginShape: "cells" }, null],
     ["4 × 3 without margin, sharp corners", { sizeMode: "cells", columns: 4, rows: 3, outerRadius: 0 }, null],
   ];
   it.each(cases)("%s", async (_, settings, buildPlate) => {

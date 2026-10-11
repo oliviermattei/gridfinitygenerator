@@ -175,23 +175,19 @@ describe.each<Quality>(["preview", "final"])("magnet holes, %s quality", (qualit
 });
 
 describe("the bins stay seated: the holes take nothing from the pockets", () => {
-  const PROFILES = {
-    hybrid: [...HYBRID_OPENINGS.map(({ z }) => z), 2.1, 2.3, 2.9],
-    flush: [0.1, 0.5, 1.5, 2.1, 2.3, 2.6, 3.5, 4.1],
-  } as const;
+  const HEIGHTS = [...HYBRID_OPENINGS.map(({ z }) => z), 2.1, 2.3, 2.9];
 
   it.each<[string, Partial<BaseplateSettings>]>([
-    ["4 × 3 cells, hybrid", cells(4, 3)],
-    ["4 × 3 cells of 20 mm, flush", cells(4, 3, { cellSize: 20, pocketProfile: "flush" })],
+    ["4 × 3 cells", cells(4, 3)],
+    ["4 × 3 cells of 20 mm", cells(4, 3, { cellSize: 20 })],
     ["truncated cells around 2 × 2 cells, 8 mm margins, hole gap of 1 mm", cells(2, 2, { marginShape: "cells", marginWidth: 16, marginDepth: 16, holeGap: 1 })],
   ])("%s: at every height of reference, only the holes are taken away, and above them nothing", async (_, settings) => {
     const [bare, drilled] = await Promise.all([generateBaseplate(settings, "final", BARE), generateBaseplate(settings, "final")]);
     expect(drilled.stats.magnets).toBeGreaterThan(0);
-    const heights = PROFILES[settings.pocketProfile ?? "hybrid"];
-    const [before, after] = await Promise.all([checkMesh(bare.mesh, heights), checkMesh(drilled.mesh, heights)]);
+    const [before, after] = await Promise.all([checkMesh(bare.mesh, HEIGHTS), checkMesh(drilled.mesh, HEIGHTS)]);
     const radius = (6 + (settings.holeGap ?? 0.5)) / 2;
     const discs: Disc[] = drilled.layout.magnets.map(([x, y]) => ({ x, y, radius: radius + 0.01 }));
-    for (const z of heights) {
+    for (const z of HEIGHTS) {
       const [a, b] = [before.sections.get(z) ?? [], after.sections.get(z) ?? []];
       // Below the ceiling of the holes, nothing but the holes; above it, the section is intact:
       // the upper slope of the pockets, where the bins are seated, above all.
@@ -246,7 +242,7 @@ describe("with magnets, the mesh", () => {
     ["the default drawer in truncated cells, magnets on the edge", { marginShape: "cells" }],
     ["truncated cells with whole cells of margin", cells(2, 2, { marginShape: "cells", marginWidth: 100, marginDepth: 60 })],
     ["truncated cells, chamfered, rounded 10 mm", cells(3, 2, { marginShape: "cells", marginWidth: 16, marginDepth: 20, bottomChamfer: 3, outerRadius: 10 })],
-    ["flush, 0.28 mm layers, hole gap of 1 mm", cells(3, 3, { pocketProfile: "flush", layerHeight: 0.28, holeGap: 1 })],
+    ["0.28 mm layers, hole gap of 1 mm", cells(3, 3, { layerHeight: 0.28, holeGap: 1 })],
     ["screws and magnets, truncated cells", { marginShape: "cells", screws: true, alignment: "br", drawerWidth: 300, drawerDepth: 200 }],
   ];
 
@@ -269,7 +265,7 @@ describe("with magnets, the mesh", () => {
   it.each<[string, Partial<BaseplateSettings>, BuildPlate]>([
     ["the default drawer", {}, PLATE_256],
     ["the default drawer in truncated cells", { marginShape: "cells" }, PLATE_256],
-    ["20 mm cells, flush, chamfered, screws", { drawerWidth: 160, drawerDepth: 120, cellSize: 20, pocketProfile: "flush", bottomChamfer: 1, screws: true, marginShape: "cells" }, { width: 70, depth: 70 }],
+    ["20 mm cells, chamfered, screws", { drawerWidth: 160, drawerDepth: 120, cellSize: 20, bottomChamfer: 1, screws: true, marginShape: "cells" }, { width: 70, depth: 70 }],
   ])("cut for the build plate, %s: each piece is closed (NoError), the same by the cell bricks and by booleans", async (_, settings, plate) => {
     const bricks = await generateBaseplate(settings, "final", { strategy: "bricks", buildPlate: plate });
     const booleans = await generateBaseplate(settings, "final", { strategy: "boolean", buildPlate: plate });

@@ -3,7 +3,6 @@ import {
   MARGIN_SHAPES,
   clampSettings,
   generateBaseplate,
-  generateTestKit,
   pieceMesh,
   skeletonOf,
   type BaseplateSettings,
@@ -101,14 +100,7 @@ describe("a skeleton is the open baseplate with its murets notched between the c
     }
   });
 
-  it("follows the flush profile, the layer height and the cell size", async () => {
-    const flush = await generateBaseplate(cells(2, 2, { ...SKELETON, pocketProfile: "flush" }), "final");
-    const { status, sections } = await checkMesh(flush.mesh, [0.35, 0.45, 3]);
-    expect(status).toBe("NoError");
-    expectWithin(flush.stats.dimensions.height, 4.25);
-    expect(inSection(sections.get(0.35) ?? [], [0, 21])).toBe(true);
-    expect(inSection(sections.get(0.45) ?? [], [0, 21])).toBe(false);
-    expectWithin(reach(sections.get(3) ?? [], [0, 0], [0, 1]), ARM_TOP_MM + 4.25 - 3, 0.01);
+  it("follows the layer height and the cell size", async () => {
     // At 0.28 mm, a band of 2 layers: 0.56 mm.
     const coarse = await generateBaseplate(cells(2, 2, { ...SKELETON, layerHeight: 0.28, cellSize: 30 }), "final");
     const coarseSections = (await checkMesh(coarse.mesh, [0.5, 0.6])).sections;
@@ -133,24 +125,16 @@ describe("a skeleton is the open baseplate with its murets notched between the c
     expectWithin(reach(magnet, [0, 0], [0, 1], 3.3) - 3.25, ARM_TOP_MM + HEIGHT_MM - 2.1 - 3.25, 0.01);
   });
 
-  it("gives the test kit no notch: it tries the pockets of an open baseplate", async () => {
-    const [open, skeleton] = await Promise.all([generateTestKit({}, "final"), generateTestKit(SKELETON, "final")]);
-    expect(skeleton.stats.volume).toBe(open.stats.volume);
-  });
 });
 
 describe("a skeleton cut for the build plate", () => {
   it("takes its clips in its posts: slots of 4 mm, which end 0.8 mm short of the notch", async () => {
-    const [skeleton, flush] = await Promise.all([
-      generateBaseplate(SKELETON, "final", { buildPlate: PLATE_256 }),
-      generateBaseplate({ ...SKELETON, pocketProfile: "flush" }, "preview", { buildPlate: PLATE_256 }),
-    ]);
+    const skeleton = await generateBaseplate(SKELETON, "final", { buildPlate: PLATE_256 });
     expect(skeleton.stats.pieces).toBe(4);
     expect(skeleton.stats.clips).toBe(8);
     // From 1.92 mm off the crossing of the cuts, the post reaches 6.80 mm at the top of the slot
-    // (2.80 mm): 6.80 − 0.8 − 1.92 = 4.08, down to a tenth. 4.13 in the flush profile.
+    // (2.80 mm): 6.80 − 0.8 − 1.92 = 4.08, down to a tenth.
     expect(skeleton.layout.clips?.slot).toMatchObject({ length: 4, top: 2.8 });
-    expect(flush.layout.clips?.slot).toMatchObject({ length: 4.1, top: 2.4 });
     expect((await checkMesh(skeleton.clip ?? { positions: new Float32Array(), indices: new Uint32Array() })).bounds.max[2]).toBeCloseTo(3.5, 5);
     // The clip on the row cut (y = 0), left of the crossing at x = −21: its slot from x = −22.92
     // to −26.92, then 0.8 mm of post at least up to the notch, along its leg (y = −0.9).
@@ -195,7 +179,7 @@ describe("the same skeleton by the cell bricks and by the booleans (ADR 0004)", 
       ]),
     ),
     ["whole cells of the margin on the left and the right only, 0.5 mm front and back, chamfered, cut", cells(4, 3, { marginWidth: 100, marginDepth: 1, marginShape: "cells", bottomChamfer: 1 }), { width: 150, depth: 150 }],
-    ["flush, truncated cells of 30 mm", { pocketProfile: "flush", cellSize: 30, marginShape: "cells" }, null],
+    ["truncated cells of 30 mm", { cellSize: 30, marginShape: "cells" }, null],
     ["cells of 20 mm at 0.12 mm layers", cells(5, 4, { cellSize: 20, layerHeight: 0.12 }), null],
     ["cells of 80 mm, sharp corners, 3 mm chamfer, large screws, cut", cells(3, 3, { cellSize: 80, outerRadius: 0, bottomChamfer: 3, screws: true, screwHead: 8, holeGap: 1 }), { width: 200, depth: 200 }],
   ];

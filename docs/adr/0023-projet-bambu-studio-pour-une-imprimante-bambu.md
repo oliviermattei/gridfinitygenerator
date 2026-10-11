@@ -4,6 +4,8 @@ status: accepted
 
 # Un projet Bambu Studio quand l'imprimante est une Bambu Lab
 
+> **Kit de test retiré** (2026-10-11, ADR 0002) : il n'y a plus de kit à mettre sur un plateau.
+
 Bambu Studio ouvre nos 3MF avec un avertissement : « The 3mf is not from Bambu Lab, load geometry data only ». Il charge alors les objets seuls, sur un plateau unique : une baseplate découpée en 4 pièces arrive en 5 objets à répartir à la main. Le code de Bambu Studio 2.8 (`Plater.cpp`, `bbs_3mf.cpp`) l'explique. Sans `Metadata/project_settings.config`, ou si cette config ne nomme pas une imprimante Bambu (`printer_model`), il ne charge pas la config. Et sans config chargée, il ignore les plateaux de `Metadata/model_settings.config`. Des plateaux sans config ne servent donc à rien.
 
 Un 3MF qui embarque une config impose son imprimante. Le site sert tous les trancheurs et toutes les imprimantes : on ne peut pas imposer celle du mainteneur à tout le monde.

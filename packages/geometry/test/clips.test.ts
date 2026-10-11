@@ -157,13 +157,9 @@ describe("where the clips go", () => {
     expect(preview.layout.clips).toEqual(final.layout.clips);
   });
 
-  it("follows the flush profile and the layer: the slot stays under the upper slope of the pocket", async () => {
-    const flush = await generateBaseplate({ pocketProfile: "flush" }, "preview", { buildPlate: PLATE_256 });
-    expect(flush.layout.clips?.slot).toMatchObject({ bridge: 0.8, top: 2.4 });
+  it("follows the layer: the slot stays under the upper slope of the pocket", async () => {
     const coarse = await generateBaseplate({ layerHeight: 0.28 }, "preview", { buildPlate: PLATE_256 });
     expect(coarse.layout.clips?.slot).toMatchObject({ bridge: 0.84, top: 2.8 });
-    const flushCoarse = await generateBaseplate({ pocketProfile: "flush", layerHeight: 0.28 }, "preview", { buildPlate: PLATE_256 });
-    expect(flushCoarse.layout.clips?.slot).toMatchObject({ bridge: 0.84, top: 2.24 });
   });
 
   it("starts a slot farther from an edge of the grid on the outline, to keep 0.8 mm of skin over the bottom chamfer", async () => {
@@ -246,13 +242,10 @@ describe("slots in the pieces", () => {
     expect(leg.find(([, b]) => b === -126 + 0.8)).toEqual([-126, -125.2]);
   });
 
-  it.each([
-    ["hybrid", {}, [0.1, 0.7, 1.5, 2.7], 2.8],
-    ["flush", { pocketProfile: "flush" }, [0.1, 0.5, 1.5, 2.3], 2.4],
-  ] as const)("keeps at least 0.8 mm of skin towards the pocket at the heights of reference, %s profile", async (_, settings, heights, top) => {
-    const cut = await generateBaseplate(settings, "final", { buildPlate: PLATE_256 });
-    expect(cut.layout.clips?.slot.top).toBe(top);
-    for (const z of heights) {
+  it("keeps at least 0.8 mm of skin towards the pocket at the heights of reference", async () => {
+    const cut = await generateBaseplate({}, "final", { buildPlate: PLATE_256 });
+    expect(cut.layout.clips?.slot.top).toBe(2.8);
+    for (const z of [0.1, 0.7, 1.5, 2.7]) {
       // Along y = −4.42, through the clip on the cut x = −21: the material of the muret left of it.
       const along = materialAlong(await sectionOf(cut, z), -4.42).filter(([a, b]) => b > -26 && a < -21);
       const skin = along[0] as [number, number];
@@ -266,10 +259,10 @@ describe("every type takes its clips (ADR 0018)", () => {
   // 2 × 2 cells on a plate of 50 mm: 4 pieces of a single cell, the cuts crossing at (0, 0), and
   // a clip on each of the 4 junctions, at the crossing: the most crowded corner there is.
   const KIT = { sizeMode: "cells", columns: 2, rows: 2 } as const;
-  it.each(BASEPLATE_TYPES.flatMap((baseplateType) => (["hybrid", "flush"] as const).map((pocketProfile) => [baseplateType, pocketProfile] as const)))(
-    "%s, %s: 0.8 mm of skin towards the pocket and between the slots, nothing above the slot, NoError, the same by bricks and booleans",
-    async (baseplateType, pocketProfile) => {
-      const settings = { ...KIT, baseplateType, pocketProfile };
+  it.each(BASEPLATE_TYPES)(
+    "%s: 0.8 mm of skin towards the pocket and between the slots, nothing above the slot, NoError, the same by bricks and booleans",
+    async (baseplateType) => {
+      const settings = { ...KIT, baseplateType };
       const plate = { width: 50, depth: 50 };
       const [bricks, booleans] = await Promise.all([
         generateBaseplate(settings, "final", { strategy: "bricks", buildPlate: plate }),
@@ -411,10 +404,10 @@ describe("edge slots on the sides without margin (#37, ADR 0022)", () => {
     expect(cut.layout.clips?.edges).toHaveLength(8);
   });
 
-  it.each(BASEPLATE_TYPES.flatMap((baseplateType) => (["hybrid", "flush"] as const).map((pocketProfile) => [baseplateType, pocketProfile] as const)))(
-    "%s, %s: half a slot on each side, 0.8 mm of skin towards the pocket, invisible from above, NoError, the same by bricks and booleans",
-    async (baseplateType, pocketProfile) => {
-      const settings = { ...SQUARE, baseplateType, pocketProfile };
+  it.each(BASEPLATE_TYPES)(
+    "%s: half a slot on each side, 0.8 mm of skin towards the pocket, invisible from above, NoError, the same by bricks and booleans",
+    async (baseplateType) => {
+      const settings = { ...SQUARE, baseplateType };
       const [bricks, booleans, plain] = await Promise.all([
         generateBaseplate(settings, "final", { strategy: "bricks" }),
         generateBaseplate(settings, "final", { strategy: "boolean" }),
@@ -490,7 +483,7 @@ describe("edge slots on the sides without margin (#37, ADR 0022)", () => {
 describe("pieces with clips", () => {
   const CASES: [name: string, settings: Partial<BaseplateSettings>, plate: BuildPlate][] = [
     ["default drawer", {}, { width: 180, depth: 180 }],
-    ["flush profile, 0.28 mm layers, chamfered, screws", { pocketProfile: "flush", layerHeight: 0.28, bottomChamfer: 1, screws: true }, { width: 180, depth: 180 }],
+    ["0.28 mm layers, chamfered, screws", { layerHeight: 0.28, bottomChamfer: 1, screws: true }, { width: 180, depth: 180 }],
     ["3 × 2 cells, a piece per cell, clips clear of the numbers", { sizeMode: "cells", columns: 3, rows: 2 }, { width: 50, depth: 50 }],
   ];
 

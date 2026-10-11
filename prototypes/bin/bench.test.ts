@@ -10,7 +10,6 @@ import { expect, it } from "vitest";
 import {
   generateBaseplate,
   generateBin,
-  generateTestKit,
   serialize3mf,
   serializeStl,
   type BaseplateSettings,
@@ -55,11 +54,11 @@ it("(1) assise du pied du bin dans chaque baseplate", async () => {
   // Le bin du moteur, 1 × 1 × 3 U, posé au-dessus de la cellule arrière droite d'une baseplate 2 × 2.
   const bin = solidOf(wasm, (await generateBin({ columns: 1, rows: 1, units: 3 }, "final")).mesh);
   const variants: [name: string, settings: Partial<BaseplateSettings>, floor: number][] = [
-    ["Normal, profil hybride", { baseplateType: "normal", pocketProfile: "hybrid" }, 0],
-    ["Normal, profil ras", { baseplateType: "normal", pocketProfile: "flush" }, 0],
-    ["Tray, profil hybride", { baseplateType: "tray", pocketProfile: "hybrid" }, 0.6],
-    ["Skeleton, profil hybride", { baseplateType: "skeleton", pocketProfile: "hybrid" }, 0],
-    ["CLICKbase, profil hybride", { baseplateType: "clickbase", pocketProfile: "hybrid" }, 0],
+    // Le profil ras, mesuré ici à l'origine (results.md), est retiré du moteur (ADR 0002).
+    ["Normal, profil hybride", { baseplateType: "normal" }, 0],
+    ["Tray, profil hybride", { baseplateType: "tray" }, 0.6],
+    ["Skeleton, profil hybride", { baseplateType: "skeleton" }, 0],
+    ["CLICKbase, profil hybride", { baseplateType: "clickbase" }, 0],
   ];
   const rows: string[] = [];
   for (const [name, settings, floor] of variants) {
@@ -215,16 +214,14 @@ async function write3mf(file: string, objects: { mesh: TriangleMesh; name: strin
 }
 
 it("fichiers de la recette", async () => {
-  const kit = await generateTestKit({}, "final");
   const clickbase = await generateBaseplate({ sizeMode: "cells", columns: 1, rows: 1, baseplateType: "clickbase" }, "final");
   const standard = await generateBin({ columns: 1, rows: 1, units: 3 }, "final");
   const hollow = await generateBin({ columns: 1, rows: 1, units: 3 }, "final", { socle: "hollow" });
   const full = await generateBin({ columns: 2, rows: 1, units: 4, compartmentColumns: 2, scoop: true, labelTab: true }, "final");
   const files = [
-    await write3mf("bin-1x1x3-plein.3mf", [{ mesh: standard.mesh, name: "bin 1x1x3 plein" }], "Bin standard 1 × 1 × 3 U, socle plein, congé ; à essayer dans le kit de test et le CLICKbase"),
+    await write3mf("bin-1x1x3-plein.3mf", [{ mesh: standard.mesh, name: "bin 1x1x3 plein" }], "Bin standard 1 × 1 × 3 U, socle plein, congé ; à essayer dans une baseplate Normal et le CLICKbase"),
     await write3mf("bin-1x1x3-creux.3mf", [{ mesh: hollow.mesh, name: "bin 1x1x3 creux" }], "Le même, socle creux : juger le pont du fond et la rigidité"),
     await write3mf("bin-2x1x4-pelle-onglet.3mf", [{ mesh: full.mesh, name: "bin 2x1x4" }], "Bin 2 × 1 × 4 U, 2 compartiments, congé, pelle et onglet d'étiquette : juger la pelle, l'onglet sans support, et l'empilage"),
-    await write3mf("kit-de-test.3mf", [{ mesh: kit.mesh, name: "kit de test" }], "Kit de test 1 × 2 (hybride à l'avant, ras à l'arrière) du moteur"),
     await write3mf("clickbase-1x1.3mf", [{ mesh: clickbase.mesh, name: "CLICKbase 1x1" }], "CLICKbase 1 × 1 du moteur, en PETG"),
   ];
   sections[3] = ["## Fichiers (relus, `NoError`)", "", ...files, ""];

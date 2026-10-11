@@ -90,7 +90,7 @@ describe("pitch", () => {
   it("is the height of a piece and exactly one layer", () => {
     expect(stackPitch(4.6, 0.2)).toBe(4.8); // hybrid: 23 + 1 layers
     expect(stackPitch(5.4, 0.2)).toBe(5.6); // tray: 27 + 1 layers
-    expect(stackPitch(4.25, 0.2)).toBe(4.45); // flush: not a whole number of layers, still one layer of air
+    expect(stackPitch(4.25, 0.2)).toBe(4.45); // not a whole number of layers: still one layer of air
     expect(stackPitch(4.6, 0.12)).toBe(4.72);
   });
 });

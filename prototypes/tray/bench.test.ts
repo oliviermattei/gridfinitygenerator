@@ -9,7 +9,7 @@ import { expect, it } from "vitest";
 import { generateBaseplate, serialize3mf, type BaseplateSettings, type TriangleMesh } from "../../packages/geometry/src/index";
 import { trayFloorOf, trayProfile } from "../../packages/geometry/src/baseplate-type";
 import { loadManifold } from "../../packages/geometry/src/manifold";
-import { FLUSH_PROFILE, HYBRID_PROFILE, type PocketProfile } from "../../packages/geometry/src/pocket-profile";
+import { HYBRID_PROFILE, type PocketProfile } from "../../packages/geometry/src/pocket-profile";
 import { loft, pocketTool, roundedRect, type GridFrame } from "../../packages/geometry/src/shapes";
 import { checkMesh, readThreeMf } from "../../packages/geometry/test/support/measure";
 
@@ -19,6 +19,21 @@ const lines: string[] = [];
 /** Réécrit results.md avec ce que les tests ont mesuré jusqu'ici. */
 const flush = () => writeFileSync(new URL("results.md", OUT), ["# Résultats du banc (généré par `bench.test.ts`)", "", ...lines].join("\n"));
 const fr = (value: number, digits = 2) => value.toFixed(digits).replace(".", ",").replace(/^-(0,0+)$/, "$1");
+
+/**
+ * Profil ras d'extrabold, retiré du moteur (ADR 0002) : 45° 0,7, vertical 1,8, puis 45° jusqu'au
+ * plat de 0,4 mm, 4,25 mm de haut. Le banc le garde pour comparer, sans le moteur.
+ */
+const FLUSH_PROFILE: PocketProfile = {
+  height: 4.25,
+  topRadius: 4,
+  points: [
+    [0, 2.85],
+    [0.7, 2.15],
+    [2.5, 2.15],
+    [4.25, 0.4],
+  ],
+};
 
 const CELL = 42;
 const QUARTER = 32; // segments par quart de cercle, comme la qualité finale du moteur
@@ -55,7 +70,7 @@ function footOf(wasm: ManifoldToplevel): Manifold {
 function benchOf(wasm: ManifoldToplevel, profile: PocketProfile, pocketFloor = 0): Manifold {
   const outline = new wasm.CrossSection([roundedRect(2 * CELL, 2 * CELL, 4, QUARTER)]);
   const frame = { cellSize: CELL, segmentsPerQuarter: QUARTER, profile } as GridFrame;
-  const tool = pocketTool(wasm, (m) => m, frame, profile);
+  const tool = pocketTool(wasm, (m) => m, frame);
   const tools = [-1, 1].flatMap((sx) => [-1, 1].map((sy) => tool.translate([(sx * CELL) / 2, (sy * CELL) / 2, 0])));
   const solid = wasm.Manifold.extrude(outline, profile.height).subtract(wasm.Manifold.compose(tools));
   return pocketFloor > 0 ? solid.add(wasm.Manifold.extrude(outline, pocketFloor)) : solid;

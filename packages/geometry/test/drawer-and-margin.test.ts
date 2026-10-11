@@ -651,7 +651,7 @@ describe.each(MARGIN_SHAPES.flatMap((marginShape) => [false, true].map((minimalM
       ["a single column carried on by whole cells into a wide margin", { sizeMode: "cells", columns: 1, rows: 3, marginWidth: 100, alignment: "l" }],
       ["a single cell in wide margins all around", { sizeMode: "cells", columns: 1, rows: 1, marginWidth: 120, marginDepth: 90 }],
       ["80 mm cells, a 3 mm chamfer, a radius of 10 mm and screws", { drawerWidth: 500, drawerDepth: 300, cellSize: 80, bottomChamfer: 3, outerRadius: 10, screws: true, alignment: "br" }],
-      ["the flush profile, sharp corners and a chamfer", { drawerWidth: 333, drawerDepth: 222, pocketProfile: "flush", outerRadius: 0, bottomChamfer: 0.8 }],
+      ["sharp corners and a chamfer", { drawerWidth: 333, drawerDepth: 222, outerRadius: 0, bottomChamfer: 0.8 }],
       // The margin's cut above a margin of 0.5 mm lies on the edge of the cell, where the 3 mm
       // chamfer of the rounded corner leaves vertices closer than the weld of the seams (#20).
       ["a margin of 0.5 mm by a rounded corner, under a chamfer of 3 mm", { sizeMode: "cells", columns: 2, rows: 2, marginWidth: 16, marginDepth: 0.5, alignment: "tr", outerRadius: 2.3, bottomChamfer: 3 }],
@@ -670,7 +670,7 @@ describe.each(MARGIN_SHAPES.flatMap((marginShape) => [false, true].map((minimalM
     // a cut goes through it (a doubled crossbar, a T split into two Ls, truncated cells).
     it.each<[string, Partial<BaseplateSettings>, number]>([
       ["the default drawer", {}, 256],
-      ["sharp corners, a chamfer, screws and the flush profile", { outerRadius: 0, bottomChamfer: 1.2, screws: true, pocketProfile: "flush" }, 256],
+      ["sharp corners, a chamfer and screws", { outerRadius: 0, bottomChamfer: 1.2, screws: true }, 256],
       ["20 mm cells, back left, wide margins", { sizeMode: "cells", columns: 5, rows: 5, cellSize: 20, marginWidth: 90, marginDepth: 30, alignment: "tl" }, 100],
       ["15 × 2 cells in pieces of 2 cells", { sizeMode: "cells", columns: 15, rows: 2, marginDepth: 20, outerRadius: 10 }, 90],
     ])("cut, %s: each piece the same by the cell bricks and by booleans, NoError", async (_, settings, plate) => {

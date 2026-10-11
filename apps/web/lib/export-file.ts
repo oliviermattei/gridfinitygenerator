@@ -7,31 +7,26 @@ export const MEDIA_TYPES: Record<FileExtension, string> = { "3mf": "model/3mf", 
 /**
  * Name of a downloaded file without its extension, which is also the name of the object
  * inside a 3MF:
- * - a baseplate, `baseplate-{nx}x{ny}-{W}x{D}mm` (the naming of the spec), with `-tray` for
- *   a tray and `-flush` when its pockets have the flush profile, so that two files to
- *   compare tell apart;
- * - the test kit, `baseplate-test-kit-hybrid-flush-{W}x{D}mm`: its profiles, front to back;
+ * - a baseplate, `baseplate-{nx}x{ny}-{W}x{D}mm` (the naming of the spec), with its type
+ *   when it is not the normal one (`-tray`);
  * - the pieces of a cut baseplate stacked for a single print (#28), with `-stack` at the end.
  */
 export function exportName(piece: ExportPiece, { layout, stats }: BaseplateSummary, settings: BaseplateSettings, stacked = false): string {
   const mm = (value: number) => String(Number(value.toFixed(1)));
   const size = `${mm(stats.dimensions.width)}x${mm(stats.dimensions.depth)}mm`;
-  if (piece === "test-kit") return `baseplate-test-kit-hybrid-flush-${size}`;
   const type = settings.baseplateType === "normal" ? "" : `-${settings.baseplateType}`;
-  const profile = settings.pocketProfile === "flush" ? "-flush" : "";
-  return `baseplate-${layout.columns}x${layout.rows}-${size}${type}${profile}${stacked ? "-stack" : ""}`;
+  return `baseplate-${layout.columns}x${layout.rows}-${size}${type}${stacked ? "-stack" : ""}`;
 }
 
 /**
  * Name of a single clip downloaded alone (#37), without its extension: `baseplate-clip`, with
  * what shapes it, as for a baseplate: `-skeleton` (a shorter clip, in the posts), `-tray` (a
- * taller one), `-flush`, and the layer height when it is not 0.2 mm (the height of the bridge).
+ * taller one), and the layer height when it is not 0.2 mm (the height of the bridge).
  */
 export function clipExportName(settings: BaseplateSettings): string {
   const type = settings.baseplateType === "skeleton" || settings.baseplateType === "tray" ? `-${settings.baseplateType}` : "";
-  const profile = settings.pocketProfile === "flush" ? "-flush" : "";
   const layer = settings.layerHeight === 0.2 ? "" : `-${Number(settings.layerHeight.toFixed(2))}mm`;
-  return `baseplate-clip${type}${profile}${layer}`;
+  return `baseplate-clip${type}${layer}`;
 }
 
 /**

@@ -7,7 +7,7 @@ import type { CrossSection, Manifold, ManifoldToplevel } from "manifold-3d";
 import { expect, it } from "vitest";
 import { generateBaseplate, pieceMesh, printClips, printPieces, serialize3mf, type TriangleMesh } from "../../packages/geometry/src/index";
 import { loadManifold } from "../../packages/geometry/src/manifold";
-import { insetAt, POCKET_PROFILES, type PocketProfile, type PocketProfileName } from "../../packages/geometry/src/pocket-profile";
+import { HYBRID_PROFILE, insetAt, type PocketProfile } from "../../packages/geometry/src/pocket-profile";
 import { roundDownToLayer, roundUpToLayer } from "../../packages/geometry/src/print";
 import { checkMesh, readThreeMf } from "../../packages/geometry/test/support/measure";
 
@@ -128,13 +128,16 @@ function area(contours: [number, number][][]): number {
   return sum / 2;
 }
 
+// Le profil ras est retiré du moteur (ADR 0002) : le banc ne mesure plus que le profil hybride ;
+// ses mesures d'origine au profil ras restent dans results.md.
+type PocketProfileName = "hybrid";
+const POCKET_PROFILES: Record<PocketProfileName, PocketProfile> = { hybrid: HYBRID_PROFILE };
 const HEIGHTS: Record<PocketProfileName, number[]> = {
   // Hauteurs de référence du profil hybride (test/support/measure.ts), plus le haut de la fente.
   hybrid: [0.1, 0.7, 1.5, 2.7, 2.9, 3.5, 4.5],
-  flush: [0.1, 0.5, 1.5, 2.3, 2.5, 3.5, 4.1],
 };
 
-const NAMES: Record<PocketProfileName, string> = { hybrid: "hybride", flush: "ras" };
+const NAMES: Record<PocketProfileName, string> = { hybrid: "hybride" };
 
 it("kits de clips : fentes, peau restante, invisibilité, clips à 4 jeux", async () => {
   const wasm = await loadManifold();
@@ -146,12 +149,12 @@ it("kits de clips : fentes, peau restante, invisibilité, clips à 4 jeux", asyn
   );
   const skins: string[] = [];
   const clipsTable: string[] = [];
-  for (const name of ["hybrid", "flush"] as const) {
+  for (const name of ["hybrid"] as const) {
     const profile = POCKET_PROFILES[name];
     const levels = levelsOf(profile);
     // 2 × 1 cellules sur un plateau de 50 mm : deux pièces d'une cellule, coupe en x = 0,
     // numéros gravés au milieu de la coupe (y de −1,5 à 1,5), un de chaque côté.
-    const kit = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 1, pocketProfile: name, clips: false }, "final", {
+    const kit = await generateBaseplate({ sizeMode: "cells", columns: 2, rows: 1, clips: false }, "final", {
       buildPlate: { width: 50, depth: 50 },
     });
     expect(kit.stats.pieces).toBe(2);

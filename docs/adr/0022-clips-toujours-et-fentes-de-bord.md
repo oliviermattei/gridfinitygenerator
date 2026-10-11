@@ -4,6 +4,8 @@ status: proposed
 
 # Clips toujours présents, fentes de bord et clip téléchargeable seul
 
+> **Profil ras et kit de test retirés** (2026-10-11, ADR 0002) : la clé `pr` est ignorée comme `cl` ; le clip seul ne porte plus de suffixe `-flush`, et les mentions du ras et du kit de test sont historiques.
+
 Décisions du 2026-09-30 avec le mainteneur (#37, parent #20, suite de #22, #30 et #31). Les clips ne sont plus un réglage, et une baseplate sans marge sur un côté porte des **fentes de bord**, pour la clipser plus tard à une autre générée à part. L'agrafe, la section de sa fente et ses jeux (ADR 0010), et le placement aux coins des jonctions (ADR 0018) ne changent pas. Glossaire : Clip, Fente, Fente de bord. Mesures : `prototypes/edge-slots/`.
 
 ## Décision

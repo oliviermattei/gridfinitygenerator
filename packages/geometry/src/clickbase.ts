@@ -75,8 +75,8 @@ const CORNER_CLEARANCE_MM = 0.5;
 const ERGOT_HALF_MM = 1.5;
 const ERGOT_RAMP_MM = 1.4;
 /**
- * Top of the flat of the ergot, above the bottom of the foot of a seated bin (at z = 0 in both
- * pocket profiles): the vertical band of the foot runs from 0.8 to 2.6 mm. Above it, the
+ * Top of the flat of the ergot, above the bottom of the foot of a seated bin (at z = 0 in the
+ * hybrid profile): the vertical band of the foot runs from 0.8 to 2.6 mm. Above it, the
  * lamella bends back into the wall at 45°.
  */
 const ERGOT_TOP_MM = 2;
@@ -115,7 +115,7 @@ function wallFoot(profile: PocketProfile): number {
   return foot[0];
 }
 
-/** Inset of the vertical pocket wall from the edge of the cell (2.15 mm in both profiles). */
+/** Inset of the vertical pocket wall from the edge of the cell (2.15 mm in the hybrid profile). */
 function wallInset(profile: PocketProfile): number {
   const top = profile.points[profile.points.length - 2];
   if (!top) throw new Error("A pocket profile needs a vertical wall under its upper slope");

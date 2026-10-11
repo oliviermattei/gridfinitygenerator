@@ -92,7 +92,7 @@ const SLIT_TOLERANCE_MM = 1e-3;
 
 /**
  * Width of the foot of a muret: the pocket wall at its widest inset, on both sides of the grid
- * line (5.70 mm for both profiles). A heel of the extended grid, a support of a minimal margin
+ * line (5.70 mm in the hybrid profile). A heel of the extended grid, a support of a minimal margin
  * and its piece of outer wall are that wide (#29).
  */
 export function footWidth(frame: Pick<GridFrame, "profile">): number {
@@ -626,7 +626,7 @@ function cutOfCells(wasm: ManifoldToplevel, own: Own, frame: GridFrame, all: rea
   const pockets = new Map<number, Manifold>();
   const pocketOf = (open: number) => {
     const grow = [OPEN_LEFT, OPEN_RIGHT, OPEN_FRONT, OPEN_BACK].map((bit) => (open & bit ? 2 * cellSize : 0)) as [number, number, number, number];
-    const pocket = pockets.get(open) ?? pocketTool(wasm, own, frame, profile, grow);
+    const pocket = pockets.get(open) ?? pocketTool(wasm, own, frame, grow);
     pockets.set(open, pocket);
     return pocket;
   };

@@ -1,5 +1,4 @@
 import { BASEPLATE_TYPES, type BaseplateType } from "./baseplate-type";
-import { POCKET_PROFILES, type PocketProfileName } from "./pocket-profile";
 
 /**
  * Settings of a baseplate that the engine implements: what the share link carries (spec v1).
@@ -9,7 +8,7 @@ import { POCKET_PROFILES, type PocketProfileName } from "./pocket-profile";
  * Local preferences (nozzle, build plate, preview colour…) are not baseplate settings.
  */
 
-export type { BaseplateType, PocketProfileName };
+export type { BaseplateType };
 
 /** How the size of the baseplate is given: by the drawer it fills, or by a number of cells. */
 export type SizeMode = "drawer" | "cells";
@@ -60,8 +59,6 @@ export interface BaseplateSettings {
    * or a tray, the grid on a solid floor.
    */
   baseplateType: BaseplateType;
-  /** Profile of the pockets: the hybrid one (ADR 0002) by default, or the flush one, 0.35 mm lower. */
-  pocketProfile: PocketProfileName;
   /** Countersunk screw holes that fix the baseplate to the bottom of the drawer, on the inner intersections of the grid. */
   screws: boolean;
   /** Diameter of the screw shank, in millimetres, before the hole gap. */
@@ -126,10 +123,6 @@ export const BASEPLATE_SETTINGS = {
   marginShape: { options: MARGIN_SHAPES, default: "frame" } as ChoiceSetting<MarginShape>,
   minimalMargin: { default: false } as FlagSetting,
   baseplateType: { options: BASEPLATE_TYPES, default: "normal" } as ChoiceSetting<BaseplateType>,
-  pocketProfile: {
-    options: Object.keys(POCKET_PROFILES) as PocketProfileName[],
-    default: "hybrid",
-  } as ChoiceSetting<PocketProfileName>,
   screws: { default: false } as FlagSetting,
   screwShank: { min: 2, max: 6, default: 3, integer: false },
   screwHead: { min: 2, max: 8, default: 6, integer: false },
@@ -157,7 +150,6 @@ export const DEFAULT_SETTINGS: BaseplateSettings = {
   marginShape: BASEPLATE_SETTINGS.marginShape.default,
   minimalMargin: BASEPLATE_SETTINGS.minimalMargin.default,
   baseplateType: BASEPLATE_SETTINGS.baseplateType.default,
-  pocketProfile: BASEPLATE_SETTINGS.pocketProfile.default,
   screws: BASEPLATE_SETTINGS.screws.default,
   screwShank: BASEPLATE_SETTINGS.screwShank.default,
   screwHead: BASEPLATE_SETTINGS.screwHead.default,

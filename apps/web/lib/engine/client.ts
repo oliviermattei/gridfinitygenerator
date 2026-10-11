@@ -81,7 +81,7 @@ const FINAL_AFTER_STILL_MS = 200;
 export const ENGINE_TIMING_PREFIX = "engine:";
 
 /** What a request computes, as named in its User Timing measure. */
-type RequestLabel = Quality | "volumes" | `export-${ExportFormat}` | `export-test-kit-${ExportFormat}` | "export-clip";
+type RequestLabel = Quality | "volumes" | `export-${ExportFormat}` | "export-clip";
 
 interface Pending {
   resolve: (response: EngineResponse) => void;
@@ -297,7 +297,7 @@ export function createEngineClient(events: EngineClientEvents): EngineClient {
       }
     },
     async exportFile(piece, settings, format, { link, buildPlate, pieceName, clipName, stack, stackName, bambu }) {
-      const label = piece === "test-kit" ? (`export-test-kit-${format}` as const) : piece === "clip" ? "export-clip" : (`export-${format}` as const);
+      const label = piece === "clip" ? "export-clip" : (`export-${format}` as const);
       const response = await send({ type: "export", piece, settings, format, link, buildPlate, pieceName, clipName, stack, stackName, bambu }, label).response;
       if (response.type !== "export") throw new Error(`Unexpected engine response: ${response.type}`);
       return { bytes: response.bytes, name: response.name, extension: response.extension, baseplate: response.baseplate, stacks: response.stacks };

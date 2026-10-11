@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateBaseplate, generateTestKit, type BaseplateSettings, type Quality } from "../src/index";
+import { generateBaseplate, type BaseplateSettings, type Quality } from "../src/index";
 import { HYBRID_OPENINGS as POCKET_OPENINGS, checkMesh, inSection, outerContour, pocketOpening } from "./support/measure";
 
 // Advanced settings (#13): cell size, outer corner radius and bottom chamfer, observed
@@ -177,13 +177,13 @@ describe("advanced settings together", () => {
       ["20 mm cells, sharp corners, largest chamfer, margin and screws", { drawerWidth: 250, drawerDepth: 190, cellSize: 20, outerRadius: 0, bottomChamfer: 3, screws: true }],
       ["80 mm cells, largest radius and chamfer, screws", cells(3, 2, { cellSize: 80, outerRadius: 10, bottomChamfer: 3, screws: true })],
       ["a radius under the chamfer, margins on two sides", cells(4, 3, { cellSize: 30, outerRadius: 1, bottomChamfer: 2.5, marginWidth: 15, marginDepth: 8, alignment: "tr" })],
-      ["flush profile, sharp corners, largest chamfer", cells(2, 2, { pocketProfile: "flush", outerRadius: 0, bottomChamfer: 3 })],
+      ["2 × 2, sharp corners, largest chamfer", cells(2, 2, { outerRadius: 0, bottomChamfer: 3 })],
       ["the default drawer with a small chamfer", { bottomChamfer: 0.4 }],
       ["20 mm cells with round corners and screws, no chamfer", cells(5, 4, { cellSize: 20, outerRadius: 10, screws: true })],
       ["thick lines and layers, 55 mm cells, chamfer", { drawerWidth: 300, drawerDepth: 200, cellSize: 55, bottomChamfer: 2, lineWidth: 1.2, layerHeight: 0.28, alignment: "bl" }],
       ["20 mm cells carried on by whole cells into wide margins, largest radius, chamfer and screws", cells(3, 2, { cellSize: 20, marginWidth: 90, marginDepth: 50, outerRadius: 10, bottomChamfer: 2, screws: true, alignment: "tl" })],
       ["narrow margins in the largest radius: truncated corner cells", cells(4, 3, { outerRadius: 10, marginWidth: 9, marginDepth: 7 })],
-      ["flush profile, whole cells in the margin, screws", cells(2, 3, { pocketProfile: "flush", marginWidth: 100, marginDepth: 12, screws: true, alignment: "r" })],
+      ["whole cells in the margin on one side, screws", cells(2, 3, { marginWidth: 100, marginDepth: 12, screws: true, alignment: "r" })],
     ])("%s: same volume, bounds and genus as the boolean fallback, NoError", async (_, settings) => {
       const [fast, fallback] = await Promise.all([
         generateBaseplate(settings, quality),
@@ -215,18 +215,5 @@ describe("advanced settings together", () => {
     const check = await checkMesh(baseplate.mesh);
     expect(check.status).toBe("NoError");
     expectWithin(baseplate.stats.volume ?? Number.NaN, check.volume, check.volume * 1e-6);
-  });
-});
-
-describe("test kit with advanced settings", () => {
-  it("follows the cell size, the outer corner radius and the bottom chamfer of the settings", async () => {
-    const kit = await generateTestKit({ cellSize: 30, outerRadius: 0, bottomChamfer: 1 }, "final");
-    expect(kit.layout).toMatchObject({ columns: 1, rows: 2, cellSize: 30 });
-    expectWithin(kit.stats.dimensions.width, 30);
-    expectWithin(kit.stats.dimensions.depth, 60);
-    const { sections, status } = await checkMesh(kit.mesh, [0.01, 2]);
-    expect(status).toBe("NoError");
-    expectWithin(sectionBox(sections.get(0.01) ?? []).width, 30 - 2 * 0.99);
-    expect(inSection(sections.get(2) ?? [], [14.9, 29.9])).toBe(true);
   });
 });
