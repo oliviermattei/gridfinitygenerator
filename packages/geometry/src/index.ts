@@ -1,6 +1,8 @@
 // Public entry point of the geometry engine (ADR 0003): pure TypeScript on top of
 // manifold-3d, with no dependency on React, the DOM or the app.
 export {
+  dimensionsOf as meshDimensions,
+  volumeOf as meshVolume,
   generateBaseplate,
   generateClip,
   generateTestKit,

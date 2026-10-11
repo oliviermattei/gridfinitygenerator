@@ -335,7 +335,8 @@ export async function loadEngine(): Promise<void> {
   await loadManifold();
 }
 
-function dimensionsOf({ positions }: TriangleMesh): BaseplateStats["dimensions"] {
+/** Bounding box of a mesh, in millimetres (width along X, depth along Y). */
+export function dimensionsOf({ positions }: TriangleMesh): BaseplateStats["dimensions"] {
   const min = [Infinity, Infinity, Infinity];
   const max = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < positions.length; i += 3) {
@@ -353,7 +354,7 @@ function dimensionsOf({ positions }: TriangleMesh): BaseplateStats["dimensions"]
  * Volume enclosed by a closed mesh (divergence theorem): the sum of the signed volumes of
  * the tetrahedra joining the origin to each triangle, counter-clockwise seen from outside.
  */
-function volumeOf({ positions, indices }: TriangleMesh): number {
+export function volumeOf({ positions, indices }: TriangleMesh): number {
   const p = positions;
   let sixfold = 0;
   for (let t = 0; t < indices.length; t += 3) {
