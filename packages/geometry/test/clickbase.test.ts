@@ -5,7 +5,6 @@ import {
   clampSettings,
   clickbaseOf,
   generateBaseplate,
-  generateTestKit,
   pieceMesh,
   type BaseplateSettings,
   type BuildPlate,
@@ -119,18 +118,6 @@ describe("a CLICKbase", () => {
     expect(clickbase.stats.volume as number).toBeLessThan(normal.stats.volume as number);
   });
 
-  it("follows the flush profile: the lamella starts at the foot of its vertical wall", async () => {
-    const flush = await generateBaseplate(cells(2, 2, { ...CLICKBASE, pocketProfile: "flush" }), "final");
-    const { status, sections } = await checkMesh(flush.mesh, [0.7, 0.9, 1.5]);
-    expect(status).toBe("NoError");
-    expect(badEdges(flush.mesh)).toBe(0);
-    expectWithin(flush.stats.dimensions.height, 4.25);
-    const at = (u: number, v: number): [number, number] => [-21 + u, -21 + v];
-    expect(inSection(sections.get(0.7) ?? [], at(6, 19.1))).toBe(false);
-    expect(inSection(sections.get(0.9) ?? [], at(6, 19.1))).toBe(true);
-    expectWithin(wallAlong(sections.get(1.5) ?? [], at(10.5, 0), [0, 1]), ERGOT_MM, 0.01);
-  });
-
   it("keeps the lamellas off a side on the outline that the bottom chamfer would open", async () => {
     // Without a margin, the slit of a side on the outline has 0.85 mm of skin behind it; a
     // chamfer of 1 mm leaves 0.05 mm at the top of the base: that side has no lamella.
@@ -141,11 +128,6 @@ describe("a CLICKbase", () => {
     // The +Y side of cell (0, 1), on the outline: whole. Its −Y side, inside: a slit.
     expect(inSection(section, [-21 + 6, 21 + 19.9])).toBe(true);
     expect(inSection(section, [-21 + 6, 21 - 19.9])).toBe(false);
-  });
-
-  it("gives the test kit no lamella: it tries the pockets of an open baseplate", async () => {
-    const [open, clickbase] = await Promise.all([generateTestKit({}, "final"), generateTestKit(CLICKBASE, "final")]);
-    expect(clickbase.stats.volume).toBe(open.stats.volume);
   });
 
   it("previews the slits only, straight, from the base up", async () => {
@@ -249,9 +231,9 @@ describe("the same CLICKbase by the cell bricks and by the booleans (ADR 0004)",
     ...MARGIN_SHAPES.map((marginShape): [string, Partial<BaseplateSettings>, BuildPlate | null] => [`default drawer cut, ${marginShape}`, { marginShape }, PLATE_256]),
     ["chamfered and screwed, cut", { bottomChamfer: 0.8, screws: true }, PLATE_256],
     ["whole cells of the margin, cut", cells(3, 3, { marginWidth: 100, marginDepth: 90, marginShape: "cells" }), { width: 150, depth: 150 }],
-    ["flush, truncated cells of 30 mm", { pocketProfile: "flush", cellSize: 30, marginShape: "cells" }, null],
+    ["truncated cells of 30 mm", { cellSize: 30, marginShape: "cells" }, null],
     ["cells of 20 mm at 0.12 mm layers", cells(5, 4, { cellSize: 20, layerHeight: 0.12 }), null],
-    ["cells of 36 mm at 0.28 mm layers, flush", cells(4, 3, { cellSize: 36, layerHeight: 0.28, pocketProfile: "flush" }), null],
+    ["cells of 36 mm at 0.28 mm layers", cells(4, 3, { cellSize: 36, layerHeight: 0.28 }), null],
     ["cells of 80 mm, sharp corners, 3 mm chamfer, large screws, cut", cells(3, 3, { cellSize: 80, outerRadius: 0, bottomChamfer: 3, screws: true, screwHead: 8, holeGap: 1 }), { width: 200, depth: 200 }],
   ];
   it.each(cases)("%s", async (_, settings, buildPlate) => {

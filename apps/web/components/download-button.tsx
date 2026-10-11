@@ -15,7 +15,7 @@ export interface DownloadButtonProps {
   onAddClipToBasket?: () => void;
   /** Format of the baseplate being prepared, if any. */
   exporting: ExportFormat | null;
-  /** Whether a download is being prepared (the baseplate or the test kit): every download waits for it. */
+  /** Whether a download is being prepared (the baseplate or a clip): every download waits for it. */
   disabled: boolean;
   /** Dock variant: the format alone as visible text. */
   compact?: boolean;

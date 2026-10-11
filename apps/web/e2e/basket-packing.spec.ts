@@ -19,10 +19,10 @@ async function openBasket(page: Page, articles: { model: string; link: string; q
 const mode = (page: Page, name: string) => page.getByRole("radiogroup", { name: "Rangement sur les plateaux" }).getByRole("radio", { name });
 
 test("changing the rangement changes the plates and their view; the choice is remembered", async ({ page }) => {
-  // Two bins, a test kit and a clip: small enough to share one plate.
+  // Two bins, a 1 × 2 baseplate and a clip: small enough to share one plate.
   await openBasket(page, [
     { model: "bin", link: "v=1", quantity: 2 },
-    { model: "test-kit", link: "v=1", quantity: 1 },
+    { model: "baseplate", link: "v=1&mode=cells&cx=1&cy=2", quantity: 1 },
     { model: "clip", link: "v=1", quantity: 1 },
   ]);
   const status = page.getByTestId("packing-status");
@@ -37,12 +37,12 @@ test("changing the rangement changes the plates and their view; the choice is re
 
   await mode(page, "Par catégorie").click();
   await expect(status).toHaveText("3 plateaux, le minimum possible");
-  await expect(page.getByTestId("plate-name")).toHaveText(["Bins 1", "Kit de test", "Clips"]);
+  await expect(page.getByTestId("plate-name")).toHaveText(["Bins 1", "Baseplate 42 × 84", "Clips"]);
   await expect(page.getByTestId("total-plates")).toHaveText("3");
 
   await mode(page, "Un objet par plateau").click();
   await expect(status).toHaveText("4 plateaux, le minimum possible");
-  await expect(page.getByTestId("plate-name")).toHaveText(["Bin 2×1, 3 U (1)", "Bin 2×1, 3 U (2)", "Kit de test", "Clips"]);
+  await expect(page.getByTestId("plate-name")).toHaveText(["Bin 2×1, 3 U (1)", "Bin 2×1, 3 U (2)", "Baseplate 42 × 84", "Clips"]);
   for (const plate of await plates.all()) await expect(plate.getByTestId("plate-object")).toHaveCount(1);
 
   // Remembered in this browser.
@@ -51,7 +51,7 @@ test("changing the rangement changes the plates and their view; the choice is re
   await expect(plates).toHaveCount(4);
 
   // A change of the basket searches again.
-  await page.getByRole("button", { name: "Supprimer Kit de test" }).click();
+  await page.getByRole("button", { name: "Supprimer Baseplate 42 × 84" }).click();
   await expect(status).toHaveText("3 plateaux, le minimum possible");
 });
 

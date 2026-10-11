@@ -8,12 +8,12 @@ import { isMobile } from "./support";
 // The link is copied to the clipboard: allowed up front, so that no native prompt shows.
 test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
-/** A basket of a v1 bin, twice, and a test kit, as #41 stores it. */
+/** A basket of a v1 bin, twice, and a clip, as #41 stores it. */
 const BASKET = JSON.stringify({
   v: 1,
   articles: [
     { id: "a1", model: "bin", link: "v=1&x=3", quantity: 2 },
-    { id: "a2", model: "test-kit", link: "v=1", quantity: 1 },
+    { id: "a2", model: "clip", link: "v=1", quantity: 1 },
   ],
 });
 
@@ -33,7 +33,7 @@ test("a copied basket link fills an empty basket, then asks to replace or add to
   await page.goto("/fr/panier");
   await page.evaluate((basket) => localStorage.setItem("basket", basket), BASKET);
   await page.reload();
-  await expect(names(page)).toHaveText(["Bin 3×1, 3 U", "Kit de test"]);
+  await expect(names(page)).toHaveText(["Bin 3×1, 3 U", "Clip"]);
 
   await page.getByRole("button", { name: "Copier le lien du panier" }).click();
   await expect(page.getByText("Lien copié")).toBeVisible();
@@ -47,30 +47,30 @@ test("a copied basket link fills an empty basket, then asks to replace or add to
     const recipient = await other.newPage();
     await recipient.goto(link);
     await expect(recipient.getByText("Panier ouvert : 2 articles")).toBeVisible();
-    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Kit de test"]);
+    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Clip"]);
     await expect(recipient.getByRole("listitem", { name: "Bin 3×1, 3 U" }).getByRole("textbox", { name: "Quantité" })).toHaveValue("2");
     await expect(recipient).toHaveURL(/\/fr\/panier$/);
     await recipient.reload();
-    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Kit de test"]);
+    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Clip"]);
 
     // Their basket now has articles: the link asks first. Added after them…
     await recipient.goto(link);
     const dialog = recipient.getByRole("alertdialog", { name: "Ouvrir le panier de ce lien ?" });
     await expect(dialog).toContainText("Ce lien apporte 2 articles, et votre panier en a déjà 2.");
     await dialog.getByRole("button", { name: "Ajouter à mon panier" }).click();
-    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Kit de test", "Bin 3×1, 3 U", "Kit de test"]);
+    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Clip", "Bin 3×1, 3 U", "Clip"]);
     await expect(recipient).toHaveURL(/\/fr\/panier$/);
 
     // …or in their place.
     await recipient.goto(link);
     await recipient.getByRole("button", { name: "Remplacer mon panier" }).click();
-    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Kit de test"]);
+    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Clip"]);
 
     // Cancelled: the basket stays as it is, and the link leaves the address all the same.
     await recipient.goto(link);
     await recipient.getByRole("button", { name: "Annuler" }).click();
     await expect(recipient).toHaveURL(/\/fr\/panier$/);
-    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Kit de test"]);
+    await expect(names(recipient)).toHaveText(["Bin 3×1, 3 U", "Clip"]);
   } finally {
     await other.close();
   }

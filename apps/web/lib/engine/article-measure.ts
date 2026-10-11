@@ -4,7 +4,6 @@ import {
   generateBaseplate,
   generateBin,
   generateClip,
-  generateTestKit,
   meshDimensions,
   meshVolume,
   orientStacks,
@@ -124,15 +123,6 @@ export async function computeArticle({ model, link }: Pick<Article, "model" | "l
         },
         parts: meshes,
         clip: clips,
-      };
-    }
-    case "test-kit": {
-      const { stats, mesh } = await generateTestKit(articleBaseplateSettings(article), "final");
-      const { parts, meshes } = whole(mesh, stats.dimensions);
-      return {
-        measure: { dimensions: stats.dimensions, material: { volume: stats.volume as number, clips: 0 }, pieces: 1, fits: fitsOnBuildPlate(stats.dimensions, buildPlate), parts, clips: null },
-        parts: meshes,
-        clip: null,
       };
     }
     case "clip": {

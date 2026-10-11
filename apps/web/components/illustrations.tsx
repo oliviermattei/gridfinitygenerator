@@ -2,7 +2,7 @@
 // currentColor at 10 %, and the element that changes in var(--art), which turns to the
 // accent when its control is selected.
 
-import { ALIGNMENTS, type Alignment, type BaseplateType, type MarginShape, type PocketProfileName } from "@repo/geometry";
+import { ALIGNMENTS, type Alignment, type BaseplateType, type MarginShape } from "@repo/geometry";
 
 interface ArtProps {
   className?: string;
@@ -247,62 +247,6 @@ export function MarginArt({ kind, className }: ArtProps & { kind: MarginShape })
           ))}
         </>
       )}
-    </svg>
-  );
-}
-
-/** Family icon "Profil de poche": the stepped slope of a pocket wall. */
-export function ProfileIcon({ className }: ArtProps) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden fill="none" {...stroke} strokeWidth={1.6}>
-      <path d="M2 6 H6 L9.5 9.5 V13.5 L14 18 H22" />
-      <path d="M2 21 H22" strokeOpacity={0.45} />
-    </svg>
-  );
-}
-
-/**
- * Cross-section of a pocket: two walls, the bin foot dashed, the drawer floor. The
- * hybrid profile lifts the foot on a 0.35 mm step; the flush one lays it on the floor.
- * Proportions follow the standard profile (0.7 / 1.8 / 2.15 mm).
- */
-export function ProfileArt({ kind, className }: ArtProps & { kind: PocketProfileName }) {
-  const hybrid = kind === "hybrid";
-  const floor = hybrid ? 45 : 40;
-  const step = hybrid ? `V${floor}` : "";
-  return (
-    <svg viewBox="0 0 120 56" className={className} aria-hidden fill="none">
-      <path d={`M2 ${floor} H118`} {...stroke} strokeOpacity={0.35} />
-      <path d={`M2 12 H14 L26.9 24.9 V35.7 L31.1 39.9 ${step} H2 Z`} {...stroke} {...material} />
-      <path d={`M118 12 H106 L93.1 24.9 V35.7 L88.9 39.9 ${step} H118 Z`} {...stroke} {...material} />
-      <path
-        d="M16.5 3 V12.5 L29 25 V35.3 L33.2 39.5 H86.8 L91 35.3 V25 L103.5 12.5 V3"
-        stroke={ART}
-        strokeWidth={1.6}
-        strokeDasharray="3 2.4"
-        strokeLinejoin="round"
-      />
-      {hybrid ? (
-        <path d="M31.1 40.4 V44.6 M88.9 40.4 V44.6" stroke={ART} strokeWidth={2.6} strokeLinecap="round" />
-      ) : (
-        <path d="M33.5 40 H86.5" stroke={ART} strokeWidth={2.6} strokeLinecap="round" strokeOpacity={0.9} />
-      )}
-    </svg>
-  );
-}
-
-/**
- * Test kit in section, front to back: the hybrid cell, then the flush cell, 0.35 mm lower;
- * the muret between them steps down (in var(--art)).
- */
-export function TestKitArt({ className }: ArtProps) {
-  return (
-    <svg viewBox="0 0 64 44" className={className} aria-hidden fill="none">
-      <path d="M2 40 H62" {...stroke} strokeOpacity={0.35} />
-      <path d="M4 40 V12 H5 L11 18 V40 Z" {...stroke} {...material} />
-      <path d="M26 40 V18 L31 12 H32 V17 H33 L38 22 V40 Z" {...stroke} {...material} />
-      <path d="M60 40 V17 H59 L54 22 V40 Z" {...stroke} {...material} />
-      <path d="M32 12 V17" stroke={ART} strokeWidth={2.4} strokeLinecap="round" />
     </svg>
   );
 }

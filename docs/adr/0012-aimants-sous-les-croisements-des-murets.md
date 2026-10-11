@@ -4,6 +4,8 @@ status: proposed
 
 # Logements d'aimants sous les croisements des murets, toujours présents
 
+> **Profil ras et kit de test retirés** (2026-10-11, ADR 0002) : les cotes données « en ras » sont historiques, et il n'y a plus de kit de test à exclure.
+
 La spec v1.1 (#20, ticket #24) demande un **logement d'aimant** de 6 × 2 mm plus un jeu sous chaque coin de cellule, sans réglage, pour fixer la baseplate dans un tiroir en tôle. Le mainteneur ajoute : pas là où il y a une vis. Ce ne peut pas être la position standard des aimants (13 mm du centre de la cellule, 14 mm chez extrabold) : elle tombe dans l'ouverture de la poche, où une baseplate ajourée n'a pas de matière. Il faudrait un socle, soit ×2,5 de matière chez extrabold (`docs/research/types-de-baseplate.md`). On prend donc le seul endroit où la matière existe et où aucun bac ne repose (ADR 0006) : le **croisement des murets**.
 
 ## Décision

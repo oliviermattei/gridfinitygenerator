@@ -416,7 +416,6 @@ describe("settings", () => {
       marginShape: "frame",
       minimalMargin: false,
       baseplateType: "normal",
-      pocketProfile: "hybrid",
       screws: false,
       screwShank: 3,
       screwHead: 6,
@@ -444,7 +443,8 @@ describe("settings", () => {
     expect(BASEPLATE_SETTINGS.lineWidth).toMatchObject({ min: 0.1, max: 1.2, default: 0.4 });
     expect(BASEPLATE_SETTINGS.columns).toMatchObject({ min: 1, max: 24, default: 4 });
     expect(BASEPLATE_SETTINGS.rows).toMatchObject({ min: 1, max: 24, default: 3 });
-    expect(BASEPLATE_SETTINGS.pocketProfile).toMatchObject({ options: ["hybrid", "flush"], default: "hybrid" });
+    // The pocket profile is no longer a setting (ADR 0002): every baseplate has the hybrid one.
+    expect(BASEPLATE_SETTINGS).not.toHaveProperty("pocketProfile");
     expect(BASEPLATE_SETTINGS.screws).toMatchObject({ default: false });
     expect(BASEPLATE_SETTINGS.screwShank).toMatchObject({ min: 2, max: 6, default: 3 });
     expect(BASEPLATE_SETTINGS.screwHead).toMatchObject({ min: 2, max: 8, default: 6 });
@@ -471,7 +471,6 @@ describe("settings", () => {
         marginShape: "extended",
         minimalMargin: true,
         baseplateType: "tray",
-        pocketProfile: "flush",
         screws: true,
         screwShank: 7,
         screwHead: 1,
@@ -495,7 +494,6 @@ describe("settings", () => {
       marginShape: "extended",
       minimalMargin: true,
       baseplateType: "tray",
-      pocketProfile: "flush",
       screws: true,
       screwShank: 6,
       // A screw head narrower than its shank would not hold: raised to the shank.
@@ -510,8 +508,14 @@ describe("settings", () => {
     expect(clampSettings({ layerHeight: 0.5, lineWidth: 0 })).toEqual({ ...DEFAULT_SETTINGS, layerHeight: 0.28, lineWidth: 0.1 });
     expect(clampSettings({ layerHeight: Number.NaN, lineWidth: 0.45 })).toMatchObject({ layerHeight: 0.2, lineWidth: 0.45 });
     // A choice that is not one of its options takes its default.
-    const unknown = { sizeMode: "shelf", alignment: "middle", marginShape: "solid", baseplateType: "hollow", pocketProfile: "rebuilt", screws: "yes" } as unknown as Partial<BaseplateSettings>;
-    expect(clampSettings(unknown)).toMatchObject({ sizeMode: "drawer", alignment: "c", marginShape: "frame", baseplateType: "normal", pocketProfile: "hybrid", screws: false });
+    const unknown = { sizeMode: "shelf", alignment: "middle", marginShape: "solid", baseplateType: "hollow", screws: "yes" } as unknown as Partial<BaseplateSettings>;
+    expect(clampSettings(unknown)).toMatchObject({ sizeMode: "drawer", alignment: "c", marginShape: "frame", baseplateType: "normal", screws: false });
+    // A setting that no longer exists, such as the pocket profile of settings kept from before
+    // ADR 0002 left only the hybrid one, is dropped.
+    for (const pocketProfile of ["hybrid", "flush"]) {
+      const old = { columns: 6, pocketProfile } as unknown as Partial<BaseplateSettings>;
+      expect(clampSettings(old)).toEqual({ ...DEFAULT_SETTINGS, columns: 6 });
+    }
     expect(clampSettings({ screwShank: 4, screwHead: 3.5 })).toMatchObject({ screwShank: 4, screwHead: 4 });
   });
 

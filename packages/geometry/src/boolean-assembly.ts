@@ -4,21 +4,19 @@ import { clickPocketTool, lamellaKey, cellLamellas, type LamellaSpan } from "./c
 import { slotTools } from "./clips";
 import { labelTool, type Label } from "./label";
 import { marginOf } from "./margin";
-import { withArena, type Own } from "./manifold";
-import type { PocketProfile } from "./pocket-profile";
+import { withArena } from "./manifold";
 import { magnetPositions, magnetTool } from "./magnets";
 import { screwPositions, screwTool } from "./screws";
 import { notchTools } from "./skeleton";
-import { TOOL_OVERSHOOT_MM, cellCentre, gridRect, meshOf, pocketTool, roundedRect, slabOf, type GridFrame } from "./shapes";
+import { TOOL_OVERSHOOT_MM, cellCentre, meshOf, pocketTool, roundedRect, slabOf, type GridFrame } from "./shapes";
 import { latticeOf, type PiecePlan } from "./split";
 
 /**
  * Grouped boolean assembly (ADR 0004 fallback): the slab of the outline (with its bottom
  * chamfer, less the margin's holes) minus every pocket
- * tool (with the lamellas of a CLICKbase, clickbase.ts) and the margin's cut at once, then minus the tops of the lower cells, then minus the
+ * tool (with the lamellas of a CLICKbase, clickbase.ts) and the margin's cut at once, then minus the
  * notches of the murets of a skeleton (skeleton.ts), then minus
- * every screw hole, every magnet hole and every slot of a clip astride a cut or the outline (clips.ts). Works for any grid, including single rows and columns and grids of
- * mixed pocket profiles (the test kit).
+ * every screw hole, every magnet hole and every slot of a clip astride a cut or the outline (clips.ts). Works for any grid, including single rows and columns.
  *
  * A baseplate cut for the build plate is then cut into its pieces, in the order of `pieces`:
  * each one is the baseplate within its footprint, which reaches past the outline on its
@@ -30,19 +28,13 @@ export function assembleWithBooleans(
   pieces: readonly PiecePlan[],
   labels: readonly Label[] = [],
 ): TriangleMesh[] {
-  const { columns, rows, profile, width, depth, outerRadius, segmentsPerQuarter } = frame;
+  const { columns, rows, width, depth, outerRadius, segmentsPerQuarter } = frame;
   return withArena((own) => {
     const margin = marginOf(frame).prepare(wasm, own, frame);
     const outline = own(new wasm.CrossSection([roundedRect(width, depth, outerRadius, segmentsPerQuarter)]));
     const holes = margin?.holes();
     const slab = slabOf(wasm, own, holes ? own(outline.subtract(holes)) : outline, frame);
-    const lower = new Map(frame.lowerCells.map((cell) => [`${cell.i},${cell.j}`, cell.profile]));
-    const pockets = new Map<PocketProfile, Manifold>();
-    const pocketOf = (cellProfile: PocketProfile) => {
-      const tool = pockets.get(cellProfile) ?? pocketTool(wasm, own, frame, cellProfile);
-      pockets.set(cellProfile, tool);
-      return tool;
-    };
+    const pocket = pocketTool(wasm, own, frame);
     // The pockets of a CLICKbase, with the lamellas of their sides, once per pattern of lamellas.
     const { clickbase } = frame;
     const clickPockets = new Map<string, Manifold>();
@@ -59,13 +51,12 @@ export function assembleWithBooleans(
       for (let j = 0; j < rows; j++) {
         const lamellas = cellLamellas(frame, labels, i, j);
         const key = lamellaKey(lamellas);
-        const tool = key !== "" ? clickPocketOf(lamellas, key) : pocketOf(lower.get(`${i},${j}`) ?? profile);
+        const tool = key !== "" ? clickPocketOf(lamellas, key) : pocket;
         tools.push(own(tool.translate([...cellCentre(i, j, frame), 0])));
       }
     const cut = margin?.solid();
     if (cut) tools.push(cut);
     let solid = own(slab.subtract(own(wasm.Manifold.compose(tools))));
-    if (frame.lowerCells.length > 0) solid = own(solid.subtract(lowerTops(wasm, own, frame)));
     // The notches of a skeleton reach into the pockets on both sides of their muret: they are
     // removed apart, as are the screw holes, whose bores may meet them at the top.
     const notches = notchTools(wasm, own, frame, latticeOf(frame), labels);
@@ -98,25 +89,4 @@ export function assembleWithBooleans(
       return meshOf(piece);
     });
   });
-}
-
-/**
- * What is taken off the top of the lower cells: over each one, from the height of its
- * profile up, a block exactly as wide as the cell between it and its neighbours (the muret
- * they share gets a step on the line between them), and past the grid on its sides on the
- * edge of the grid.
- */
-function lowerTops(wasm: ManifoldToplevel, own: Own, frame: GridFrame): Manifold {
-  const { columns, rows, cellSize, profile } = frame;
-  const [x0, y0] = gridRect(frame);
-  const o = TOOL_OVERSHOOT_MM;
-  const top = profile.height + o;
-  const blocks = frame.lowerCells.map(({ i, j, profile: low }) => {
-    const [left, front] = [x0 + i * cellSize - (i === 0 ? o : 0), y0 + j * cellSize - (j === 0 ? o : 0)];
-    const [right, back] = [x0 + (i + 1) * cellSize + (i === columns - 1 ? o : 0), y0 + (j + 1) * cellSize + (j === rows - 1 ? o : 0)];
-    const block = own(wasm.Manifold.cube([right - left, back - front, top - low.height]));
-    return own(block.translate([left, front, low.height]));
-  });
-  // Neighbouring lower cells share a face: a union, not a composition.
-  return own(wasm.Manifold.union(blocks));
 }

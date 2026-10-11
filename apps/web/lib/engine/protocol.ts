@@ -11,12 +11,11 @@ export type ExportFormat = "3mf" | "stl";
 export type FileExtension = ExportFormat | "zip";
 
 /**
- * What a download holds: the baseplate of the settings, the test kit (a 1 × 2 baseplate
- * with one cell of each pocket profile, which takes the cell size, the outline and the
- * print settings only), or a single clip (`generateClip`, always an STL), to print clips one
- * by one, for instance to join two baseplates by their edge slots (#37).
+ * What a download holds: the baseplate of the settings, or a single clip (`generateClip`,
+ * always an STL), to print clips one by one, for instance to join two baseplates by their
+ * edge slots (#37).
  */
-export type ExportPiece = "baseplate" | "test-kit" | "clip";
+export type ExportPiece = "baseplate" | "clip";
 
 /**
  * A baseplate to measure against the one shown (`EngineClient.compare`): its settings, and
@@ -46,7 +45,7 @@ export type EngineRequest =
       format: ExportFormat;
       /** Absolute link written into the 3MF to generate the piece again: the share link of the settings. */
       link: string;
-      /** Build plate the baseplate is cut for; the test kit is never cut. */
+      /** Build plate the baseplate is cut for. */
       buildPlate: BuildPlate;
       /**
        * Name of a piece of a cut baseplate in the 3MF, in the language of the page, `{n}`

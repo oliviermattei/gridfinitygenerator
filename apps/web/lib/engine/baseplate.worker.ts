@@ -2,7 +2,6 @@
 import {
   generateBaseplate,
   generateClip,
-  generateTestKit,
   loadEngine,
   orientStacks,
   partPlates,
@@ -65,14 +64,11 @@ scope.onmessage = async ({ data: request }: MessageEvent<EngineRequest | EngineW
       reply({ id: request.id, type: "export", bytes, name, extension: "stl", baseplate: null, triangles: clip.indices.length / 3, serializeMs, stacks: 0 }, [bytes.buffer]);
     } else {
       // Always the final quality: the exported mesh is the one the statistics measure.
-      const generated =
-        request.piece === "test-kit"
-          ? await generateTestKit(request.settings, "final")
-          : await generateBaseplate(request.settings, "final", { buildPlate: request.buildPlate });
+      const generated = await generateBaseplate(request.settings, "final", { buildPlate: request.buildPlate });
       const { mesh, ...baseplate } = generated;
       // Stacked (#28) when asked and when the baseplate allows it: several pieces, a margin
       // held upside down, a type that prints upside down.
-      const stacked = request.piece === "baseplate" && request.stack !== null && stackRuleOf(request.settings, baseplate.layout).blockers.length === 0;
+      const stacked = request.stack !== null && stackRuleOf(request.settings, baseplate.layout).blockers.length === 0;
       const name = exportName(request.piece, baseplate, request.settings, stacked);
       // The settings of the Bambu Studio project the 3MF becomes, or null for a plain 3MF (ADR 0023).
       const projectSettings = request.format === "3mf" && request.bambu ? await bambuSettings(request.bambu, request.settings.layerHeight) : null;

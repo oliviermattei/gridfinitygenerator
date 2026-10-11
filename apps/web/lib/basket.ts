@@ -18,7 +18,7 @@ import type { Strings } from "./strings";
  */
 
 /** What an article makes, which tells its generator and how its link is read. */
-export type ArticleModel = "bin" | "baseplate" | "test-kit" | "clip";
+export type ArticleModel = "bin" | "baseplate" | "clip";
 
 /** A line of the basket. */
 export interface Article {
@@ -39,7 +39,7 @@ export interface Basket {
 /** Version of the stored basket written today. */
 const BASKET_VERSION = 1;
 
-export const ARTICLE_MODELS: readonly ArticleModel[] = ["bin", "baseplate", "test-kit", "clip"];
+export const ARTICLE_MODELS: readonly ArticleModel[] = ["bin", "baseplate", "clip"];
 
 /** What an added article is made of: all but its id. */
 export type ArticleDraft = Omit<Article, "id">;
@@ -121,7 +121,7 @@ export function removeArticle(basket: Basket, id: string): Basket {
 /** The kind of object of an article (glossary: Catégorie), as the rangement keeps them apart. */
 export type { Category };
 
-const CATEGORIES: Record<ArticleModel, Category> = { bin: "bins", baseplate: "baseplates", "test-kit": "baseplates", clip: "clips" };
+const CATEGORIES: Record<ArticleModel, Category> = { bin: "bins", baseplate: "baseplates", clip: "clips" };
 
 export function categoryOf(model: ArticleModel): Category {
   return CATEGORIES[model];
@@ -133,8 +133,8 @@ export function articleBinSettings(article: Pick<Article, "link">): BinSettings 
 }
 
 /**
- * The baseplate settings of a baseplate, test kit or clip article: the test kit and the clip
- * take theirs from them, as their downloads do.
+ * The baseplate settings of a baseplate or clip article: the clip takes its own from them, as
+ * its download does.
  */
 export function articleBaseplateSettings(article: Pick<Article, "link">): BaseplateSettings {
   return decodeSettings(article.link) ?? DEFAULT_SETTINGS;
@@ -150,8 +150,8 @@ interface ArticleGenerator {
 
 const BIN_GENERATOR: ArticleGenerator = { path: binPath, decode: decodeBinSettings, defaults: DEFAULT_BIN_SETTINGS };
 const BASEPLATE_GENERATOR: ArticleGenerator = { path: baseplatePath, decode: decodeSettings, defaults: DEFAULT_SETTINGS };
-/** The test kit and the clip come from the baseplate generator, of its settings. */
-const GENERATORS: Record<ArticleModel, ArticleGenerator> = { bin: BIN_GENERATOR, baseplate: BASEPLATE_GENERATOR, "test-kit": BASEPLATE_GENERATOR, clip: BASEPLATE_GENERATOR };
+/** The clip comes from the baseplate generator, of its settings. */
+const GENERATORS: Record<ArticleModel, ArticleGenerator> = { bin: BIN_GENERATOR, baseplate: BASEPLATE_GENERATOR, clip: BASEPLATE_GENERATOR };
 
 /** Whether the generator of `model` reads `link`: an article its generator opens. */
 export function readsArticleLink(model: ArticleModel, link: string): boolean {
@@ -160,7 +160,7 @@ export function readsArticleLink(model: ArticleModel, link: string): boolean {
 
 /**
  * The automatic name of an article: « Bin 2×1, 6 U », « Baseplate 562 × 470 » (its footprint
- * measured on its mesh, in millimetres, and only « Baseplate » until then), « Kit de test », « Clip ».
+ * measured on its mesh, in millimetres, and only « Baseplate » until then), « Clip ».
  */
 export function articleName(article: Article, t: Strings, lengths: Intl.NumberFormat, footprint?: { width: number; depth: number } | null): string {
   const names = t.basket.names;
@@ -171,8 +171,6 @@ export function articleName(article: Article, t: Strings, lengths: Intl.NumberFo
     }
     case "baseplate":
       return footprint ? names.baseplateSized(lengths.format(footprint.width), lengths.format(footprint.depth)) : names.baseplate;
-    case "test-kit":
-      return names.testKit;
     case "clip":
       return names.clip;
   }

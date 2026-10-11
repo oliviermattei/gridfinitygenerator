@@ -107,7 +107,7 @@ describe("names of the plates and of their objects", () => {
   });
 
   test("the baseplates of several articles on one plate share a numbered name", () => {
-    const other: Article = { id: "kit", model: "test-kit", link: "v=1", quantity: 1 };
+    const other: Article = { id: "kit", model: "baseplate", link: "v=1", quantity: 1 };
     const measures = new Map(MEASURES).set("kit", measure([part("whole", [], 42, 84)]));
     const basket = basketPackingOf([{ ...baseplate, id: "small" }, other], (a) => (a.id === "small" ? measure([part("whole", [], 84, 84)]) : measures.get(a.id)), "by-category")!;
     const plates: PackedPlate[] = pack(basket).plates;

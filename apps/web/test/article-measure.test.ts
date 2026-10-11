@@ -36,14 +36,6 @@ describe("measuring an article", { timeout: 30_000 }, () => {
     expect(cut.dimensions.width).toBeCloseTo(whole.dimensions.width, 3);
   });
 
-  test("the test kit: 42 × 84 mm with the standard cell", async () => {
-    const measure = await measureArticle({ model: "test-kit", link: "v=1&mode=cells&cx=7&cy=1" }, PLATE);
-    expect(measure.dimensions.width).toBeCloseTo(42, 3);
-    expect(measure.dimensions.depth).toBeCloseTo(84, 3);
-    expect(measure.material.volume).toBeGreaterThan(0);
-    expect(measure.fits).toBe(true);
-  });
-
   test("a clip alone: all its material is clips", async () => {
     const measure = await measureArticle({ model: "clip", link: "v=1" }, PLATE);
     expect(measure.material.volume).toBe(0);

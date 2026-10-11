@@ -119,7 +119,6 @@ it("contact, part non portée et plafonds, par type et par marge", async () => {
   wasm = await loadManifold();
   const cases: { name: string; settings: Partial<BaseplateSettings>; plate: BuildPlate }[] = [
     { name: "pile de 3, Normal", settings: PILE, plate: PLATE_60 },
-    { name: "pile de 3, Normal ras", settings: { ...PILE, pocketProfile: "flush" }, plate: PLATE_60 },
     { name: "pile de 3, Tray", settings: { ...PILE, baseplateType: "tray" }, plate: PLATE_60 },
     { name: "pile de 3, Skeleton", settings: { ...PILE, baseplateType: "skeleton" }, plate: PLATE_60 },
     { name: "pile de 3, CLICKbase", settings: { ...PILE, baseplateType: "clickbase" }, plate: PLATE_60 },

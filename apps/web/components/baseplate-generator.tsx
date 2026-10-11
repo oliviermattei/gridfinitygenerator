@@ -118,7 +118,7 @@ export function BaseplateGenerator() {
   // shapes of the margin and the types compare with them.
   const [volumes, setVolumes] = useState<ReadonlyMap<string, Material>>(() => new Map());
   const desktop = useMediaQuery(DESKTOP_QUERY, true);
-  // Opened from the basket to edit a baseplate, test kit or clip article (#41).
+  // Opened from the basket to edit a baseplate or clip article (#41).
   const edited = useEditedArticle();
 
   const [panel, setPanel] = useState<HTMLElement | null>(null);
@@ -259,10 +259,8 @@ export function BaseplateGenerator() {
   }
 
   /**
-   * Downloads the baseplate of the settings, or the test kit (always a single 3MF). The 3MF
-   * carries the share link of the settings: the page that generates it again (the test kit
-   * from its button, since it takes the cell size, the outline and the print settings). A
-   * baseplate cut for the build plate comes as one 3MF with a named object per piece and one
+   * Downloads the baseplate of the settings. The 3MF carries the share link of the settings:
+   * the page that generates it again. A baseplate cut for the build plate comes as one 3MF with a named object per piece and one
    * for its clips, or as a zip of one STL per piece and one for the clips. A single clip comes
    * as an STL (#37).
    */
@@ -303,9 +301,9 @@ export function BaseplateGenerator() {
         left: 0,
       };
 
-  /** Adds the test kit or a single clip of the settings on screen to the basket (#41), confirmed by a notification. */
-  function addPieceToBasket(model: "test-kit" | "clip") {
-    const article = addToBasket({ model, link: encodeSettings(settings), quantity: 1 });
+  /** Adds a single clip of the settings on screen to the basket (#41), confirmed by a notification. */
+  function addClipToBasket() {
+    const article = addToBasket({ model: "clip", link: encodeSettings(settings), quantity: 1 });
     notify(t.basket.added(articleName(article, t, formats.lengths)));
   }
 
@@ -325,7 +323,7 @@ export function BaseplateGenerator() {
     <DownloadButton
       onDownload={(format) => void exportPiece("baseplate", format)}
       onDownloadClip={() => void exportPiece("clip", "stl")}
-      onAddClipToBasket={hydrated ? () => addPieceToBasket("clip") : undefined}
+      onAddClipToBasket={hydrated ? addClipToBasket : undefined}
       exporting={exporting?.piece === "baseplate" ? exporting.format : null}
       disabled={exporting !== null}
       compact={compact}
@@ -341,10 +339,6 @@ export function BaseplateGenerator() {
       summary={baseplate}
       open={openFamily}
       onOpenChange={setOpenFamily}
-      onDownloadTestKit={() => void exportPiece("test-kit", "3mf")}
-      exportingTestKit={exporting?.piece === "test-kit"}
-      downloadBusy={exporting !== null}
-      onAddTestKitToBasket={hydrated ? () => addPieceToBasket("test-kit") : null}
       marginSurpluses={marginSurpluses}
       typeVolumes={typeVolumes}
       filament={preferences.filament}

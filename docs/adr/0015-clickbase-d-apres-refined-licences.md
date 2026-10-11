@@ -4,6 +4,8 @@ status: proposed
 
 # CLICKbase d'après CLICKbase Refined, et sa licence CC BY-NC-SA
 
+> **Profil ras et kit de test retirés** (2026-10-11, ADR 0002) : le CLICKbase n'a plus que le profil hybride ; les cotes « en ras » et la comparaison à Refined en ras sont historiques.
+
 La spec v1.1 (#20, ticket #27) ajoute le type de baseplate **CLICKbase** (ADR 0013) : les bacs s'enclenchent dans les poches et y tiennent sans aimant. Le mainteneur a fixé le point de départ : **CLICKbase Refined** (Printables 1487592, ZeroCtrl, 2025), dérivé de **CLICKbase** (Printables 982173, John Hall). Les deux sont sous licence **CC BY-NC-SA 4.0**, comme toute la lignée (ClickPlates, Clickfinity). Le dépôt est sous MIT.
 
 La recherche (`docs/research/retenue-des-bacs-clickbase.md`) recommandait au contraire de ne rien reprendre de cette lignée et de concevoir une retenue maison en « salle blanche ». Le mainteneur a décidé d'**ignorer les licences pour l'instant** : cet ADR l'acte, avec les alternatives.

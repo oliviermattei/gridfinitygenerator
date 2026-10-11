@@ -332,14 +332,6 @@ it("fichiers de la recette, et le moteur construit la variante retenue", async (
         `CLICKbase 2 × 2 du moteur (serrage 0,25, profil hybride) : ${fr(engine.stats.dimensions.height)} mm, ${engine.stats.magnets} aimant ; ${cm3(engine.stats.volume as number)} cm³ contre ${cm3(normal.stats.volume as number)} en Normal`,
       ),
     );
-    const flushEngine = await generateBaseplate({ ...settings, pocketProfile: "flush", baseplateType: "clickbase" as never }, "final");
-    files.push(
-      await write3mf(
-        "banc-2x2-clickbase-ras.3mf",
-        flushEngine.mesh,
-        `CLICKbase 2 × 2 du moteur en profil ras (4,25 mm, celui de Refined) : ${cm3(flushEngine.stats.volume as number)} cm³`,
-      ),
-    );
   }
   for (const { name, protrusion } of [VARIANTS[0], VARIANTS[2]] as Variant[]) {
     const file = `banc-2x2-clickbase-${name.replace(" ", "-").replace(",", "")}.3mf`;
@@ -353,15 +345,8 @@ it("fichiers de la recette, et le moteur construit la variante retenue", async (
   expect(drawerEngine.stats.volume as number).toBeCloseTo(benchDrawer, 0);
   const plate = { buildPlate: { width: 256, depth: 256 } };
   const [cut, normalCut] = await Promise.all([generateBaseplate({ baseplateType: "clickbase" as never }, "final", plate), generateBaseplate({}, "final", plate)]);
-  // Contre CLICKbase Refined, en profil ras comme lui, sans aimant (ses STL n'en ont pas) : 2 × 2 de
-  // 84 × 84 × 4,25 mm, 4,268 cm³, relevé par refined.mjs.
-  const flushBare = await generateBaseplate({ ...settings, pocketProfile: "flush", baseplateType: "clickbase" as never }, "final", { magnets: false });
-  lines.push(
-    "## Contre CLICKbase Refined",
-    "",
-    `- 2 × 2 en profil ras, sans aimant : moteur ${fr((flushBare.stats.volume as number) / 1000, 3)} cm³, ${fr(flushBare.stats.dimensions.width)} × ${fr(flushBare.stats.dimensions.depth)} × ${fr(flushBare.stats.dimensions.height)} mm ; Refined 4,268 cm³, 84,00 × 84,00 × 4,25 mm (\`refined.mjs\`).`,
-    "",
-  );
+  // Contre CLICKbase Refined (4,268 cm³ en 2 × 2, relevé par refined.mjs) : la comparaison se
+  // faisait en profil ras, comme lui, retiré du moteur depuis (ADR 0002) ; elle reste dans results.md.
   lines.push(
     "## Le moteur (qualité finale, aimants compris)",
     "",

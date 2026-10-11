@@ -88,7 +88,7 @@ test("add a bin and a baseplate, change a quantity, edit an article and update i
   await expect(basketLink(page, "Panier, vide")).toBeVisible();
 });
 
-test("an edited article can be added as a new one; the test kit and a clip go in the basket too", async ({ page }, testInfo) => {
+test("an edited article can be added as a new one; a clip goes in the basket too", async ({ page }, testInfo) => {
   await page.goto("/en/bin");
   await expect(readout(page, "dimensions")).toHaveText("83.5 × 41.5 mm");
   await page.getByRole("button", { name: "Add to the basket" }).click();
@@ -103,30 +103,15 @@ test("an edited article can be added as a new one; the test kit and a clip go in
   await expect(page.getByText("“Bin 2×1, 4 U” added to the basket")).toBeVisible();
   await expect(page.getByRole("link", { name: "Basket, 2 articles" })).toBeVisible();
 
-  // The test kit, from its family; a single clip, from the menu of the download.
+  // A single clip, from the menu of the download.
   await page.goto("/en/baseplate");
-  await openSettings(page, testInfo);
-  await page.getByRole("button", { name: /^Pocket profile/ }).click();
-  // Disabled while the test kit downloads, as its download is: seen by an observer, the kit being quick.
-  const addTestKit = page.getByRole("button", { name: "Add the test kit to the basket" });
-  await addTestKit.evaluate((button: HTMLButtonElement) => {
-    const seen = window as Window & { disabledSeen?: boolean };
-    new MutationObserver(() => (seen.disabledSeen ||= button.disabled)).observe(button, { attributes: true, attributeFilter: ["disabled"] });
-  });
-  await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download the test kit" }).click()]);
-  expect(await page.evaluate(() => (window as Window & { disabledSeen?: boolean }).disabledSeen)).toBe(true);
-  await expect(addTestKit).toBeEnabled();
-  await addTestKit.click();
-  await expect(page.getByText("“Test kit” added to the basket")).toBeVisible();
-  await closeSettings(page, testInfo);
   await page.getByRole("button", { name: "Other formats" }).filter({ visible: true }).click();
   await page.getByRole("menuitem", { name: /^Add a clip to the basket/ }).click();
   await expect(page.getByText("“Clip” added to the basket")).toBeVisible();
 
   await page.goto("/en/panier");
   const names = page.getByRole("list", { name: "Articles" }).getByTestId("article-name");
-  await expect(names).toHaveText(["Bin 2×1, 3 U", "Bin 2×1, 4 U", "Test kit", "Clip"]);
-  await expect(article(page, "Test kit").getByTestId("article-dimensions")).toHaveText(/^42 × 84 × /);
+  await expect(names).toHaveText(["Bin 2×1, 3 U", "Bin 2×1, 4 U", "Clip"]);
 });
 
 test("an article that no longer fits on the build plate is shown in red, with why", async ({ page }) => {

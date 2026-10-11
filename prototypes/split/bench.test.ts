@@ -10,7 +10,7 @@ import {
   type BaseplateSettings,
   type BuildPlate,
 } from "../../packages/geometry/src/index";
-import { insetAt, POCKET_PROFILES } from "../../packages/geometry/src/pocket-profile";
+import { HYBRID_PROFILE, insetAt } from "../../packages/geometry/src/pocket-profile";
 import { checkMesh, readThreeMf } from "../../packages/geometry/test/support/measure";
 
 const OUT = new URL("./", import.meta.url);
@@ -52,15 +52,16 @@ it("plan de découpe", async () => {
 
 it("numéros gravés", async () => {
   lines.push("## Numéros gravés", "", "| Profil, couche | Profondeur | Demi-muret au fond de la gravure | Peau de chaque côté du chiffre (1,8 mm) | Matière retirée, tiroir par défaut en 4 pièces |", "|---|---|---|---|---|");
-  for (const [profile, layerHeight] of [["hybrid", 0.2], ["flush", 0.2], ["hybrid", 0.28], ["flush", 0.28], ["flush", 0.12]] as const) {
-    const settings = { pocketProfile: profile, layerHeight };
+  // Le profil ras, mesuré ici à l'origine (results.md), est retiré du moteur (ADR 0002).
+  for (const layerHeight of [0.2, 0.28, 0.12]) {
+    const settings = { layerHeight };
     const depth = Math.ceil(0.4 / layerHeight - 1e-9) * layerHeight;
-    const halfMuret = insetAt(POCKET_PROFILES[profile], depth);
+    const halfMuret = insetAt(HYBRID_PROFILE, depth);
     const whole = await generateBaseplate(settings, "final");
     const cut = await generateBaseplate(settings, "final", { buildPlate: { width: 256, depth: 256 } });
     const engraved = (whole.stats.volume as number) - (cut.stats.volume as number);
     lines.push(
-      `| ${profile === "hybrid" ? "hybride" : "ras"}, ${String(layerHeight).replace(".", ",")} | ${depth.toFixed(2).replace(".", ",")} mm | ${halfMuret.toFixed(2).replace(".", ",")} mm | ${((halfMuret - 1.8) / 2).toFixed(3).replace(".", ",")} mm | ${engraved.toFixed(2).replace(".", ",")} mm³ |`,
+      `| hybride, ${String(layerHeight).replace(".", ",")} | ${depth.toFixed(2).replace(".", ",")} mm | ${halfMuret.toFixed(2).replace(".", ",")} mm | ${((halfMuret - 1.8) / 2).toFixed(3).replace(".", ",")} mm | ${engraved.toFixed(2).replace(".", ",")} mm³ |`,
     );
   }
   lines.push("");

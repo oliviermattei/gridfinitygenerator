@@ -83,8 +83,8 @@ export interface ClipSlot {
   bridge: number;
   /**
    * Top of the slot: the foot of the upper slope of the pocket, rounded down to the layer
-   * (2.80 mm in the hybrid profile with 0.2 mm layers, 2.40 mm in the flush one). Nothing is
-   * removed above it, so the baseplate is untouched seen from above.
+   * (2.80 mm in the hybrid profile with 0.2 mm layers). Nothing is removed above it, so the
+   * baseplate is untouched seen from above.
    */
   top: number;
 }
@@ -151,7 +151,7 @@ export function clipSlotOf(frame: Pick<GridFrame, "profile" | "layerHeight" | "c
   if (!foot) throw new Error("A pocket profile needs an upper slope");
   const top = roundDownToLayer(foot[0], layerHeight);
   const reach = frame.skeleton ? postReach({ ...frame, skeleton: frame.skeleton }, top) : null;
-  // A tenth of a millimetre, down: 4.0 mm in the hybrid profile, 4.1 mm in the flush one.
+  // A tenth of a millimetre, down: 4.0 mm in the hybrid profile.
   const room = reach === null ? SLOT_LENGTH_MM : Math.floor((reach - SKIN_MM - CROSSING_START_MM) * 10 + 1e-6) / 10;
   return {
     halfWidth: SLOT_HALF_WIDTH_MM,

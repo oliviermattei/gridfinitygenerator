@@ -114,7 +114,7 @@ describe("split plan", () => {
 describe("pieces of a cut baseplate", () => {
   const CASES: [name: string, settings: Partial<BaseplateSettings>][] = [
     ["default drawer", {}],
-    ["default drawer, flush profile, 0.28 mm layers", { pocketProfile: "flush", layerHeight: 0.28 }],
+    ["default drawer, 0.28 mm layers", { layerHeight: 0.28 }],
     ["default drawer, chamfered, sharp corners, screws", { bottomChamfer: 1, outerRadius: 0, screws: true }],
     ["5 × 5 cells in 20 mm cells, back left, wide margins", { sizeMode: "cells", columns: 5, rows: 5, cellSize: 20, marginWidth: 90, marginDepth: 30, alignment: "tl" }],
   ];

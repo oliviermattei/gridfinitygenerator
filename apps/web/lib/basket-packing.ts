@@ -6,7 +6,7 @@ import type { Strings } from "./strings";
 
 /**
  * What the rangement of the basket lays on the plates (#42, ADR 0024), from the measures of its
- * articles: each exemplar of a bin, test kit or whole baseplate, each piece or stack of a cut
+ * articles: each exemplar of a bin or whole baseplate, each piece or stack of a cut
  * baseplate, and one block of all the clips of the basket. Pure: no React, no worker.
  */
 

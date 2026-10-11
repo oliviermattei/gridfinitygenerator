@@ -4,6 +4,8 @@ status: proposed
 
 # Type de baseplate, et Tray : la poche relevée sur un fond, une couche de jeu sous le pied
 
+> **Profil ras et kit de test retirés** (2026-10-11, ADR 0002) : les passages sur le profil ras, le kit de test et le suffixe `-flush` sont historiques ; le nom d'un fichier finit par `-tray`.
+
 La spec v1.1 (#20, ticket #25) ajoute un réglage **type de baseplate** : Normal (défaut), Tray, puis Skeleton (#26) et CLICKbase (#27). Le **Tray** est la grille posée sur un fond plein, pour qu'une petite pièce ne tombe pas à travers et que la baseplate se pose sur un bureau. La spec fixe un fond de 3 à 4 couches, pas les 2,8 mm d'extrabold, et ne reprend pas son décalage de 1 mm (probable bug, `docs/research/types-de-baseplate.md`).
 
 Le ticket signale une incohérence. En profil hybride, un bac assis sur ses pentes descend **exactement** jusqu'au fond de la poche, à z = 0 (ADR 0002, `retenue-des-bacs-clickbase.md`). Le prototype le mesure : le pied touche les pentes à z = 0,000. Un fond posé là porterait le bac, qui ne serait plus assis sur ses pentes.

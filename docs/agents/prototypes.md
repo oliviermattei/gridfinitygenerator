@@ -13,6 +13,8 @@ Le mainteneur imprime sur une Bambu Lab P1S, depuis Bambu Studio. Ce qu'il impri
 
 ## Registre
 
+Depuis le 2026-10-11, le moteur n'a plus que le profil hybride (ADR 0002) : les bancs ne mesurent plus le profil ras ni le kit de test, et leurs `results.md` gardent les mesures d'origine.
+
 | Dossier | Ticket | Ce qu'il teste | Ce qu'il alimente | État |
 |---|---|---|---|---|
 | `geometry-perf/` | — | Quel moteur de géométrie pour le navigateur, manifold-3d ou JSCAD : aperçu < 100 ms, calcul complet < 1 s (10 × 10) et < 3 s (20 × 20), aimants compris. | ADR 0004 (manifold-3d, briques de cellule), moteur rapide #5 | tranché |

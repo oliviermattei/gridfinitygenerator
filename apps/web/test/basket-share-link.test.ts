@@ -14,7 +14,7 @@ const TWENTY: ArticleDraft[] = Array.from({ length: 20 }, (_, i): ArticleDraft =
     case 1:
       return { model: "baseplate", link: `v=1&mode=cells&cx=${4 + i}&cy=${3 + (i % 4)}&lh=0.28`, quantity: 1 };
     case 2:
-      return { model: "test-kit", link: "v=1&type=skeleton&mg=1", quantity: 2 };
+      return { model: "baseplate", link: "v=1&type=skeleton&mg=1", quantity: 2 };
     default:
       return { model: "clip", link: `v=1&w=${400 + i}&d=${300 + i}`, quantity: 12 };
   }
@@ -50,8 +50,8 @@ describe("the basket link", () => {
   });
 
   test("carries only the articles: their model, share link and quantity", () => {
-    const query = basketShareQuery([{ model: "test-kit", link: "v=1&type=skeleton", quantity: 2 }]);
-    expect(readBasketShareLink(query)).toEqual({ articles: [{ model: "test-kit", link: "v=1&type=skeleton", quantity: 2 }], unreadable: 0 });
+    const query = basketShareQuery([{ model: "baseplate", link: "v=1&type=skeleton", quantity: 2 }]);
+    expect(readBasketShareLink(query)).toEqual({ articles: [{ model: "baseplate", link: "v=1&type=skeleton", quantity: 2 }], unreadable: 0 });
   });
 
   test("of an empty basket opens as an empty basket", () => {
@@ -110,16 +110,17 @@ describe("an article that cannot be read", () => {
         "bin two v=1", // a quantity that is not one
         "baseplate", // nothing to read
         "clip 0 v=1", // a quantity out of range, brought back into it
-        "test-kit 5000 v=1",
+        "baseplate 5000 v=1",
+        "test-kit 1 v=1", // the test kit, removed with the flush profile (ADR 0002)
       ].join("\n"),
     );
     expect(readBasketShareLink(link)).toEqual({
       articles: [
         { model: "bin", link: "v=1&x=3", quantity: 2 },
         { model: "clip", link: "v=1", quantity: 1 },
-        { model: "test-kit", link: "v=1", quantity: 999 },
+        { model: "baseplate", link: "v=1", quantity: 999 },
       ],
-      unreadable: 4,
+      unreadable: 5,
     });
   });
 });

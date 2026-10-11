@@ -8,7 +8,7 @@ import type { Manifold, ManifoldToplevel } from "manifold-3d";
 import { expect, it } from "vitest";
 import { generateBaseplate, pieceMesh, printClips, printPieces, serialize3mf, type BaseplateType, type TriangleMesh } from "../../packages/geometry/src/index";
 import { loadManifold } from "../../packages/geometry/src/manifold";
-import { POCKET_PROFILES, insetAt, type PocketProfileName } from "../../packages/geometry/src/pocket-profile";
+import { HYBRID_PROFILE, insetAt, type PocketProfile } from "../../packages/geometry/src/pocket-profile";
 import { roundDownToLayer, roundUpToLayer } from "../../packages/geometry/src/print";
 import { trayFloorOf, trayProfile } from "../../packages/geometry/src/baseplate-type";
 import { badEdges, checkMesh, readThreeMf } from "../../packages/geometry/test/support/measure";
@@ -39,8 +39,12 @@ const CROSSING_START = Math.ceil((HALF_WIDTH + SKIN / Math.SQRT2) * 100) / 100;
 const EDGE_START = SKIN;
 
 const TYPES: BaseplateType[] = ["normal", "tray", "skeleton", "clickbase"];
-const PROFILES: PocketProfileName[] = ["hybrid", "flush"];
-const NAMES: Record<PocketProfileName, string> = { hybrid: "hybride", flush: "ras" };
+// Le profil ras est retiré du moteur (ADR 0002) : le banc ne mesure plus que le profil hybride ;
+// ses mesures d'origine au profil ras restent dans results.md.
+type PocketProfileName = "hybrid";
+const POCKET_PROFILES: Record<PocketProfileName, PocketProfile> = { hybrid: HYBRID_PROFILE };
+const PROFILES: PocketProfileName[] = ["hybrid"];
+const NAMES: Record<PocketProfileName, string> = { hybrid: "hybride" };
 
 function meshOf(solid: Manifold): TriangleMesh {
   expect(solid.status()).toBe("NoError");
@@ -132,7 +136,7 @@ it("croisement de deux coupes : 4 fentes collées au coin, 4 types × 2 profils"
   for (const type of TYPES)
     for (const name of PROFILES) {
       // 2 × 2 cellules sur un plateau de 50 mm : 4 pièces d'une cellule, croisement des coupes en (0, 0).
-      const settings = { sizeMode: "cells", columns: 2, rows: 2, baseplateType: type, pocketProfile: name, clips: false } as const;
+      const settings = { sizeMode: "cells", columns: 2, rows: 2, baseplateType: type, clips: false } as const;
       const kit = await generateBaseplate(settings, "final", { buildPlate: { width: 50, depth: 50 } });
       expect(kit.stats.pieces).toBe(4);
       expect(kit.layout.split.columnCuts).toEqual([1]);
@@ -196,7 +200,7 @@ it("bout d'une jonction au bord du treillis, contre un cadre de 2 mm", async () 
   const wasm = await loadManifold();
   for (const name of PROFILES) {
     // 2 × 3 cellules, marge de 10 mm en cadre, coupées en 2 pièces d'une colonne : une jonction de 3 cellules, deux bouts au bord.
-    const settings = { sizeMode: "cells", columns: 2, rows: 3, marginWidth: 20, marginDepth: 20, pocketProfile: name, clips: false } as const;
+    const settings = { sizeMode: "cells", columns: 2, rows: 3, marginWidth: 20, marginDepth: 20, clips: false } as const;
     const cut = await generateBaseplate(settings, "final", { buildPlate: { width: 60, depth: 200 } });
     expect(cut.stats.pieces).toBe(2);
     const top = topOf("normal", name);
@@ -277,7 +281,7 @@ it("moteur (ADR 0018) : fentes aux coins pour les 4 types, lamelles raccourcies,
   const plate = { width: 50, depth: 50 };
   for (const type of TYPES)
     for (const name of PROFILES) {
-      const settings = { sizeMode: "cells", columns: 2, rows: 2, baseplateType: type, pocketProfile: name } as const;
+      const settings = { sizeMode: "cells", columns: 2, rows: 2, baseplateType: type } as const;
       const [clipped, bare] = await Promise.all([
         generateBaseplate(settings, "final", { buildPlate: plate }),
         generateBaseplate({ ...settings, clips: false }, "final", { buildPlate: plate }),

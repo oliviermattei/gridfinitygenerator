@@ -5,7 +5,6 @@ export {
   volumeOf as meshVolume,
   generateBaseplate,
   generateClip,
-  generateTestKit,
   loadEngine,
   type AssemblyStrategy,
   type Baseplate,
@@ -23,7 +22,7 @@ export {
 export { BASEPLATE_TYPES, trayFloorOf, type BaseplateType, type TrayFloor } from "./baseplate-type";
 export { skeletonOf, type Skeleton } from "./skeleton";
 export { clickbaseOf, type Clickbase } from "./clickbase";
-export { POCKET_PROFILES, type PocketProfile } from "./pocket-profile";
+export { HYBRID_PROFILE, type PocketProfile } from "./pocket-profile";
 export {
   ADVANCED_SETTINGS,
   ALIGNMENTS,
@@ -40,7 +39,6 @@ export {
   type FlagSetting,
   type MarginShape,
   type NumericSetting,
-  type PocketProfileName,
   type SizeMode,
 } from "./settings";
 export {

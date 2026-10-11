@@ -5,20 +5,18 @@ import {
   generateBaseplate,
   type BaseplateSettings,
   type BuildPlate,
-  type PocketProfileName,
 } from "../src/index";
 import { badEdges, checkMesh } from "./support/measure";
 
 // Quality check across the settings of spec v1.1 (#20): each ticket checked its own cases;
 // here the types, the shapes of the margin, whole or minimal (#29), the sides without margin
-// and their edge slots (#37), the cut with clips, the
-// profiles and the screws are combined, in final quality, by the cell bricks and by booleans (ADR 0004). Every mesh
+// and their edge slots (#37), the cut with clips
+// and the screws are combined, in final quality, by the cell bricks and by booleans (ADR 0004). Every mesh
 // must be NoError AND have each edge on exactly two faces (NoError does not see an edge
 // pinched between four faces, ADR 0014), and both ways must give the same volume.
 
 const VOLUME_TOLERANCE_MM3 = 0.1;
 const PLATE_256: BuildPlate = { width: 256, depth: 256 };
-const PROFILES: readonly PocketProfileName[] = ["hybrid", "flush"];
 
 /**
  * A small drawer with a margin on the 4 sides, cut in 2 pieces for a plate of 256 mm: 6 × 2
@@ -33,26 +31,24 @@ interface Case {
 }
 
 /**
- * The matrix: every type × margin × cut, the profile, the screws and the minimal margin varied
- * so that every pair of values of any two settings is met at least once (pairwise). 24 of the
- * 192 cases.
+ * The matrix: every type × margin × cut, the screws and the minimal margin varied so that
+ * every pair of values of any two settings is met at least once (pairwise). 24 of the 96 cases.
  */
 const MATRIX: Case[] = BASEPLATE_TYPES.flatMap((baseplateType, t) =>
   MARGIN_SHAPES.flatMap((marginShape, m) =>
     [false, true].map((cut, c) => {
-      const pocketProfile = PROFILES[(t + m + c) % 2] as PocketProfileName;
       const screws = (t + c) % 2 === 1;
       const minimalMargin = (m + c) % 2 === 1;
       return {
-        name: `${baseplateType}, ${marginShape}${minimalMargin ? " minimal" : ""}, ${cut ? "cut on 256 with clips" : "whole"}, ${pocketProfile}${screws ? ", screws" : ""}`,
-        settings: { ...DRAWER, baseplateType, marginShape, minimalMargin, pocketProfile, screws },
+        name: `${baseplateType}, ${marginShape}${minimalMargin ? " minimal" : ""}, ${cut ? "cut on 256 with clips" : "whole"}${screws ? ", screws" : ""}`,
+        settings: { ...DRAWER, baseplateType, marginShape, minimalMargin, screws },
         buildPlate: cut ? PLATE_256 : null,
       };
     }),
   ),
 );
 
-/** Edge cases, cut with clips and screwed, on each type; the margin and the profile rotate. */
+/** Edge cases, cut with clips and screwed, on each type; the margin rotates. */
 const EDGES: [name: string, settings: Partial<BaseplateSettings>][] = [
   ["bottom chamfer of 1 mm", { bottomChamfer: 1 }],
   ["outer radius of 10 mm", { outerRadius: 10 }],
@@ -63,8 +59,8 @@ const EDGES: [name: string, settings: Partial<BaseplateSettings>][] = [
 ];
 /** A crossing of two cuts (#30): 4 clips at the most crowded corner, on each type. */
 const CROSSED: Case[] = BASEPLATE_TYPES.map((baseplateType, t) => ({
-  name: `cut in 4 around a crossing of the cuts: ${baseplateType}, ${MARGIN_SHAPES[t % MARGIN_SHAPES.length]}, ${PROFILES[t % 2]}`,
-  settings: { drawerWidth: 150, drawerDepth: 150, baseplateType, marginShape: MARGIN_SHAPES[t % MARGIN_SHAPES.length], pocketProfile: PROFILES[t % 2], screws: true },
+  name: `cut in 4 around a crossing of the cuts: ${baseplateType}, ${MARGIN_SHAPES[t % MARGIN_SHAPES.length]}`,
+  settings: { drawerWidth: 150, drawerDepth: 150, baseplateType, marginShape: MARGIN_SHAPES[t % MARGIN_SHAPES.length], screws: true },
   buildPlate: { width: 100, depth: 100 },
 }));
 /**
@@ -73,10 +69,10 @@ const CROSSED: Case[] = BASEPLATE_TYPES.map((baseplateType, t) => ({
  * truncated cells, the ends of the sides 0.8 mm inside the lattice).
  */
 const NO_MARGIN: Case[] = BASEPLATE_TYPES.flatMap((baseplateType, t) => {
-  const cells = { sizeMode: "cells", columns: 4, rows: 3, baseplateType, pocketProfile: PROFILES[t % 2] as PocketProfileName } as const;
+  const cells = { sizeMode: "cells", columns: 4, rows: 3, baseplateType } as const;
   const marginShape = MARGIN_SHAPES[t % MARGIN_SHAPES.length];
   return [
-    { name: `4 × 3 cells without margin, whole, ${cells.pocketProfile}: ${baseplateType}`, settings: { ...cells, screws: t % 2 === 0 }, buildPlate: null },
+    { name: `4 × 3 cells without margin, whole: ${baseplateType}`, settings: { ...cells, screws: t % 2 === 0 }, buildPlate: null },
     {
       name: `4 × 3 cells without margin, a chamfer of 1 mm, sharp corners, cut on 100 mm: ${baseplateType}`,
       settings: { ...cells, bottomChamfer: 1, outerRadius: 0, screws: t % 2 === 1 },
@@ -93,11 +89,10 @@ const NO_MARGIN: Case[] = BASEPLATE_TYPES.flatMap((baseplateType, t) => {
 const EDGE_CASES: Case[] = EDGES.flatMap(([name, extra], e) =>
   BASEPLATE_TYPES.map((baseplateType, t) => {
     const marginShape = MARGIN_SHAPES[(e + t) % MARGIN_SHAPES.length];
-    const pocketProfile = PROFILES[(e + t) % 2] as PocketProfileName;
     const minimalMargin = Math.floor((e + t) / MARGIN_SHAPES.length) % 2 === 1;
     return {
-      name: `${name}: ${baseplateType}, ${marginShape}${minimalMargin ? " minimal" : ""}, ${pocketProfile}`,
-      settings: { ...DRAWER, ...extra, baseplateType, marginShape, minimalMargin, pocketProfile, screws: true },
+      name: `${name}: ${baseplateType}, ${marginShape}${minimalMargin ? " minimal" : ""}`,
+      settings: { ...DRAWER, ...extra, baseplateType, marginShape, minimalMargin, screws: true },
       buildPlate: PLATE_256,
     };
   }),
@@ -122,9 +117,9 @@ async function expectSoundAndSame({ settings, buildPlate }: Case) {
 }
 
 describe("combinations of the settings of v1.1, in final quality", () => {
-  it("covers every pair of values of type, margin, cut, profile, screws and minimal margin", () => {
-    const factors = MATRIX.map(({ settings: s, buildPlate }) => [s.baseplateType, s.marginShape, buildPlate ? "cut" : "whole", s.pocketProfile, String(s.screws), String(s.minimalMargin)]);
-    const values = [BASEPLATE_TYPES, MARGIN_SHAPES, ["whole", "cut"], PROFILES, ["false", "true"], ["false", "true"]] as const;
+  it("covers every pair of values of type, margin, cut, screws and minimal margin", () => {
+    const factors = MATRIX.map(({ settings: s, buildPlate }) => [s.baseplateType, s.marginShape, buildPlate ? "cut" : "whole", String(s.screws), String(s.minimalMargin)]);
+    const values = [BASEPLATE_TYPES, MARGIN_SHAPES, ["whole", "cut"], ["false", "true"], ["false", "true"]] as const;
     for (let f = 0; f < values.length; f++)
       for (let g = f + 1; g < values.length; g++)
         for (const x of values[f] as readonly string[])

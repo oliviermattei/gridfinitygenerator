@@ -451,7 +451,7 @@ export function searchPacking(problem: PackingProblem, options: PackingSearchOpt
   return { ...progress(), status: optimal ? "optimal" : "exhausted" };
 }
 
-/** The kind of object of the basket (glossary: Catégorie); a test kit is a baseplate. */
+/** The kind of object of the basket (glossary: Catégorie). */
 export type Category = "bins" | "baseplates" | "clips";
 
 /** The three rangements of a basket (glossary: Rangement). */

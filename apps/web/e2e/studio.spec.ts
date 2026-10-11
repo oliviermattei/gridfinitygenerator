@@ -39,29 +39,29 @@ test.describe("desktop", () => {
   test("opening a family closes the previous one", async ({ page }) => {
     await page.goto("/fr/baseplate");
     const size = page.getByRole("button", { name: /^Taille/ });
-    const profile = page.getByRole("button", { name: /^Profil de poche/ });
+    const type = page.getByRole("button", { name: /^Type/ });
 
     // Each family is summarised on one line, open or closed.
     await expect(size).toHaveAccessibleName("Taille 399 × 279 mm, 9 × 6 cellules");
-    await expect(profile).toHaveAccessibleName("Profil de poche Hybride");
+    await expect(type).toHaveAccessibleName("Type Normal, sans fond");
     await expect(size).toHaveAttribute("aria-expanded", "true");
-    await expect(profile).toHaveAttribute("aria-expanded", "false");
+    await expect(type).toHaveAttribute("aria-expanded", "false");
 
-    await profile.click();
-    await expect(profile).toHaveAttribute("aria-expanded", "true");
+    await type.click();
+    await expect(type).toHaveAttribute("aria-expanded", "true");
     await expect(size).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByRole("radio", { name: /Hybride/ })).toBeChecked();
+    await expect(page.getByRole("radio", { name: /^Normal/ })).toBeChecked();
     await expect(numberField(page, "Largeur")).toHaveCount(0);
 
     await size.click();
     await expect(size).toHaveAttribute("aria-expanded", "true");
-    await expect(profile).toHaveAttribute("aria-expanded", "false");
+    await expect(type).toHaveAttribute("aria-expanded", "false");
     await expect(numberField(page, "Largeur")).toBeVisible();
 
     // Closing the open family leaves them all closed.
     await size.click();
     await expect(size).toHaveAttribute("aria-expanded", "false");
-    await expect(profile).toHaveAttribute("aria-expanded", "false");
+    await expect(type).toHaveAttribute("aria-expanded", "false");
   });
 
   test("the top bar holds the actions, and the gear menu parameters only", async ({ page }) => {
@@ -146,7 +146,7 @@ test.describe("desktop", () => {
       expect(reached, `${name} is reached with Tab`).toContain(name);
     }
     expect(reached.some((name) => name.startsWith("Taille"))).toBe(true);
-    for (const family of ["Alignement", "Profil de poche", "Avancé"]) {
+    for (const family of ["Alignement", "Type", "Avancé"]) {
       expect(reached.some((name) => name.startsWith(family)), `${family} is reached with Tab`).toBe(true);
     }
     // The screws family, then its switch beside it.
@@ -164,9 +164,9 @@ test.describe("desktop", () => {
     await numberField(page, "Largeur").focus();
     await page.keyboard.press("ArrowUp");
     await expect(readout(page, "dimensions")).toHaveText("400 × 279 mm");
-    await page.getByRole("button", { name: /^Profil de poche/ }).focus();
+    await page.getByRole("button", { name: /^Avancé/ }).focus();
     await page.keyboard.press("Enter");
-    await expect(page.getByRole("button", { name: /^Profil de poche/ })).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("button", { name: /^Avancé/ })).toHaveAttribute("aria-expanded", "true");
   });
 });
 

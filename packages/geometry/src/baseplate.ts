@@ -6,7 +6,7 @@ import { clipLayoutOf, clipSlotOf, clipSolid, type ClipLayout } from "./clips";
 import { labelsOf } from "./label";
 import { layoutOf, type BaseplateLayout, type Margins } from "./layout";
 import { loadManifold, withArena } from "./manifold";
-import { FLUSH_PROFILE, POCKET_PROFILES } from "./pocket-profile";
+import { HYBRID_PROFILE } from "./pocket-profile";
 import { magnetHolesOf, magnetPositions } from "./magnets";
 import { supportAreas } from "./margin";
 import { layerCount, type BuildPlate } from "./print";
@@ -132,9 +132,9 @@ export interface Baseplate {
 }
 
 /**
- * Generates a baseplate: a grid of open pockets with the profile of the settings (hybrid by
- * default, ADR 0002, or flush) on a pitch of the cell size, or of pockets on a solid floor
- * for a tray (the type of baseplate, baseplate-type.ts, ADR 0013), sized for a drawer or by its
+ * Generates a baseplate: a grid of open pockets with the hybrid profile (ADR 0002) on a pitch
+ * of the cell size, or of pockets on a solid floor for a tray (the type of baseplate,
+ * baseplate-type.ts, ADR 0013), sized for a drawer or by its
  * number of cells, its outline rounded and chamfered at the bottom by the settings, and its
  * margin in the shape of the settings (a frame of crossbars by default, truncated cells or
  * the extended grid, whole or reduced to their supports, see margin.ts, ADR 0011 and ADR 0017), with a countersunk screw hole on each inner intersection of the grid when the
@@ -157,55 +157,23 @@ export async function generateBaseplate(
   quality: Quality,
   options: GenerateOptions = {},
 ): Promise<Baseplate> {
-  return buildBaseplate(clampSettings(input), quality, [], options);
+  return buildBaseplate(clampSettings(input), quality, options);
 }
 
-/**
- * Generates the test kit: a 1 × 2 baseplate whose front cell has the hybrid profile and
- * whose back cell has the flush one, to try how bins seat in each before printing a large
- * baseplate. It is as high as its hybrid cell (4.60 mm); the flush cell is 0.35 mm lower,
- * and the muret between them steps down on the line between the cells. Of the settings, it
- * only takes those that are not about the size, the alignment, the pocket profile, the type
- * of baseplate (it is always open) or the screws (a 1 × 2 grid has no inner intersection):
- * the cell size, the outer corner radius
- * and the bottom chamfer, so that it tries the pockets and the outline of the baseplate to
- * print, and the print settings.
- */
-export async function generateTestKit(input: Partial<BaseplateSettings>, quality: Quality): Promise<Baseplate> {
-  const settings = clampSettings({
-    ...input,
-    sizeMode: "cells",
-    columns: 1,
-    rows: 2,
-    marginWidth: 0,
-    marginDepth: 0,
-    pocketProfile: "hybrid",
-    baseplateType: "normal",
-    screws: false,
-  });
-  return buildBaseplate(settings, quality, [{ i: 0, j: 1, profile: FLUSH_PROFILE }]);
-}
-
-/** Builds the baseplate of settings brought into their ranges, some cells cut lower. */
-async function buildBaseplate(
-  settings: BaseplateSettings,
-  quality: Quality,
-  lowerCells: GridFrame["lowerCells"],
-  options: GenerateOptions = {},
-): Promise<Baseplate> {
+/** Builds the baseplate of settings brought into their ranges. */
+async function buildBaseplate(settings: BaseplateSettings, quality: Quality, options: GenerateOptions): Promise<Baseplate> {
   const wasm = await loadManifold();
   const cells = layoutOf(settings);
   const { margins } = cells;
   const width = cells.columns * cells.cellSize + margins.left + margins.right;
   const depth = cells.rows * cells.cellSize + margins.back + margins.front;
   const type = BASEPLATE_TYPE_VARIANTS[settings.baseplateType];
-  const profile = type.profile(POCKET_PROFILES[settings.pocketProfile], settings.layerHeight);
+  const profile = type.profile(HYBRID_PROFILE, settings.layerHeight);
   const uncut: GridFrame = {
     columns: cells.columns,
     rows: cells.rows,
     cellSize: cells.cellSize,
     profile,
-    lowerCells,
     margins,
     marginShape: options.margin === false ? "none" : settings.marginShape,
     minimalMargin: settings.minimalMargin,
@@ -217,7 +185,7 @@ async function buildBaseplate(
     segmentsPerQuarter: SEGMENTS_PER_QUARTER[quality],
     segmentsPerHole: SEGMENTS_PER_HOLE[quality],
     screws: screwHolesOf(settings, profile),
-    magnets: options.magnets === false || lowerCells.length > 0 ? null : magnetHolesOf(settings),
+    magnets: options.magnets === false ? null : magnetHolesOf(settings),
     cuts: { columns: [], rows: [] },
     clips: null,
     skeleton: type.skeleton(settings.layerHeight),
@@ -227,8 +195,7 @@ async function buildBaseplate(
   };
   const split = splitPlanOf(uncut, options.buildPlate ?? null);
   const labels = labelsOf(split);
-  // The test kit tries the seating of the bins: no slot.
-  const clips = clipsOf(options.clips !== false && lowerCells.length === 0, uncut, split, labels);
+  const clips = clipsOf(options.clips !== false, uncut, split, labels);
   // The slots of the clips, under the murets, never show from above: the preview leaves them
   // out, and the lamellas of a CLICKbase whole, for its 100 ms; the final mesh has them (ADR 0018).
   const frame: GridFrame = { ...uncut, cuts: { columns: split.columnCuts, rows: split.rowCuts }, clips: quality === "final" ? clips : null };
@@ -272,7 +239,7 @@ function clickbaseFor(clickbase: Clickbase | null, quality: Quality): Clickbase 
 
 /**
  * The clips of a baseplate cut along `split` and its edge slots, null without slots (`on`, the
- * test kit and the benches), or when neither a junction nor a side of the outline has one.
+ * benches), or when neither a junction nor a side of the outline has one.
  */
 function clipsOf(on: boolean, frame: GridFrame, split: SplitPlan, labels: ReturnType<typeof labelsOf>): ClipLayout | null {
   if (!on) return null;
@@ -283,14 +250,14 @@ function clipsOf(on: boolean, frame: GridFrame, split: SplitPlan, labels: Return
 /**
  * One clip for the settings, as it prints (lying on its side, from the origin up), checked
  * (`NoError`): the one of `Baseplate.clip`, to print alone, for instance to join two
- * baseplates by their edge slots (ADR 0022). It only depends on the pocket profile, the type
- * of baseplate and the layer height.
+ * baseplates by their edge slots (ADR 0022). It only depends on the type of baseplate and
+ * the layer height.
  */
 export async function generateClip(input: Partial<BaseplateSettings>): Promise<TriangleMesh> {
   const settings = clampSettings(input);
   const wasm = await loadManifold();
   const type = BASEPLATE_TYPE_VARIANTS[settings.baseplateType];
-  const profile = type.profile(POCKET_PROFILES[settings.pocketProfile], settings.layerHeight);
+  const profile = type.profile(HYBRID_PROFILE, settings.layerHeight);
   const slot = clipSlotOf({ profile, layerHeight: settings.layerHeight, cellSize: settings.cellSize, skeleton: type.skeleton(settings.layerHeight) });
   return withArena((own) => meshOf(clipSolid(wasm, own, slot)));
 }

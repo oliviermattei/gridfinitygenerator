@@ -46,14 +46,15 @@ describe("reading the stored basket", () => {
         { id: "a3", model: "baseplate", quantity: 1 },
         null,
         { id: "a4", model: "clip", link: "v=1", quantity: 0 },
-        { id: "a5", model: "test-kit", link: "v=1", quantity: 2.6 },
+        { id: "a5", model: "baseplate", link: "v=1", quantity: 2.6 },
+        { id: "a6", model: "test-kit", link: "v=1", quantity: 1 }, // removed with the flush profile (ADR 0002)
         { id: "a1", model: "baseplate", link: "v=1", quantity: 1 },
       ],
     });
     expect(parseBasket(raw).articles).toEqual([
       { id: "a1", model: "bin", link: "v=1&x=3", quantity: 2 },
       { id: "a4", model: "clip", link: "v=1", quantity: 1 },
-      { id: "a5", model: "test-kit", link: "v=1", quantity: 3 },
+      { id: "a5", model: "baseplate", link: "v=1", quantity: 3 },
     ]);
   });
 });
@@ -121,21 +122,18 @@ describe("what an article is", () => {
     expect(articleName(baseplate, en, lengths(en), { width: 398.5, depth: 278.5 })).toBe("Baseplate 398.5 × 278.5");
     // Its size is measured: until then, only what it is.
     expect(articleName(baseplate, fr, lengths(fr))).toBe("Baseplate");
-    expect(articleName({ ...baseplate, model: "test-kit" }, fr, lengths(fr))).toBe("Kit de test");
-    expect(articleName({ ...baseplate, model: "test-kit" }, en, lengths(en))).toBe("Test kit");
     expect(articleName({ ...baseplate, model: "clip" }, fr, lengths(fr))).toBe("Clip");
   });
 
-  test("its category: bins, baseplates (test kits included) or clips", () => {
+  test("its category: bins, baseplates or clips", () => {
     expect(categoryOf("bin")).toBe("bins");
     expect(categoryOf("baseplate")).toBe("baseplates");
-    expect(categoryOf("test-kit")).toBe("baseplates");
     expect(categoryOf("clip")).toBe("clips");
   });
 
   test("it opens in its generator with its settings, which then edits it", () => {
     expect(articleHref(bin("v=1&x=3"), "fr")).toBe("/fr/bin?v=1&x=3#article=a1");
-    expect(articleHref({ id: "k", model: "test-kit", link: "v=1&cs=40", quantity: 1 }, "en")).toBe("/en/baseplate?v=1&cs=40#article=k");
+    expect(articleHref({ id: "k", model: "clip", link: "v=1&cs=40", quantity: 1 }, "en")).toBe("/en/baseplate?v=1&cs=40#article=k");
     expect(editedArticleId("#article=k")).toBe("k");
     expect(editedArticleId("")).toBeNull();
     expect(editedArticleId("#other")).toBeNull();

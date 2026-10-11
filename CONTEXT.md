@@ -27,12 +27,8 @@ La cloison profilée qui sépare deux poches voisines ; son sommet est un plat, 
 _Avoid_: arête, nervure, lip
 
 **Profil de poche**:
-La forme de la paroi d'une poche, du fond de la baseplate au plat du muret. Deux profils : **hybride** (par défaut, 4,60 mm, avec la marche verticale de 0,35 mm qui fait porter le bin par ses pentes, ADR 0002) et **ras** (4,25 mm, celui d'extrabold, sans cette marche : le bin repose sur le fond du tiroir).
-_Avoid_: profil de base, socket profile, flush (sauf dans le code)
-
-**Kit de test**:
-Une baseplate 1 × 2 dont la cellule avant a le profil hybride et la cellule arrière le profil ras, à imprimer pour essayer ses bins dans chacun avant une grande baseplate. Chaque cellule garde sa hauteur : le muret entre les deux descend d'une marche de 0,35 mm sur la ligne qui les sépare.
-_Avoid_: échantillon, sample, test print
+La forme de la paroi d'une poche, du fond de la baseplate au plat du muret : le profil **hybride**, le seul (4,60 mm, avec la marche verticale de 0,35 mm qui fait porter le bin par ses pentes, ADR 0002). Ce n'est pas un réglage.
+_Avoid_: profil de base, socket profile, ras ou flush (ancien second profil, retiré, ADR 0002), kit de test (ancienne baseplate 1 × 2 aux deux profils, retirée avec le ras : une baseplate 1 × 1 suffit pour essayer un bin)
 
 **Type de baseplate**:
 Ce que la baseplate a sous sa grille, et la forme de ses murets, au choix (#25, ADR 0013) : **Normal** (par défaut, la grille ajourée, sans fond), **Tray** (la grille sur un fond plein, pour un bureau, une étagère ou de petites pièces) ou **Skeleton** (la grille ajourée, ses murets entaillés entre des poteaux : environ deux fois moins de matière, le bin guidé par ses 4 coins, les clips logés dans les poteaux ; #26, ADR 0014, ADR 0018) ou **CLICKbase** (la grille ajourée, des lamelles dans la paroi des poches qui serrent le pied des bins, qui s'enclenchent et tiennent sans aimant ; d'après CLICKbase Refined, sous licence CC BY-NC-SA ; #27, ADR 0015).
@@ -307,7 +303,7 @@ _Avoid_: slicer, slicer 3D
 ### Panier
 
 **Panier**:
-La liste de ce qu'on veut imprimer d'un coup, commune à tous les générateurs (bins, baseplates, kits de test, clips seuls) et gardée dans ce navigateur ; elle se télécharge d'un coup, ses objets répartis sur des plateaux par le rangement (ADR 0024). Rien ne s'y achète : le site est gratuit.
+La liste de ce qu'on veut imprimer d'un coup, commune à tous les générateurs (bins, baseplates, clips seuls) et gardée dans ce navigateur ; elle se télécharge d'un coup, ses objets répartis sur des plateaux par le rangement (ADR 0024). Rien ne s'y achète : le site est gratuit.
 _Avoid_: cart, commande, lot, liste d'impression
 
 **Article**:
@@ -319,11 +315,11 @@ Un lien de la page du panier qui porte tout le panier : pour chaque article son 
 _Avoid_: export du panier, panier partagé
 
 **Objet**:
-Ce que le rangement pose sur un plateau : un exemplaire de bin, une pièce, une pile, une baseplate entière (kit de test compris), ou le bloc des clips du panier. Un article en donne autant que sa quantité, ou que ses pièces ou ses piles.
+Ce que le rangement pose sur un plateau : un exemplaire de bin, une pièce, une pile, une baseplate entière, ou le bloc des clips du panier. Un article en donne autant que sa quantité, ou que ses pièces ou ses piles.
 _Avoid_: item, élément, pièce (réservé à la pièce d'une baseplate découpée)
 
 **Catégorie**:
-Le genre d'objet d'un article ou d'une partie d'article : **bins**, **baseplates** (kits de test compris) ou **clips** (ceux d'une baseplate découpée comme les clips seuls). Une baseplate découpée met donc ses pièces dans les baseplates et ses clips dans les clips.
+Le genre d'objet d'un article ou d'une partie d'article : **bins**, **baseplates** ou **clips** (ceux d'une baseplate découpée comme les clips seuls). Une baseplate découpée met donc ses pièces dans les baseplates et ses clips dans les clips.
 _Avoid_: type (réservé au type de baseplate), famille, générateur
 
 **Rangement**:

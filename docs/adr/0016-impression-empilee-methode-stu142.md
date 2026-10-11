@@ -4,6 +4,8 @@ status: proposed
 
 # Impression empilée : méthode Stu142, une couche d'air, marge pleine hauteur
 
+> **Profil ras et kit de test retirés** (2026-10-11, ADR 0002) : l'exclusion du kit de test n'a plus d'objet.
+
 La spec v1.1 (#20, ticket #28) ajoute un interrupteur **« Empiler les pièces »** à l'export. Les pièces d'une baseplate découpée sortent en une pile, pour une seule impression en mono-matière. Recherche : `docs/research/impression-empilee-multimateriaux.md` (mécanisme des trancheurs) et `impression-empilee-sources.md` (Stu142, Printables 725407, et les échecs rapportés). Mesures : `prototypes/stack/`.
 
 ## Décision

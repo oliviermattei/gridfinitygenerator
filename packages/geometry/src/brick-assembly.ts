@@ -21,7 +21,7 @@ import { latticeOf, type Lattice, type PiecePlan } from "./split";
  * its piece of margin), and the four corners (rounded like the outline, with their margin).
  * A corner is only a corner on both axes, so every axis of the lattice (below) needs at
  * least two cells; single rows and columns without whole cells of margin go through the
- * boolean fallback, and so does a grid of mixed pocket profiles (the test kit). A kind of cell is also told apart by its corners
+ * boolean fallback. A kind of cell is also told apart by its corners
  * that hold a screw or a magnet (magnets.ts): the brick carries a quarter of each of their holes
  * (half of a magnet hole on the edge of the lattice, with the margin beyond it), whose circles
  * have a vertex on the seams, so that neighbouring quarters weld. With clips (clips.ts), it is
@@ -40,7 +40,7 @@ import { latticeOf, type Lattice, type PiecePlan } from "./split";
  */
 export function canAssembleWithBricks(frame: GridFrame): boolean {
   const { columns, rows } = latticeOf(frame);
-  return columns[1] - columns[0] >= 2 && rows[1] - rows[0] >= 2 && frame.lowerCells.length === 0;
+  return columns[1] - columns[0] >= 2 && rows[1] - rows[0] >= 2;
 }
 
 /**

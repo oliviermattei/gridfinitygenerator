@@ -1,5 +1,7 @@
 # Profil de poche : muret de 0,35 mm en bas, plat de 0,4 mm en haut, hauteur 4,60 mm
 
+> **Profil unique (2026-10-11)** : le profil ras et le kit de test sont retirés, et la clé `pr` est ignorée dans les liens. Voir la dernière section.
+
 La poche reprend le profil Gridfinity 0,7 / 1,8 / 2,15 mm et le jeu horizontal de 0,25 mm de la spec, pour que tout bac standard s'emboîte. On garde sous le profil le muret vertical de 0,35 mm de gridfinity-rebuilt : il fait porter le bac par les pentes à 45°, qui le centrent sans jeu, et non par le fond du tiroir. On rabote l'arête vive du haut sur 0,4 mm, comme extrabold. Hauteur totale : 4,65 + 0,35 − 0,4 = 4,60 mm, soit 23 couches exactes de 0,2 mm.
 
 ## Considered Options
@@ -26,3 +28,13 @@ Le profil hybride est le profil par défaut, mais le profil de poche est une don
 - En mode tiroir, `nx = floor(W / cs)` reste plafonné à 24 cellules par axe, la limite du mode cellules pour laquelle les cibles de performance sont fixées : un tiroir de 1000 mm en cellules de 20 mm donne 24 × 24 cellules et 519 mm de marge. Sans plafond (49 × 49), la finale prenait 7,5 s pour 3,2 millions de triangles et un 3MF de 42 Mo. Depuis #19, la marge prolonge la grille : le plafond ne borne plus le nombre de poches (voir ADR 0008).
 - Le kit de test suit la taille de cellule, le rayon des coins et le chanfrein, pour essayer les poches et le contour de la baseplate à imprimer. Son 3MF porte donc le lien de partage des réglages : il rouvre le générateur sur ces réglages, et le bouton du kit redonne le même kit.
 - Hors des défauts, un bac standard peut ne plus s'emboîter : une cellule qui n'est pas de 42 mm, un rayon de plus d'environ 5 mm qui ouvre la poche d'un coin sans marge, un chanfrein de plus d'environ 2,5 mm qui entame le muret de bord sans marge. L'interface l'annonce par un avertissement non bloquant dès qu'un réglage avancé diffère de son défaut.
+
+## Profil unique (2026-10-11)
+
+Décision du mainteneur : la baseplate ne garde que le profil hybride.
+
+- **Profil ras retiré**, et avec lui le réglage du profil de poche : `FLUSH_PROFILE` et `pocketProfile` dans le moteur, la famille « Profil de poche » du panneau, le suffixe `-flush` des noms de fichier (baseplate et clip seul). Le profil de poche reste une donnée du moteur (`HYBRID_PROFILE`), qu'on ne choisit plus.
+- **Pourquoi** : le profil hybride assoit le pied standard sans jeu, sur ses pentes (banc #34, ADR 0021). Le ras n'apportait que du jeu : 0,25 mm dans une Normal, le bin posé sur le fond du tiroir. Un second profil doublait aussi les cas à vérifier, pour aucun gain.
+- **Kit de test retiré** : `generateTestKit`, la pièce d'export `test-kit`, son encart dans le panneau, et ce que le moteur n'avait que pour lui (des cellules d'un profil plus bas dans une même grille, par la voie booléenne). Il ne servait qu'à comparer les deux profils. Pour essayer un bin, la taille de cellule, le rayon des coins ou le chanfrein avant une grande baseplate, une baseplate 1 × 1 suffit.
+- **Liens** : la clé `pr` sort de la table v1 et s'ignore comme toute clé inconnue, comme `cl` (ADR 0022). Un lien `pr=hybrid` ou `pr=flush` s'ouvre au profil hybride, ses autres réglages inchangés ; de même pour les derniers réglages gardés dans le navigateur, qui sont un lien.
+- Les sections « Mise en œuvre du profil ras » et « Taille de cellule et contour » restent comme historique pour ce qui touche au ras et au kit. Les bancs de `prototypes/` ne mesurent plus le ras ; leurs `results.md` gardent les mesures d'origine.

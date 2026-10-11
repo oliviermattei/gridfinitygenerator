@@ -5,7 +5,7 @@ import {
   BASEPLATE_SETTINGS,
   BASEPLATE_TYPES,
   MARGIN_SHAPES,
-  POCKET_PROFILES,
+  HYBRID_PROFILE,
   changedAdvancedSettings,
   clickbaseOf,
   skeletonOf,
@@ -15,11 +15,10 @@ import {
   type BaseplateSettings,
   type BaseplateType,
   type MarginShape,
-  type PocketProfileName,
   type SizeMode,
 } from "@repo/geometry";
 import { ChoiceGroup, NumberStepper, Segmented, SliderField, ToggleSwitch, focusRing } from "@repo/ui";
-import { ChevronDown, Download, ShoppingBasket, TriangleAlert } from "lucide-react";
+import { ChevronDown, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import type { BaseplateSummary } from "@/lib/engine/protocol";
 import type { Formats } from "@/lib/format";
@@ -34,13 +33,10 @@ import {
   AlignIcon,
   MarginArt,
   MarginIcon,
-  ProfileArt,
-  ProfileIcon,
   ScrewArt,
   ScrewIcon,
   SizeIcon,
   StackIcon,
-  TestKitArt,
   TypeArt,
   TypeIcon,
 } from "./illustrations";
@@ -49,7 +45,7 @@ import {
  * Families of settings in the panel. The print settings (layer height, line width) live in
  * the gear menu.
  */
-export type Family = "size" | "type" | "alignment" | "margin" | "profile" | "screws" | "stack" | "advanced";
+export type Family = "size" | "type" | "alignment" | "margin" | "screws" | "stack" | "advanced";
 
 /** "Valeurs par défaut", or the advanced settings changed: "Cellule 30 mm, chanfrein 0,6 mm". */
 function advancedSummary(settings: BaseplateSettings, t: Strings, f: Formats): string {
@@ -139,14 +135,6 @@ export interface FamiliesProps {
   /** The only open family (exclusive accordion), or null when all are closed. */
   open: Family | null;
   onOpenChange: (family: Family | null) => void;
-  /** Downloads the test kit, one cell of each pocket profile. */
-  onDownloadTestKit: () => void;
-  /** Whether the test kit is being prepared. */
-  exportingTestKit: boolean;
-  /** Whether a download is being prepared: every download waits for it. */
-  downloadBusy: boolean;
-  /** Adds the test kit to the basket (#41); null while the page hydrates. Disabled with its download. */
-  onAddTestKitToBasket: (() => void) | null;
   /**
    * Material each shape of margin adds, the other settings as they are (the minimal margin
    * included), in mm³: the volume of the baseplate with it less that of its grid alone, both
@@ -173,10 +161,6 @@ export function Families({
   summary,
   open,
   onOpenChange,
-  onDownloadTestKit,
-  exportingTestKit,
-  downloadBusy,
-  onAddTestKitToBasket,
   marginSurpluses,
   typeVolumes,
   filament,
@@ -227,40 +211,6 @@ export function Families({
         summary={`${t.marginShapeNames[settings.marginShape]}${settings.minimalMargin ? t.minimalMarginShort : ""}`}
       >
         <MarginFields settings={settings} onSettingsChange={onSettingsChange} summary={summary} surpluses={marginSurpluses} filament={filament} />
-      </FamilyItem>
-      <FamilyItem
-        {...bind("profile")}
-        icon={<ProfileIcon className="size-[18px]" />}
-        title={t.pocketProfile}
-        summary={settings.pocketProfile === "flush" ? t.flush : t.hybrid}
-      >
-        <ChoiceGroup<PocketProfileName>
-          label={t.pocketProfile}
-          value={settings.pocketProfile}
-          onChange={(pocketProfile) => onSettingsChange({ pocketProfile })}
-          options={[
-            {
-              value: "hybrid",
-              label: t.hybrid,
-              badge: t.recommended,
-              description: t.hybridDescription,
-              art: <ProfileArt kind="hybrid" className="h-auto w-full max-w-[128px]" />,
-            },
-            {
-              value: "flush",
-              label: t.flush,
-              description: t.flushDescription,
-              art: <ProfileArt kind="flush" className="h-auto w-full max-w-[128px]" />,
-            },
-          ]}
-        />
-        <TestKit
-          cellSize={settings.cellSize}
-          onDownload={onDownloadTestKit}
-          exporting={exportingTestKit}
-          disabled={downloadBusy}
-          onAddToBasket={onAddTestKitToBasket}
-        />
       </FamilyItem>
       <FamilyItem
         {...bind("screws")}
@@ -403,7 +353,7 @@ function TypeFields({
     return t.typeMaterial(f.volumes.format(measured.volume / 1000), mass);
   };
   const floor = trayFloorOf(settings.layerHeight);
-  const { grip } = clickbaseOf(settings.cellSize, POCKET_PROFILES[settings.pocketProfile], settings.layerHeight);
+  const { grip } = clickbaseOf(settings.cellSize, HYBRID_PROFILE, settings.layerHeight);
   const hints: Record<BaseplateType, string> = {
     normal: t.normalHint,
     tray: t.trayHint(f.fine.format(floor.thickness), f.fine.format(floor.gap)),
@@ -458,60 +408,6 @@ function AdvancedFields({ settings, onSettingsChange }: FieldsProps) {
       <SliderField label={t.cellSize} hint={t.cellSizeHint} {...field("cellSize", 1)} />
       <SliderField label={t.outerRadius} hint={t.outerRadiusHint} {...field("outerRadius", 0.5)} />
       <SliderField label={t.bottomChamfer} hint={t.bottomChamferHint} {...field("bottomChamfer", 0.1)} />
-    </div>
-  );
-}
-
-/**
- * The test kit, under the two profiles it compares: a 1 × 2 baseplate with one cell of
- * each, to print before a large baseplate. Always a single 3MF, with the cells of the
- * cell size.
- */
-const testKitButton = `flex h-10 items-center gap-2 rounded-ctl border border-line-strong bg-surface px-3 text-[13px] font-semibold transition-colors hover:bg-sunken disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
-
-function TestKit({
-  cellSize,
-  onDownload,
-  exporting,
-  disabled,
-  onAddToBasket,
-}: {
-  cellSize: number;
-  onDownload: () => void;
-  exporting: boolean;
-  disabled: boolean;
-  onAddToBasket: (() => void) | null;
-}) {
-  const t = useStrings();
-  const f = useFormats();
-  return (
-    <div className="mt-3 flex items-start gap-3 rounded-card border border-line bg-surface p-3">
-      <span className="grid h-10 w-13 shrink-0 place-items-center rounded-ctl bg-sunken text-muted [--art:var(--accent)]">
-        <TestKitArt className="h-9 w-12" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[13.5px] font-semibold">{t.testKit}</p>
-        <p className="mt-0.5 text-[12px] leading-snug text-muted">
-          {t.testKitHint(f.footprint({ width: cellSize, depth: 2 * cellSize }))}
-        </p>
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          <button type="button" onClick={onDownload} disabled={disabled} className={testKitButton}>
-            <Download className="size-4 shrink-0" aria-hidden />
-            {exporting ? t.preparingTestKit : t.downloadTestKit}
-          </button>
-          <button
-            type="button"
-            onClick={onAddToBasket ?? undefined}
-            disabled={disabled || onAddToBasket === null}
-            aria-label={t.basket.addTestKit}
-            title={t.basket.addTestKit}
-            className={testKitButton}
-          >
-            <ShoppingBasket className="size-4 shrink-0" aria-hidden />
-            {t.basket.add}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
