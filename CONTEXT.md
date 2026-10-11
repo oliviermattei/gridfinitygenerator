@@ -218,6 +218,10 @@ _Avoid_: insert, découpe, cutout
 Un outil du site qui produit un modèle imprimable à partir de réglages (générateur de baseplates, de bins…).
 _Avoid_: outil, configurateur, tool
 
+**Lien de partage**:
+L'adresse d'un générateur qui porte tous les réglages d'un modèle : l'ouvrir, même plus tard, redonne le même modèle. Le 3MF téléchargé la porte, et un article du panier la garde. Les préférences de ce navigateur (plateau, imprimante, filament, unités) n'y entrent pas.
+_Avoid_: URL, permalien, lien des réglages
+
 **Index**:
 La page d'entrée du site dans une langue (`/fr`, `/en`), qui présente chaque générateur par une carte : disponible, ou « bientôt » (ADR 0020).
 _Avoid_: accueil, home, catalogue, landing
@@ -307,12 +311,16 @@ La liste de ce qu'on veut imprimer d'un coup, commune à tous les générateurs 
 _Avoid_: cart, commande, lot, liste d'impression
 
 **Article**:
-Une ligne du panier : les réglages d'un modèle et une quantité. Le modèle est recalculé au téléchargement, et l'article se rouvre dans son générateur pour être modifié. Quatre bins identiques font un article de quantité 4 ; une baseplate découpée en pièces reste un article.
+Une ligne du panier : les réglages d'un modèle et une quantité. L'article se rouvre dans son générateur pour être modifié. Quatre bins identiques font un article de quantité 4 ; une baseplate découpée en pièces reste un article.
 _Avoid_: item, élément, produit
 
 **Lien du panier**:
-Un lien de `/{lang}/panier` qui porte tout le panier dans un seul paramètre versionné (`?p=1.<données>`) : pour chaque article son modèle, son lien de partage tel quel et sa quantité, compressés (deflate puis base64url). Rien d'autre : ni plateau, ni imprimante, ni rangement, préférences de chaque navigateur. Ouvert sur un panier vide, il le remplit ; sinon il demande s'il le remplace ou s'y ajoute (#44).
+Un lien de la page du panier qui porte tout le panier : pour chaque article son modèle, son **lien de partage** et sa quantité. Rien d'autre : ni plateau, ni imprimante, ni rangement, préférences de chaque navigateur. Ouvert sur un panier vide, il le remplit ; sinon il demande s'il le remplace ou s'y ajoute (#44).
 _Avoid_: export du panier, panier partagé
+
+**Objet**:
+Ce que le rangement pose sur un plateau : un exemplaire de bin, une pièce, une pile, une baseplate entière (kit de test compris), ou le bloc des clips du panier. Un article en donne autant que sa quantité, ou que ses pièces ou ses piles.
+_Avoid_: item, élément, pièce (réservé à la pièce d'une baseplate découpée)
 
 **Catégorie**:
 Le genre d'objet d'un article ou d'une partie d'article : **bins**, **baseplates** (kits de test compris) ou **clips** (ceux d'une baseplate découpée comme les clips seuls). Une baseplate découpée met donc ses pièces dans les baseplates et ses clips dans les clips.

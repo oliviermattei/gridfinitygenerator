@@ -4,7 +4,7 @@ status: proposed
 
 # Un panier de réglages, rangé sur les plateaux au téléchargement
 
-Décisions du 2026-10-11 avec le mainteneur (grilling du panier). On veut imprimer d'un coup tout ce qu'on a conçu (baseplates, bins, clips) : un **panier** commun aux générateurs, qui se télécharge rangé sur le moins de plateaux possible. Le 3MF standard ne connaît pas les plateaux ; seul le projet Bambu les porte, et seulement avec la config de son imprimante (ADR 0023). Glossaire : Panier, Article, Catégorie, Rangement.
+Décisions du 2026-10-11 avec le mainteneur (grilling du panier). On veut imprimer d'un coup tout ce qu'on a conçu (baseplates, bins, clips) : un **panier** commun aux générateurs, qui se télécharge rangé sur le moins de plateaux possible. Le 3MF standard ne connaît pas les plateaux ; seul le projet Bambu les porte, et seulement avec la config de son imprimante (ADR 0023). Glossaire : Panier, Article, Lien du panier, Objet, Catégorie, Rangement.
 
 ## Décision
 
@@ -25,6 +25,6 @@ Décisions du 2026-10-11 avec le mainteneur (grilling du panier). On veut imprim
 ## Consequences
 
 - Les totaux du panier (masse, coût, nombre de plateaux) demandent de calculer chaque modèle une fois en qualité finale, dans le worker ; un exemplaire de plus ne coûte rien (même maillage).
-- Le lien du panier (plus tard) n'est qu'une liste compressée de liens d'articles et de quantités : il hérite de la compatibilité de chaque lien versionné.
+- Le lien du panier (#44) n'est qu'une liste compressée de liens d'articles et de quantités, dans un seul paramètre versionné de `/{lang}/panier` : `?p=1.<données>`, les données étant une ligne `<modèle> <quantité> <lien>` par article, compressées (deflate) puis en base64url. Il hérite de la compatibilité de chaque lien versionné.
 - S'appuie sur l'ADR 0023 (préférence Imprimante, `serializeBambu3mf`).
 - **Une hauteur de couche par plateau (provisoire, #43, en attente de la décision du mainteneur)** : un projet Bambu n'a qu'une `layer_height`, mais chaque article a la sienne (le `lh` de son lien, 0,2 mm par défaut : aucun article n'en est sans). Le rangement ne met donc jamais deux hauteurs de couche sur un même plateau : la couche entre dans la clé du plateau (`plateKeyOf`), et les clips font un bloc par couche, car leur forme en dépend. Le projet prend la couche du plus grand nombre d'objets. Bambu Studio n'a pas de couche par plateau (ses clés de plateau sont `bed_type`, `print_sequence`, `spiral_mode`…) : chaque objet d'un plateau d'une autre couche reçoit la sienne en réglage d'objet (`layer_height` dans `Metadata/model_settings.config`). Vérifié par la CLI de Bambu Studio 2.8.2 : un plateau à 0,2 mm et un à 0,12 mm, chacun tranché à sa couche. Le commit `feat(geometry): one layer height per plate (#43)` se défait seul.
