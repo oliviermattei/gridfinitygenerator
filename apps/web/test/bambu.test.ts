@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bambuSettings, bambuTargetOf } from "../lib/printers/bambu";
+import { PRINTER_BEDS, PRINTER_EXCLUDED_CORNERS, PRINTERS, bambuSettings, bambuTargetOf } from "../lib/printers/bambu";
 import { DEFAULT_FILAMENT } from "../lib/mass";
 
 // Settings of the Bambu Studio project a 3MF becomes (ADR 0023).
@@ -48,5 +48,19 @@ describe("bambuTargetOf", () => {
       nozzle: 0.6,
       filament: "petg",
     });
+  });
+});
+
+describe("the bed of a Bambu Lab printer", () => {
+  it.each(PRINTERS.filter((printer) => printer !== "other"))("%s: its build plate and its excluded corner are those of its profiles, every nozzle", async (printer) => {
+    for (const nozzle of [0.2, 0.4, 0.6, 0.8]) {
+      const settings = await bambuSettings({ printer, nozzle, filament: "pla" }, 0.2);
+      const extent = (points: unknown) => {
+        const xy = (points as string[]).map((point) => point.split("x").map(Number));
+        return { width: Math.max(...xy.map(([x]) => x!)), depth: Math.max(...xy.map(([, y]) => y!)) };
+      };
+      expect(extent(settings?.printable_area)).toEqual(PRINTER_BEDS[printer]);
+      expect(extent(settings?.bed_exclude_area)).toEqual(PRINTER_EXCLUDED_CORNERS[printer]);
+    }
   });
 });

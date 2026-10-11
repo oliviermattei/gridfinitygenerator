@@ -1,6 +1,6 @@
 "use client";
 
-import type { BuildPlate } from "@repo/geometry";
+import { PACKING_MODES, type BuildPlate, type PackingMode } from "@repo/geometry";
 import { BRAND_ACCENT } from "@repo/ui";
 import { useCallback, useSyncExternalStore } from "react";
 import { isLocale, type Locale } from "./i18n";
@@ -67,6 +67,8 @@ export interface Preferences {
   stack: StackPreference;
   /** Filament of the prints, its density and its price: the mass and cost shown (#31, mass.ts). */
   filament: FilamentPreference;
+  /** Rangement of the basket on the plates (#42): « moins de plateaux » by default. */
+  packingMode: PackingMode;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -78,6 +80,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   buildPlate: { width: 256, depth: 256 },
   stack: { on: false, ears: false, pins: false },
   filament: DEFAULT_FILAMENT,
+  packingMode: "fewest-plates",
 };
 
 function isPreviewColor(value: unknown): value is PreviewColor {
@@ -123,6 +126,7 @@ function parse(raw: string | null): Preferences {
       pins: flag(stack.pins, DEFAULT_PREFERENCES.stack.pins),
     },
     filament: parseFilament(stored.filament),
+    packingMode: PACKING_MODES.includes(stored.packingMode as PackingMode) ? (stored.packingMode as PackingMode) : DEFAULT_PREFERENCES.packingMode,
   };
 }
 

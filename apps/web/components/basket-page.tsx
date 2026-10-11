@@ -5,32 +5,43 @@ import { NumberStepper, focusRing } from "@repo/ui";
 import { Pencil, Trash2, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QUANTITY_RANGE, articleHref, articleName, removeArticle, setQuantity, type Article } from "@/lib/basket";
+import { basketPackingOf } from "@/lib/basket-packing";
 import { changeBasket, useBasket } from "@/lib/basket-store";
-import type { ArticleMeasure } from "@/lib/engine/article-measure";
+import type { ArticleMeasure, StackChoice } from "@/lib/engine/article-measure";
 import { createBasketEngineClient, type BasketEngineClient } from "@/lib/engine/basket-client";
 import { GENERATORS } from "@/lib/generators";
 import { indexPath } from "@/lib/i18n";
 import { useFormats, useLocale, useStrings } from "@/lib/locale";
 import { gramsText, massOf } from "@/lib/mass";
-import { usePreferences } from "@/lib/preferences";
+import { usePreferences, type StackPreference } from "@/lib/preferences";
+import { PRINTER_EXCLUDED_CORNERS } from "@/lib/printers/bambu";
 import { useHydrated } from "@/lib/saved-settings";
 import { BasketLink } from "./basket-link";
+import { BasketPackingSection, useBasketPacking } from "./basket-packing";
 import { PocketMark } from "./illustrations";
 import { LanguageLinks } from "./language-links";
 
 /** A measure of an article, or its failure. */
 type Measured = ArticleMeasure | "failed";
 
-/** What an article is measured by: its model, its settings and the build plate it is cut for. */
-function measureKey({ model, link }: Article, { width, depth }: BuildPlate): string {
-  return `${model}|${link}|${width}×${depth}`;
+/**
+ * What an article is measured by: its model, its settings, the build plate it is cut for and
+ * how its pieces print stacked (the objects of the rangement, #42).
+ */
+function measureKey({ model, link }: Article, { width, depth }: BuildPlate, stack: StackChoice | null): string {
+  return `${model}|${link}|${width}×${depth}|${stack ? `stack:${stack.ears}:${stack.pins}` : "flat"}`;
+}
+
+/** How the pieces of a cut baseplate print, as the generators export them (#28). */
+function stackChoiceOf(stack: StackPreference): StackChoice | null {
+  return stack.on ? { ears: stack.ears || stack.pins, pins: stack.pins } : null;
 }
 
 /**
  * The measures of the articles, each computed once in the basket's worker in final quality
- * (a quantity costs nothing: the same model), again when the build plate changes.
+ * (a quantity costs nothing: the same model), again when the build plate or the stacking changes.
  */
-function useMeasures(articles: readonly Article[], buildPlate: BuildPlate, enabled: boolean): ReadonlyMap<string, Measured> {
+function useMeasures(articles: readonly Article[], buildPlate: BuildPlate, stack: StackChoice | null, enabled: boolean): ReadonlyMap<string, Measured> {
   const engine = useRef<BasketEngineClient | null>(null);
   const asked = useRef(new Set<string>());
   const [measures, setMeasures] = useState<ReadonlyMap<string, Measured>>(() => new Map());
@@ -50,10 +61,10 @@ function useMeasures(articles: readonly Article[], buildPlate: BuildPlate, enabl
     const client = engine.current;
     if (!enabled || !client) return;
     for (const article of articles) {
-      const key = measureKey(article, buildPlate);
+      const key = measureKey(article, buildPlate, stack);
       if (asked.current.has(key)) continue;
       asked.current.add(key);
-      client.measure(article, buildPlate).then(
+      client.measure(article, buildPlate, stack).then(
         (measure) => setMeasures((known) => new Map(known).set(key, measure)),
         (reason: unknown) => {
           if (engine.current !== client) return; // disposed with the page
@@ -63,7 +74,7 @@ function useMeasures(articles: readonly Article[], buildPlate: BuildPlate, enabl
         },
       );
     }
-  }, [articles, buildPlate, enabled]);
+  }, [articles, buildPlate, stack, enabled]);
 
   return measures;
 }
@@ -79,10 +90,25 @@ export function BasketPage() {
   const locale = useLocale();
   const hydrated = useHydrated();
   const { articles } = useBasket();
-  const [{ buildPlate, filament }] = usePreferences();
-  const measures = useMeasures(articles, buildPlate, hydrated);
+  const [{ buildPlate, filament, stack: stackPreference, printer, packingMode }, setPreferences] = usePreferences();
+  const stack = useMemo(() => stackChoiceOf(stackPreference), [stackPreference]);
+  const measures = useMeasures(articles, buildPlate, stack, hydrated);
 
-  const measureOf = (article: Article) => measures.get(measureKey(article, buildPlate));
+  const measureOf = (article: Article) => measures.get(measureKey(article, buildPlate, stack));
+
+  // The rangement of what fits on the plates (#42), searched again at each change.
+  const excludedCorner = printer === "other" ? null : PRINTER_EXCLUDED_CORNERS[printer];
+  const packingBasket = useMemo(
+    () => basketPackingOf(articles, (article) => measures.get(measureKey(article, buildPlate, stack)), packingMode),
+    [articles, measures, buildPlate, stack, packingMode],
+  );
+  const packing = useBasketPacking(hydrated ? packingBasket : null, buildPlate, excludedCorner);
+  const nameOf = (articleId: string) => {
+    const article = articles.find((candidate) => candidate.id === articleId);
+    if (!article) return "";
+    const measure = measureOf(article);
+    return articleName(article, t, f.lengths, measure && measure !== "failed" ? measure.dimensions : null);
+  };
   const grams = (value: number) => t.mass(gramsText(value, f.grams, t.belowOneGram));
 
   // Totals of what will be printed: the articles that fit, once all of them are measured.
@@ -91,7 +117,7 @@ export function BasketPage() {
     let cost: number | null = filament.price === null ? null : 0;
     let excluded = 0;
     for (const article of articles) {
-      const measure = measures.get(measureKey(article, buildPlate));
+      const measure = measures.get(measureKey(article, buildPlate, stack));
       if (measure === undefined) return null;
       if (measure === "failed" || !measure.fits) {
         excluded++;
@@ -102,7 +128,7 @@ export function BasketPage() {
       if (cost !== null && mass.cost !== null) cost += mass.cost * article.quantity;
     }
     return { total, cost, excluded };
-  }, [articles, measures, buildPlate, filament]);
+  }, [articles, measures, buildPlate, stack, filament]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
@@ -158,6 +184,12 @@ export function BasketPage() {
                     {totals ? grams(totals.total) : "…"}
                   </dd>
                 </div>
+                <div className="flex items-baseline justify-between gap-3 py-1">
+                  <dt className="text-muted">{t.basket.totalPlates}</dt>
+                  <dd className="font-semibold tabular-nums" data-testid="total-plates">
+                    {packing.progress ? packing.progress.packing.plates.length : packing.status === "empty" ? 0 : "…"}
+                  </dd>
+                </div>
                 {filament.price !== null && (
                   <div className="flex items-baseline justify-between gap-3 py-1">
                     <dt className="text-muted">{t.basket.totalCost}</dt>
@@ -169,6 +201,15 @@ export function BasketPage() {
               </dl>
               {totals !== null && totals.excluded > 0 && <p className="mt-1 text-[12.5px] text-muted">{t.basket.excluded(totals.excluded)}</p>}
             </section>
+
+            <BasketPackingSection
+              packing={packing}
+              mode={packingMode}
+              onModeChange={(mode) => setPreferences({ packingMode: mode })}
+              plate={buildPlate}
+              excludedCorner={excludedCorner}
+              nameOf={nameOf}
+            />
           </>
         )}
 

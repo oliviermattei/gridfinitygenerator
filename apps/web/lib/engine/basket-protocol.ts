@@ -1,6 +1,6 @@
 import type { BuildPlate } from "@repo/geometry";
 import type { ArticleModel } from "../basket";
-import type { ArticleMeasure } from "./article-measure";
+import type { ArticleMeasure, StackChoice } from "./article-measure";
 
 /** Requests from the basket page to its engine worker; each one gets a response with its id. */
 export type BasketEngineRequest = {
@@ -11,6 +11,8 @@ export type BasketEngineRequest = {
   link: string;
   /** Build plate a baseplate is cut for, and every article is checked against. */
   buildPlate: BuildPlate;
+  /** How the pieces of a cut baseplate print stacked, or null side by side (#42: its objects). */
+  stack: StackChoice | null;
 };
 
 /** Messages from the basket engine worker back to the page. */

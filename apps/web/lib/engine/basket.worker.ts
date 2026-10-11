@@ -18,7 +18,7 @@ scope.onmessage = async ({ data: request }) => {
     return;
   }
   try {
-    const measure = await measureArticle(request, request.buildPlate);
+    const measure = await measureArticle(request, request.buildPlate, request.stack);
     scope.postMessage({ id: request.id, type: "measure", measure });
   } catch (error) {
     scope.postMessage({ id: request.id, type: "error", message: error instanceof Error ? error.message : String(error) });

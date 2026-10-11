@@ -1,14 +1,14 @@
 import type { BuildPlate } from "@repo/geometry";
 import type { Article } from "../basket";
-import type { ArticleMeasure } from "./article-measure";
+import type { ArticleMeasure, StackChoice } from "./article-measure";
 import type { BasketEngineRequest, BasketEngineResponse } from "./basket-protocol";
 
 export interface BasketEngineClient {
   /**
-   * Measures one article in final quality, cut for `buildPlate` (`measureArticle`). The worker
-   * takes its requests one at a time, in the order they are made.
+   * Measures one article in final quality, cut for `buildPlate` and stacked as `stack` asks
+   * (`measureArticle`). The worker takes its requests one at a time, in the order they are made.
    */
-  measure(article: Pick<Article, "model" | "link">, buildPlate: BuildPlate): Promise<ArticleMeasure>;
+  measure(article: Pick<Article, "model" | "link">, buildPlate: BuildPlate, stack: StackChoice | null): Promise<ArticleMeasure>;
   dispose(): void;
 }
 
@@ -43,13 +43,13 @@ export function createBasketEngineClient(): BasketEngineClient {
   }
 
   return {
-    measure({ model, link }, buildPlate) {
+    measure({ model, link }, buildPlate, stack) {
       worker ??= start();
       const id = nextId++;
       const target = worker;
       return new Promise((resolve, reject) => {
         pending.set(id, { resolve, reject });
-        target.postMessage({ id, type: "measure", model, link, buildPlate } satisfies BasketEngineRequest);
+        target.postMessage({ id, type: "measure", model, link, buildPlate, stack } satisfies BasketEngineRequest);
       });
     },
     dispose() {
