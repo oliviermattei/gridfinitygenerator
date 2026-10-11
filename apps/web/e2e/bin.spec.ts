@@ -104,3 +104,35 @@ test("the scoop goes on the side chosen, the label across from it, as high as th
   const link = new URL(await page.evaluate(() => navigator.clipboard.readText()));
   expect(link.search).toBe("?v=1&sc=1&lt=1&ss=left&ld=16");
 });
+
+test("the scoop as round as asked when it fits, and the inner floor lower, checked under it", async ({ page, context }, testInfo) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/fr/bin");
+  await expect(readout(page, "dimensions")).toHaveText("83,5 × 41,5 mm");
+  await openSettings(page, testInfo);
+  await page.getByRole("switch", { name: "Pelle" }).click();
+  // 12 mm asked: in 3 U, the compartment leaves 10.4 mm under the lip.
+  await expect(page.getByTestId("scoop-clamped").filter({ visible: true })).toHaveText("Ramené à 10,4 mm : plus grand, la pelle ne tiendrait pas dans le compartiment.");
+  await numberField(page, "Rayon de la pelle").fill("8");
+  await numberField(page, "Rayon de la pelle").press("Tab");
+  await expect(page.getByRole("button", { name: /^Pelle/ })).toContainText("Côté avant, 8 mm");
+  await expect(page.getByTestId("scoop-clamped").filter({ visible: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: /^Taille/ }).click();
+  // 5.5 mm: 0.75 mm over the gap between the two feet, at 4.75 mm.
+  await numberField(page, "Hauteur du fond intérieur").fill("5,5");
+  await numberField(page, "Hauteur du fond intérieur").press("Tab");
+  await expect(page.getByTestId("floor-thin").filter({ visible: true })).toHaveText(
+    "Fond intérieur trop bas : il ne reste que 0,75 mm de matière sous lui, au plus mince, moins des 1,2 mm qu'il lui faut. Remontez-le.",
+  );
+  await expect(page.getByRole("alert").filter({ hasText: "il ne reste que 0,75 mm" }).filter({ visible: true })).toBeVisible();
+  await numberField(page, "Hauteur du fond intérieur").fill("6");
+  await numberField(page, "Hauteur du fond intérieur").press("Tab");
+  await expect(page.getByRole("button", { name: /^Taille/ })).toContainText("fond intérieur à 6 mm");
+  await expect(page.getByTestId("floor-thin").filter({ visible: true })).toHaveCount(0);
+  await closeSettings(page, testInfo);
+
+  await runAction(page, testInfo, "Partager");
+  const link = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+  expect(link.search).toBe("?v=1&fh=6&sc=1&rs=8");
+});

@@ -34,8 +34,12 @@ export const FOOT = {
   height: 4.75,
 } as const;
 
-/** Top of the socle, the inner floor of a standard bin: the first U (gridfinity-rebuilt `BASE_HEIGHT`). */
+/** Top of the socle, the inner floor of a standard bin: the first U (gridfinity-rebuilt `BASE_HEIGHT`), the default floor height. */
 export const SOLID_FLOOR_MM = 7;
+/** Thinnest material a bin should keep under its inner floor: the floor of a hollow socle (bench #34). */
+export const MIN_FLOOR_THICKNESS_MM = 1.2;
+/** Least height of a compartment, from its floor to the top of the useful space. */
+const MIN_ROOM_MM = 2;
 
 /** Floor of a hollow socle (bench #34): a slab this thick just above the slopes of the feet. */
 const HOLLOW_FLOOR_MM = 1.2;
@@ -79,8 +83,6 @@ export function lipHeight(lip: StackingLip): number {
 
 /** Radius of the fillet between the inner floor and the walls (congé), when it fits. */
 export const FILLET_RADIUS_MM = 5;
-/** Radius of the scoop (pelle), when it fits. */
-export const SCOOP_RADIUS_MM = 12;
 /**
  * The label tab (onglet d'étiquette), a ribbed shelf: its thickness; the rim (liseré) along its
  * front edge, whose top is the top of the useful space; the 45° fillet under its root; and the
@@ -136,6 +138,13 @@ export interface BinStats {
   heightWithoutLip: number;
   /** Inside of one compartment: width, depth and useful height, from the floor to under the lip. */
   compartment: { width: number; depth: number; height: number };
+  /**
+   * The material left under the inner floor when it is thinner than MIN_FLOOR_THICKNESS_MM, in
+   * millimetres: the shortest distance from the compartments to the air under the socle,
+   * measured on the solids, 0 when the floor goes through it; null when the floor keeps at
+   * least MIN_FLOOR_THICKNESS_MM (the floor holds).
+   */
+  thinFloor: number | null;
   compartments: number;
   /** Volume of material in mm³, measured on the final mesh; null for the preview. */
   volume: number | null;
@@ -179,6 +188,7 @@ export async function generateBin(input: Partial<BinSettings>, quality: Quality,
         dimensions: dimensionsOf(mesh),
         heightWithoutLip: layout.wallTop,
         compartment: { ...layout.compartment, height: layout.usefulTop - layout.floor },
+        thinFloor: built.thinFloor,
         compartments: settings.compartmentColumns * settings.compartmentRows,
         volume: quality === "final" ? built.solid.volume() : null,
         usefulVolume: quality === "final" ? built.usefulVolume : null,
@@ -220,11 +230,13 @@ export function binLayoutOf(settings: BinSettings, options: GenerateBinOptions =
   const wall = linesOf(1.2, lineWidth, 2, 1.6);
   // 0.8 mm dividers (2 lines of 0.4).
   const divider = linesOf(0.8, lineWidth, 2, 1.6);
-  const floor = options.socle === "hollow" ? roundUpToLayer(FOOT.height + HOLLOW_FLOOR_MM, layerHeight) : SOLID_FLOOR_MM;
   const lipLevels = lip === "none" ? null : LIPS[lip];
   // The useful space stops where the support of the lip leaves the wall, and under the foot of a stacked bin.
   const [firstZ, firstInset] = lipLevels ? (lipLevels[0] as readonly [number, number]) : [0, 0];
   const usefulTop = lipLevels ? Math.min(wallTop + firstZ - (firstInset - wall), wallTop - STACKED_FOOT_DEPTH_MM - STACK_CLEARANCE_MM) : wallTop;
+  // The floor where asked, and at least MIN_ROOM_MM under the top of the useful space.
+  const floor =
+    options.socle === "hollow" ? roundUpToLayer(FOOT.height + HOLLOW_FLOOR_MM, layerHeight) : Math.min(settings.floorHeight, usefulTop - MIN_ROOM_MM);
   const innerWidth = width - 2 * wall;
   const innerDepth = depth - 2 * wall;
   const compartment = {
@@ -236,7 +248,8 @@ export function binLayoutOf(settings: BinSettings, options: GenerateBinOptions =
   const fillet = settings.fillet ? Math.max(0, Math.min(options.filletRadius ?? FILLET_RADIUS_MM, half - 0.5, room / 2)) : 0;
   // Across the compartment from its side: the depth for the front and the back, the width for the sides.
   const across = (side: BinSide) => (side === "front" || side === "back" ? compartment.depth : compartment.width);
-  const scoop = settings.scoop ? Math.max(0, Math.min(SCOOP_RADIUS_MM, across(settings.scoopSide) / 2, room - 1)) : 0;
+  // The scoop, as round as asked when it fits: under half the compartment across, and 1 mm under the top of the useful space.
+  const scoop = settings.scoop ? Math.max(0, Math.min(settings.scoopRadius, across(settings.scoopSide) / 2, room - 1)) : 0;
   // The label tab, under half the compartment across; its consoles, at 45°, reach as far as
   // the height under the shelf allows, 1 mm above the floor.
   const labelSide = labelSideOf(settings);
@@ -312,7 +325,7 @@ function buildBin(
   layout: BinLayout,
   quality: Quality,
   options: GenerateBinOptions,
-): { solid: Manifold; usefulVolume: number } {
+): { solid: Manifold; usefulVolume: number; thinFloor: number | null } {
   const segments = SEGMENTS_PER_QUARTER[quality];
   const { cellSize, columns, rows, lip } = settings;
   const { width, depth, wallTop, height, wall, divider, usefulTop, compartment } = layout;
@@ -378,7 +391,15 @@ function buildBin(
       }
     }
   }
-  const tools: Manifold[] = [own(wasm.Manifold.compose(boxes))];
+  const cavities = own(wasm.Manifold.compose(boxes));
+  // The material under the floor: from the compartments to the air under the slab of the
+  // socle, around and between its feet (and in them, when hollow), on the solids. Searched up
+  // to MIN_FLOOR_THICKNESS_MM only: further, the search costs seconds on many compartments.
+  const under = own(own(wasm.Manifold.cube([width + 2, depth + 2, FOOT.height + 1])).translate([-width / 2 - 1, -depth / 2 - 1, -1]));
+  const gap = cavities.minGap(own(under.subtract(solid)), MIN_FLOOR_THICKNESS_MM);
+  // manifold measures in single precision: 1.2 mm comes back as 1.1999998.
+  const thinFloor = gap < MIN_FLOOR_THICKNESS_MM - 1e-4 ? gap : null;
+  const tools: Manifold[] = [cavities];
   if (lip !== "none") {
     // The opening through the lip, from the top of the useful space up through the top.
     const levels: [number, number][] = [[usefulTop, wall], ...LIPS[lip].map(([z, inset]) => [wallTop + z, inset] as [number, number]), [height + 1, 0.4]];
@@ -386,7 +407,7 @@ function buildBin(
   }
   solid = own(solid.subtract(own(wasm.Manifold.union(tools))));
   if (extras.length > 0) solid = own(wasm.Manifold.union([solid, ...extras]));
-  return { solid, usefulVolume };
+  return { solid, usefulVolume, thinFloor };
 }
 
 /** A compartment inside, seen from above: [x0, x1, y0, y1]. */

@@ -8,6 +8,7 @@ import {
   encodeBinSettings,
   generateBin,
   maxBinCells,
+  MIN_FLOOR_THICKNESS_MM,
   labelSideOf,
   openingBinSettings,
   oppositeSide,
@@ -226,5 +227,118 @@ describe("the scoop and the label tab (grilling of the finishes)", () => {
     expect(tab).toBeGreaterThan(1000);
     expect(tab).toBeLessThan(5000);
     expect(encodeBinSettings(clampBinSettings({ ...settings, labelDepth: 16, scoop: true, scoopSide: "left" }))).toBe("v=1&x=3&h=4&sc=1&lt=1&ss=left&ld=16");
+  });
+});
+
+describe("the scoop radius (#32, decision of 2026-10-11)", () => {
+  /** How far the inside sets in at the front and at the back, `h` above the floor of a 1 × 1 bin of one compartment. */
+  async function frontAndBackInsets(bin: Awaited<ReturnType<typeof generateBin>>, h: number) {
+    const z = bin.layout.floor + h;
+    const check = await checkMesh(bin.mesh, [z]);
+    const contours = check.sections.get(z) ?? [];
+    const inner = contours.reduce((a, b) => (Math.max(...a.map(([x]) => x)) - Math.min(...a.map(([x]) => x)) < Math.max(...b.map(([x]) => x)) - Math.min(...b.map(([x]) => x)) ? a : b));
+    const ys = inner.map(([, y]) => y);
+    const half = 41.5 / 2 - bin.layout.wall;
+    return { front: Math.min(...ys) + half, back: half - Math.max(...ys) };
+  }
+
+  it("is 12 mm by default, brought down in a bin of 3 U to 10.4 mm, what the compartment leaves under the lip", async () => {
+    const bin = await generateBin({ scoop: true }, "preview");
+    expectWithin(bin.layout.scoop, 10.4);
+    const tall = await generateBin({ scoop: true, units: 6 }, "preview");
+    expect(tall.layout.scoop).toBe(12);
+  });
+
+  it("the higher, the rounder: the scoop sets in by the arc of the radius asked", async () => {
+    const arc = (r: number, h: number) => r - Math.sqrt(r * r - (r - h) * (r - h));
+    // 3 mm, the least, is less round than the 5 mm fillet of the other sides.
+    for (const scoopRadius of [3, 6, 16]) {
+      const bin = await generateBin({ columns: 1, rows: 1, units: 6, scoop: true, scoopRadius }, "final");
+      expect(bin.layout.scoop).toBe(scoopRadius);
+      expect((await checkMesh(bin.mesh)).status).toBe("NoError");
+      expectWithin((await frontAndBackInsets(bin, 2)).front, arc(scoopRadius, 2), 0.05);
+    }
+  });
+
+  it("is brought down to half the compartment across from its side", async () => {
+    const bin = await generateBin({ columns: 1, rows: 1, units: 8, scoop: true, scoopRadius: 40 }, "preview");
+    expectWithin(bin.layout.scoop, (41.5 - 2 * 1.2) / 2);
+  });
+});
+
+describe("the share link of the scoop radius and the floor height", () => {
+  it("carries the scoop radius as rs, and reads a link written before it with the 12 mm of then", () => {
+    const settings = clampBinSettings({ scoop: true, scoopSide: "left", scoopRadius: 15.5 });
+    expect(encodeBinSettings(settings)).toBe("v=1&sc=1&ss=left&rs=15.5");
+    expect(decodeBinSettings("v=1&sc=1&ss=left&rs=15.5")).toEqual(settings);
+    expect(decodeBinSettings("v=1&sc=1")?.scoopRadius).toBe(12);
+  });
+
+  it("carries the floor height as fh, and reads a link written before it with the standard floor at 7 mm", () => {
+    const settings = clampBinSettings({ columns: 3, units: 4, floorHeight: 5.2 });
+    expect(encodeBinSettings(settings)).toBe("v=1&x=3&h=4&fh=5.2");
+    expect(decodeBinSettings("v=1&x=3&h=4&fh=5.2")).toEqual(settings);
+    expect(decodeBinSettings("v=1&x=3&h=4")?.floorHeight).toBe(7);
+    expect(decodeBinSettings("v=1&fh=0.2")?.floorHeight).toBe(1);
+  });
+});
+
+describe("the floor height (#32, decision of 2026-10-11)", () => {
+  it("by default, with the scoop radius, keeps the bin of before both settings, to the mm³", async () => {
+    // Volumes measured on main before the floor height and the scoop radius existed.
+    const cases = [
+      [{}, 29198.111, 34630.232],
+      [{ scoop: true }, 30687.293, 33141.049],
+      [{ scoop: true, labelTab: true, units: 5, compartmentColumns: 2 }, 39170.796, 73001.805],
+      [{ columns: 1, rows: 1, scoop: true, scoopSide: "left" }, 16469.940, 15651.907],
+    ] as const;
+    for (const [settings, volume, usefulVolume] of cases) {
+      const bin = await generateBin(settings, "final");
+      expectWithin(bin.stats.volume as number, volume);
+      expectWithin(bin.stats.usefulVolume as number, usefulVolume);
+    }
+  });
+
+  it("puts the inner floor where asked, lower into the socle or higher over it", async () => {
+    for (const floorHeight of [5, 10]) {
+      const bin = await generateBin({ columns: 1, rows: 1, fillet: false, floorHeight }, "final");
+      expect(bin.layout.floor).toBe(floorHeight);
+      // Solid 0.1 mm under the floor across the whole cell, open 0.1 mm over it inside the walls.
+      const check = await checkMesh(bin.mesh, [floorHeight - 0.1, floorHeight + 0.1]);
+      expect(check.status).toBe("NoError");
+      expect(check.sections.get(floorHeight - 0.1)).toHaveLength(1);
+      expect(check.sections.get(floorHeight + 0.1)).toHaveLength(2);
+      // The useful height goes from the floor to under the lip, at 18.4 mm in 3 U.
+      expectWithin(bin.stats.compartment.height, 18.4 - floorHeight);
+    }
+  });
+
+  it("stays 2 mm under the top of the useful space", async () => {
+    const bin = await generateBin({ floorHeight: 30 }, "preview");
+    expectWithin(bin.layout.floor, 18.4 - 2);
+  });
+});
+
+describe("the material under the inner floor", () => {
+  it("keeps 1.2 mm at least by default: the floor at 7 mm, 2.25 mm over the gap between the feet", async () => {
+    expect(MIN_FLOOR_THICKNESS_MM).toBe(1.2);
+    expect((await generateBin({}, "final")).stats.thinFloor).toBeNull();
+    expect((await generateBin({ columns: 1, rows: 1 }, "final", { socle: "hollow" })).stats.thinFloor).toBeNull();
+  });
+
+  it("is measured on the solids when thinner: over the gap at 4.75 mm, under 1.2 mm with the floor under 5.95 mm, 0 through the socle", async () => {
+    const thin = async (floorHeight: number, quality: "preview" | "final" = "final") => (await generateBin({ floorHeight }, quality)).stats.thinFloor;
+    expect(await thin(6)).toBeNull();
+    expect(await thin(5.95)).toBeNull();
+    expectWithin((await thin(5.9)) as number, 1.15);
+    expectWithin((await thin(5.9, "preview")) as number, 1.15);
+    expectWithin((await thin(5)) as number, 0.25);
+    expect(await thin(4)).toBe(0);
+  });
+
+  it("on one cell without fillet, is the distance from the corner of the floor, 1.2 mm in from the outside, to the 45° slope of the foot", async () => {
+    const bin = await generateBin({ columns: 1, rows: 1, fillet: false, floorHeight: 5.2 }, "final");
+    expectWithin(bin.stats.thinFloor as number, (1.2 + 5.2 - 4.75) / Math.SQRT2);
+    expect((await generateBin({ columns: 1, rows: 1, fillet: false, floorHeight: 5.25 }, "final")).stats.thinFloor).toBeNull();
   });
 });
