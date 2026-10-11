@@ -139,6 +139,24 @@ export function articleBaseplateSettings(article: Pick<Article, "link">): Basepl
   return decodeSettings(article.link) ?? DEFAULT_SETTINGS;
 }
 
+/** The generator an article opens in, which reads its link. */
+interface ArticleGenerator {
+  path: (locale: Locale) => string;
+  /** The settings of a link, null when the generator cannot read it. */
+  decode: (link: string) => { layerHeight: number } | null;
+  defaults: { layerHeight: number };
+}
+
+const BIN_GENERATOR: ArticleGenerator = { path: binPath, decode: decodeBinSettings, defaults: DEFAULT_BIN_SETTINGS };
+const BASEPLATE_GENERATOR: ArticleGenerator = { path: baseplatePath, decode: decodeSettings, defaults: DEFAULT_SETTINGS };
+/** The test kit and the clip come from the baseplate generator, of its settings. */
+const GENERATORS: Record<ArticleModel, ArticleGenerator> = { bin: BIN_GENERATOR, baseplate: BASEPLATE_GENERATOR, "test-kit": BASEPLATE_GENERATOR, clip: BASEPLATE_GENERATOR };
+
+/** Whether the generator of `model` reads `link`: an article its generator opens. */
+export function readsArticleLink(model: ArticleModel, link: string): boolean {
+  return GENERATORS[model].decode(link) !== null;
+}
+
 /**
  * The automatic name of an article: « Bin 2×1, 6 U », « Baseplate 562 × 470 » (its footprint
  * measured on its mesh, in millimetres, and only « Baseplate » until then), « Kit de test », « Clip ».
@@ -161,7 +179,8 @@ export function articleName(article: Article, t: Strings, lengths: Intl.NumberFo
 
 /** The layer height an article prints at, in millimetres: that of its settings (0.2 mm by default). */
 export function articleLayerHeight(article: Pick<Article, "model" | "link">): number {
-  return article.model === "bin" ? articleBinSettings(article).layerHeight : articleBaseplateSettings(article).layerHeight;
+  const generator = GENERATORS[article.model];
+  return (generator.decode(article.link) ?? generator.defaults).layerHeight;
 }
 
 /**
@@ -169,7 +188,7 @@ export function articleLayerHeight(article: Pick<Article, "model" | "link">): nu
  * the site at `origin`: what its objects carry in a downloaded file (#43).
  */
 export function articleShareLink(article: Pick<Article, "model" | "link">, origin: string, locale: Locale): string {
-  return `${origin}${article.model === "bin" ? binPath(locale) : baseplatePath(locale)}?${article.link}`;
+  return `${origin}${GENERATORS[article.model].path(locale)}?${article.link}`;
 }
 
 /** Fragment of a generator's address that names the article it edits. */
@@ -177,8 +196,7 @@ const EDIT_PREFIX = "#article=";
 
 /** The generator of an article with its settings, which then offers to update it (`editedArticleId`). */
 export function articleHref(article: Article, locale: Locale): string {
-  const path = article.model === "bin" ? binPath(locale) : baseplatePath(locale);
-  return `${path}?${article.link}${EDIT_PREFIX}${encodeURIComponent(article.id)}`;
+  return `${GENERATORS[article.model].path(locale)}?${article.link}${EDIT_PREFIX}${encodeURIComponent(article.id)}`;
 }
 
 /** The id of the article a generator edits, from the fragment of its address; null for none. */

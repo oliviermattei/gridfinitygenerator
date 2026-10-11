@@ -1,5 +1,5 @@
-import { decodeBinSettings, decodeSettings, deflate, inflate } from "@repo/geometry";
-import { ARTICLE_MODELS, quantityOf, type ArticleDraft, type ArticleModel } from "./basket";
+import { deflate, inflate } from "@repo/geometry";
+import { ARTICLE_MODELS, quantityOf, readsArticleLink, type ArticleDraft, type ArticleModel } from "./basket";
 
 /**
  * The basket link (#44, ADR 0024): the whole basket in one parameter of /{lang}/panier, to send
@@ -64,9 +64,7 @@ function articleOf(line: string): ArticleDraft | null {
   if (!match) return null;
   const model = match[1] as ArticleModel;
   const link = match[3] as string;
-  if (!ARTICLE_MODELS.includes(model)) return null;
-  const settings = model === "bin" ? decodeBinSettings(link) : decodeSettings(link);
-  if (settings === null) return null;
+  if (!ARTICLE_MODELS.includes(model) || !readsArticleLink(model, link)) return null;
   return { model, link, quantity: quantityOf(Number(match[2])) };
 }
 
