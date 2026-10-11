@@ -5,6 +5,7 @@ import {
   decodeSettings,
   type BaseplateSettings,
   type BinSettings,
+  type Category,
 } from "@repo/geometry";
 import { baseplatePath, binPath, type Locale } from "./i18n";
 import type { Strings } from "./strings";
@@ -117,8 +118,8 @@ export function removeArticle(basket: Basket, id: string): Basket {
   return { articles: basket.articles.filter((article) => article.id !== id) };
 }
 
-/** The kind of object of an article (glossary: Catégorie); a test kit is a baseplate. */
-export type Category = "bins" | "baseplates" | "clips";
+/** The kind of object of an article (glossary: Catégorie), as the rangement keeps them apart. */
+export type { Category };
 
 const CATEGORIES: Record<ArticleModel, Category> = { bin: "bins", baseplate: "baseplates", "test-kit": "baseplates", clip: "clips" };
 

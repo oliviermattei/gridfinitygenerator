@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clipBlockOf, plateKeyOf, searchPacking, type Packing, type PackingObject, type PackingMode, type PackingProblem } from "../src/index";
+import { clipBlockOf, plateKeyOf, searchPacking, type Category, type Packing, type PackingObject, type PackingMode, type PackingProblem } from "../src/index";
 
 // Rangement (#42, ADR 0024), observed through the public interface: rectangles laid on plates.
 
@@ -209,9 +209,9 @@ describe("searchPacking, the search for a better rangement", () => {
 
 describe("plateKeyOf", () => {
   // A basket of three bins, a baseplate in two pieces and the block of its clips, all small.
-  const objects = [
-    ...["bin-1", "bin-2", "bin-3"].map((id) => ({ id, category: "bins" })),
-    ...["piece-1", "piece-2"].map((id) => ({ id, category: "baseplates" })),
+  const objects: { id: string; category: Category }[] = [
+    ...["bin-1", "bin-2", "bin-3"].map((id) => ({ id, category: "bins" as const })),
+    ...["piece-1", "piece-2"].map((id) => ({ id, category: "baseplates" as const })),
     { id: "clips", category: "clips" },
   ];
   const problemOf = (mode: PackingMode): PackingProblem => ({

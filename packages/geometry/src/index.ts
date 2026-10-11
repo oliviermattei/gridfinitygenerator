@@ -110,6 +110,7 @@ export { decodeBinSettings, encodeBinSettings, openingBinSettings } from "./bin-
 export {
   PACKING_GAP_MM,
   clipBlockOf,
+  type Category,
   type ClipBlock,
   type ClipSource,
   PACKING_MODES,

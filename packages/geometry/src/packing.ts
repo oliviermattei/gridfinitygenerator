@@ -452,6 +452,9 @@ export function searchPacking(problem: PackingProblem, options: PackingSearchOpt
   return { ...progress(), status: optimal ? "optimal" : "exhausted" };
 }
 
+/** The kind of object of the basket (glossary: Catégorie); a test kit is a baseplate. */
+export type Category = "bins" | "baseplates" | "clips";
+
 /** The three rangements of a basket (glossary: Rangement). */
 export const PACKING_MODES = ["fewest-plates", "by-category", "one-per-plate"] as const;
 export type PackingMode = (typeof PACKING_MODES)[number];
@@ -462,7 +465,7 @@ export type PackingMode = (typeof PACKING_MODES)[number];
  * its layer height, since a plate of a Bambu Studio project prints at one layer height: two
  * layer heights never share a plate. Without one, the key is the rangement's alone.
  */
-export function plateKeyOf(mode: PackingMode, id: string, category: string, layerHeight?: number): string {
+export function plateKeyOf(mode: PackingMode, id: string, category: Category, layerHeight?: number): string {
   const layer = layerHeight === undefined ? "" : `|layer:${Number(layerHeight.toFixed(3))}`;
   switch (mode) {
     case "fewest-plates":
