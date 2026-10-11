@@ -53,7 +53,7 @@ const LEAD_MM = 0.15;
 /** Material left between a slot and the digits of a label engraved on the same side. */
 const LABEL_CLEARANCE_MM = 0.5;
 /** Space between the clips laid out for the print. */
-const PRINT_SPACING_MM = 3;
+export const PRINT_SPACING_MM = 3;
 /**
  * Least material left around a slot where it could open onto something else: the margin, the
  * outline, the slot along the other cut at a crossing, the notch of a skeleton. Two lines of

@@ -1,0 +1,182 @@
+import { clipBlockOf, plateKeyOf, type ClipBlock, type PackedPlate, type PackingObject, type PackingMode } from "@repo/geometry";
+import { articleLayerHeight, categoryOf, type Article, type Category } from "./basket";
+import type { ArticleMeasure, ArticlePart } from "./engine/article-measure";
+import type { BasketDownloadPlan, DownloadObject } from "./engine/basket-download";
+import type { Strings } from "./strings";
+
+/**
+ * What the rangement of the basket lays on the plates (#42, ADR 0024), from the measures of its
+ * articles: each exemplar of a bin, test kit or whole baseplate, each piece or stack of a cut
+ * baseplate, and one block of all the clips of the basket. Pure: no React, no worker.
+ */
+
+/**
+ * Id of the block of clips among the objects; provisionally (#43), one block per layer height,
+ * the next ones `clips-2`, `clips-3`…
+ */
+export const CLIP_BLOCK_ID = "clips";
+
+/** One object of the rangement, and what it comes from. */
+export interface BasketObject {
+  id: string;
+  category: Category;
+  /** Its article; null for the block of clips, which holds the clips of several. */
+  articleId: string | null;
+  /** Which exemplar of its article, from 1. */
+  exemplar: number;
+  /** What of the exemplar it is; null for the block of clips. */
+  part: ArticlePart | null;
+  /** Which of the parts of its article it is (`ArticleMeasure.parts`); 0 for the block of clips. */
+  index: number;
+}
+
+export interface BasketPacking {
+  /** The objects as the rangement takes them, their keys those of the mode (`plateKeyOf`). */
+  objects: PackingObject[];
+  /** What each object comes from, by its id. */
+  byId: ReadonlyMap<string, BasketObject>;
+  /** Each block of clips by its id: where each clip lies in it, with the article it comes from. */
+  clipBlocks: ReadonlyMap<string, ClipBlock>;
+  /** Quantity of each article laid out, to tell its exemplars apart. */
+  quantities: ReadonlyMap<string, number>;
+}
+
+/**
+ * The objects of the articles that fit on the plate, in the order of the basket, the blocks of
+ * clips last; null while an article is not measured yet. An article that does not fit, or whose
+ * computation failed, is left out, as it is of the download.
+ */
+export function basketPackingOf(articles: readonly Article[], measureOf: (article: Article) => ArticleMeasure | "failed" | undefined, mode: PackingMode): BasketPacking | null {
+  const objects: PackingObject[] = [];
+  const byId = new Map<string, BasketObject>();
+  const quantities = new Map<string, number>();
+  // The clips of each layer height (provisional, #43: a plate prints at one), in the basket's order.
+  const clips = new Map<number, { id: string; width: number; depth: number; count: number }[]>();
+  for (const article of articles) {
+    const measure = measureOf(article);
+    if (measure === undefined) return null;
+    if (measure === "failed" || !measure.fits) continue;
+    quantities.set(article.id, article.quantity);
+    const category = categoryOf(article.model);
+    const layer = articleLayerHeight(article);
+    for (let exemplar = 1; exemplar <= article.quantity; exemplar++)
+      measure.parts.forEach((part, index) => {
+        const id = `${article.id}/${exemplar}/${index}`;
+        byId.set(id, { id, category, articleId: article.id, exemplar, part, index });
+        objects.push({ id, width: part.width, depth: part.depth, key: plateKeyOf(mode, id, category, layer) });
+      });
+    if (measure.clips) clips.set(layer, [...(clips.get(layer) ?? []), { id: article.id, width: measure.clips.width, depth: measure.clips.depth, count: measure.clips.count * article.quantity }]);
+  }
+  const clipBlocks = new Map<string, ClipBlock>();
+  for (const [layer, sources] of clips) {
+    const block = clipBlockOf(sources);
+    if (!block) continue;
+    const id = clipBlocks.size === 0 ? CLIP_BLOCK_ID : `${CLIP_BLOCK_ID}-${clipBlocks.size + 1}`;
+    clipBlocks.set(id, block);
+    byId.set(id, { id, category: "clips", articleId: null, exemplar: 1, part: null, index: 0 });
+    objects.push({ id, width: block.width, depth: block.depth, key: plateKeyOf(mode, id, "clips", layer) });
+  }
+  return { objects, byId, clipBlocks, quantities };
+}
+
+/** Piece numbers as runs: 1-4, or 1, 3. */
+function runsOf(numbers: readonly number[]): string {
+  const sorted = [...new Set(numbers)].sort((a, b) => a - b);
+  const runs: string[] = [];
+  for (let i = 0; i < sorted.length; ) {
+    let j = i;
+    while (j + 1 < sorted.length && sorted[j + 1] === sorted[j]! + 1) j++;
+    runs.push(j > i ? `${sorted[i]}-${sorted[j]}` : String(sorted[i]));
+    i = j + 1;
+  }
+  return runs.join(", ");
+}
+
+/** What of its article an object is: nothing for a whole one, its pieces, or its stack. */
+function partSuffix(part: ArticlePart, t: Strings): string | null {
+  if (part.kind === "whole") return null;
+  const pieces = t.basket.packing.pieces(runsOf(part.numbers), part.numbers.length);
+  return part.kind === "stack" ? t.basket.packing.stack(pieces) : pieces;
+}
+
+/**
+ * The name of an object on its plate: its article's (`nameOf`), its piece or stack, and which
+ * exemplar it is when there are several; « Clips » for the block.
+ */
+export function objectLabel(object: BasketObject, basket: BasketPacking, nameOf: (articleId: string) => string, t: Strings): string {
+  const names = t.basket.packing;
+  if (object.articleId === null || object.part === null) return names.clips;
+  const suffix = partSuffix(object.part, t);
+  const name = suffix ? names.withPart(nameOf(object.articleId), suffix) : nameOf(object.articleId);
+  return (basket.quantities.get(object.articleId) ?? 1) > 1 ? names.exemplar(name, object.exemplar) : name;
+}
+
+/**
+ * The names of the plates: numbered in « moins de plateaux »; « par catégorie », after their
+ * category and numbered (« Bins 1 »), or after their baseplate and its pieces when they hold one
+ * article (« Baseplate 562 × 470 — pièces 1-4 »), « Clips »; after their object in « un objet
+ * par plateau ».
+ */
+export function plateNames(plates: readonly PackedPlate[], mode: PackingMode, basket: BasketPacking, nameOf: (articleId: string) => string, t: Strings): string[] {
+  const names = t.basket.packing;
+  const counts = new Map<Category, number>();
+  return plates.map((plate, index) => {
+    const objects = plate.objects.map((placed) => basket.byId.get(placed.id)!);
+    if (mode === "fewest-plates") return names.plate(index + 1);
+    if (mode === "one-per-plate") return objectLabel(objects[0]!, basket, nameOf, t);
+    const category = objects[0]!.category;
+    if (category === "clips") return names.clips;
+    const number = (counts.get(category) ?? 0) + 1;
+    counts.set(category, number);
+    if (category === "bins") return names.bins(number);
+    const articles = new Set(objects.map((object) => object.articleId));
+    if (articles.size > 1) return names.baseplates(number);
+    const articleId = objects[0]!.articleId!;
+    const numbers = objects.flatMap((object) => object.part?.numbers ?? []);
+    if (numbers.length === 0) return nameOf(articleId);
+    return names.withPart(nameOf(articleId), names.pieces(runsOf(numbers), new Set(numbers).size));
+  });
+}
+
+/**
+ * What the download writes (#43): the articles laid out, each computed once, and each plate of
+ * the rangement under its name, each object under its name (as on the page) with the share link
+ * of its article; the block of clips gives one object per article whose clips it holds.
+ */
+export function basketDownloadPlan(
+  articles: readonly Article[],
+  basket: BasketPacking,
+  plates: readonly PackedPlate[],
+  mode: PackingMode,
+  { nameOf, linkOf, t, basketLink }: { nameOf: (articleId: string) => string; linkOf: (article: Article) => string; t: Strings; basketLink: string },
+): BasketDownloadPlan {
+  const byId = new Map(articles.map((article) => [article.id, article]));
+  const used = new Set<string>();
+  const titles = plateNames(plates, mode, basket, nameOf, t);
+  const objectsOf = (placed: PackedPlate["objects"][number]): DownloadObject[] => {
+    const object = basket.byId.get(placed.id)!;
+    const place = { x: placed.x, y: placed.y, turned: placed.turned };
+    if (object.articleId !== null && object.part !== null) {
+      used.add(object.articleId);
+      const description = linkOf(byId.get(object.articleId)!);
+      return [{ name: objectLabel(object, basket, nameOf, t), description, articleId: object.articleId, source: { kind: "part", index: object.index }, ...place, frame: null }];
+    }
+    // The clips of each article apart, each object in the frame of the block.
+    const block = basket.clipBlocks.get(placed.id)!;
+    const sources = new Map<string, { x: number; y: number }[]>();
+    for (const { id, x, y } of block.clips) sources.set(id, [...(sources.get(id) ?? []), { x, y }]);
+    return [...sources].map(([articleId, at]) => {
+      used.add(articleId);
+      return {
+        name: t.basket.packing.clipsOf(nameOf(articleId), at.length),
+        description: linkOf(byId.get(articleId)!),
+        articleId,
+        source: { kind: "clips", at },
+        ...place,
+        frame: { width: block.width, depth: block.depth },
+      };
+    });
+  };
+  const planPlates = plates.map((plate, index) => ({ name: titles[index]!, objects: plate.objects.flatMap(objectsOf) }));
+  return { articles: articles.filter((article) => used.has(article.id)).map(({ id, model, link }) => ({ id, model, link })), plates: planPlates, link: basketLink };
+}

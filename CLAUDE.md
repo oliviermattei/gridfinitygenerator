@@ -1,6 +1,6 @@
 # Gridfinity Generator
 
-Public, free, open-source (MIT) website of Gridfinity tools: an index of the generators (`/{lang}`), a generator of 3D-printable baseplates sized for a given drawer (`/{lang}/baseplate`) and a generator of bins (`/{lang}/bin`). Everything is computed in the browser, no backend.
+Public, free, open-source (MIT) website of Gridfinity tools: an index of the generators (`/{lang}`), a generator of 3D-printable baseplates sized for a given drawer (`/{lang}/baseplate`), a generator of bins (`/{lang}/bin`) and a basket common to the generators (`/{lang}/panier`, ADR 0024). Everything is computed in the browser, no backend.
 
 ## Where things are
 

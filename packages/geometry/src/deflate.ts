@@ -401,3 +401,53 @@ export class DeflateEncoder {
     this.items = 0;
   }
 }
+
+/** Candidates the search looks at per position: plenty for short texts like a basket link. */
+const MAX_CHAIN = 64;
+
+/**
+ * Deflates `bytes` on its own, searching for repeats (a hash chain on 3 bytes, greedy):
+ * for small data whose repeats nobody knows in advance, such as the basket link. The 3MF
+ * writer, which knows them, drives `DeflateEncoder` itself, much faster.
+ */
+export function deflate(bytes: Uint8Array): Uint8Array {
+  const encoder = new DeflateEncoder();
+  const hashOf = (i: number) => (((bytes[i] as number) << 16) | ((bytes[i + 1] as number) << 8) | (bytes[i + 2] as number)) % 65_521;
+  /** Last position of each hash, and for each position the previous one of the same hash. */
+  const head = new Int32Array(65_521).fill(-1);
+  const previous = new Int32Array(bytes.length);
+  const insert = (i: number) => {
+    if (i + MIN_COPY > bytes.length) return;
+    const hash = hashOf(i);
+    previous[i] = head[hash] as number;
+    head[hash] = i;
+  };
+  let i = 0;
+  while (i < bytes.length) {
+    let bestLength = 0;
+    let bestDistance = 0;
+    if (i + MIN_COPY <= bytes.length) {
+      const limit = Math.min(MAX_COPY, bytes.length - i);
+      let candidate = head[hashOf(i)] as number;
+      for (let tries = 0; candidate >= 0 && i - candidate <= WINDOW_BYTES && tries < MAX_CHAIN; tries++) {
+        let length = 0;
+        while (length < limit && bytes[candidate + length] === bytes[i + length]) length++;
+        if (length > bestLength) {
+          bestLength = length;
+          bestDistance = i - candidate;
+          if (length === limit) break;
+        }
+        candidate = previous[candidate] as number;
+      }
+    }
+    if (bestLength >= MIN_COPY) {
+      encoder.copyBytes(bytes, i, bestLength, bestDistance);
+      for (let end = i + bestLength; i < end; i++) insert(i);
+    } else {
+      encoder.literal(bytes[i] as number);
+      insert(i);
+      i++;
+    }
+  }
+  return encoder.finish().data;
+}

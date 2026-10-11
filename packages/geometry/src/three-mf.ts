@@ -14,6 +14,11 @@ import { zipParts } from "./zip";
 export interface ThreeMfObject {
   mesh: TriangleMesh;
   name: string;
+  /**
+   * What the object is, in its own metadata (3MF core: the metadata group of the object), such
+   * as the share link of the article it comes from in a basket (#43). None by default.
+   */
+  description?: string;
 }
 
 export interface ThreeMfOptions {
@@ -24,6 +29,12 @@ export interface ThreeMfOptions {
    * baseplate can be generated again. The app builds it: the engine knows no address.
    */
   shareLink: string;
+  /**
+   * The vertices already lie where the objects go on the build plate, from its front left
+   * corner (a rangement of the basket, #43): written with no move. By default, the objects are
+   * moved together into the positive octant.
+   */
+  keepPositions?: boolean;
 }
 
 export const MODEL_PATH = "3D/3dmodel.model";
@@ -183,6 +194,9 @@ function placement(objects: readonly ThreeMfObject[]): string {
   return `1 0 0 0 1 0 0 0 1 ${offset.join(" ")}`;
 }
 
+/** The transform of an object written where it lies. */
+const IDENTITY = "1 0 0 0 1 0 0 0 1 0 0 0";
+
 /**
  * Writes the model XML of the objects: `transforms` holds the transform of the build item of
  * each object, `metadata` more metadata elements of the model, after its title and description.
@@ -216,7 +230,9 @@ export function writeModel(
   );
   objects.forEach((object, index) => {
     // Names may hold any character (« pièce 1 »): UTF-8, not ASCII text.
-    out.bytes(encoder.encode(`<object id="${index + 1}" type="model" name="${escapeXml(object.name)}"><mesh><vertices>`));
+    const description =
+      object.description === undefined ? "" : `<metadatagroup><metadata name="Description">${escapeXml(object.description)}</metadata></metadatagroup>`;
+    out.bytes(encoder.encode(`<object id="${index + 1}" type="model" name="${escapeXml(object.name)}">${description}<mesh><vertices>`));
     numbers.nextObject();
     writeMesh(object.mesh, numbers, tokens, out);
     out.text("</mesh></object>");
@@ -265,7 +281,7 @@ function writeMesh(
  */
 export function serialize3mf(mesh: TriangleMesh | readonly ThreeMfObject[], options: ThreeMfOptions): Uint8Array {
   const objects = "positions" in mesh ? [{ mesh, name: options.name }] : mesh;
-  const transform = placement(objects);
+  const transform = options.keepPositions ? IDENTITY : placement(objects);
   return zipParts([
     ["[Content_Types].xml", (out) => out.bytes(encoder.encode(CONTENT_TYPES))],
     ["_rels/.rels", (out) => out.bytes(encoder.encode(RELATIONSHIPS))],

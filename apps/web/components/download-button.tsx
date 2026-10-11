@@ -2,7 +2,7 @@
 
 import { Menu } from "@base-ui/react/menu";
 import { focusRing } from "@repo/ui";
-import { ChevronDown, Download } from "lucide-react";
+import { ChevronDown, Download, ShoppingBasket } from "lucide-react";
 import type { ExportFormat } from "@/lib/engine/protocol";
 import { useStrings } from "@/lib/locale";
 import { ClipIcon } from "./illustrations";
@@ -11,6 +11,8 @@ export interface DownloadButtonProps {
   onDownload: (format: ExportFormat) => void;
   /** Downloads a single clip of a baseplate, as an STL (#37): offered with or without a cut; none for a bin. */
   onDownloadClip?: () => void;
+  /** Adds a single clip to the basket (#41), offered with the clip's download. */
+  onAddClipToBasket?: () => void;
   /** Format of the baseplate being prepared, if any. */
   exporting: ExportFormat | null;
   /** Whether a download is being prepared (the baseplate or the test kit): every download waits for it. */
@@ -21,6 +23,8 @@ export interface DownloadButtonProps {
   stlDescription?: string;
   /** What the 3MF holds, when it is not a plain one (a Bambu Studio project, ADR 0023). */
   threeMfDescription?: string;
+  /** The name of each download, when it is not « Télécharger le 3MF » or « le STL » (the basket, #43). */
+  labels?: Partial<Record<ExportFormat, string>>;
 }
 
 const FORMATS: readonly { format: ExportFormat; description: "threeMfDescription" | "stlDescription" }[] = [
@@ -33,9 +37,19 @@ const FORMATS: readonly { format: ExportFormat; description: "threeMfDescription
  * slicer (named object, share link inside); its menu also offers the STL, and a single clip,
  * to print clips one by one.
  */
-export function DownloadButton({ onDownload, onDownloadClip, exporting, disabled, compact = false, stlDescription, threeMfDescription }: DownloadButtonProps) {
+export function DownloadButton({
+  onDownload,
+  onDownloadClip,
+  onAddClipToBasket,
+  exporting,
+  disabled,
+  compact = false,
+  stlDescription,
+  threeMfDescription,
+  labels,
+}: DownloadButtonProps) {
   const t = useStrings();
-  const label = exporting ? t.preparing[exporting] : t.download["3mf"];
+  const label = exporting ? t.preparing[exporting] : (labels?.["3mf"] ?? t.download["3mf"]);
   const accent = `h-12 bg-accent text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-70 ${focusRing}`;
   return (
     <div className="flex w-full">
@@ -69,7 +83,7 @@ export function DownloadButton({ onDownload, onDownloadClip, exporting, disabled
                 >
                   <Download className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
                   <span className="min-w-0">
-                    <span className="block text-[13.5px] font-semibold">{t.download[format]}</span>
+                    <span className="block text-[13.5px] font-semibold">{labels?.[format] ?? t.download[format]}</span>
                     <span className="block text-[12px] leading-snug text-muted">{(format === "stl" ? stlDescription : threeMfDescription) ?? t[description]}</span>
                   </span>
                 </Menu.Item>
@@ -80,6 +94,15 @@ export function DownloadButton({ onDownload, onDownloadClip, exporting, disabled
                   <span className="min-w-0">
                     <span className="block text-[13.5px] font-semibold">{t.downloadClip}</span>
                     <span className="block text-[12px] leading-snug text-muted">{t.clipDescription}</span>
+                  </span>
+                </Menu.Item>
+              )}
+              {onAddClipToBasket && (
+                <Menu.Item onClick={onAddClipToBasket} className="flex cursor-default items-start gap-3 rounded-[10px] px-2.5 py-2 outline-none data-highlighted:bg-sunken">
+                  <ShoppingBasket className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-[13.5px] font-semibold">{t.basket.addClip}</span>
+                    <span className="block text-[12px] leading-snug text-muted">{t.basket.addClipDescription}</span>
                   </span>
                 </Menu.Item>
               )}

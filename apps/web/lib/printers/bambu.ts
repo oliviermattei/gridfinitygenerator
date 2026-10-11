@@ -19,6 +19,14 @@ export const PRINTER_BEDS: Record<Exclude<Printer, "other">, BuildPlate> = {
   "bambu-p1s": { width: 256, depth: 256 },
 };
 
+/**
+ * Corner of the bed of each Bambu Lab printer no object may enter (`bed_exclude_area` of its
+ * profiles), from its origin at the front left: the rangement keeps out of it (#42, ADR 0023).
+ */
+export const PRINTER_EXCLUDED_CORNERS: Record<Exclude<Printer, "other">, { width: number; depth: number }> = {
+  "bambu-p1s": { width: 18, depth: 28 },
+};
+
 /** What a 3MF needs to be a Bambu Studio project: the printer and its nozzle, the filament. */
 export interface BambuTarget {
   printer: Exclude<Printer, "other">;

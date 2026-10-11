@@ -81,9 +81,19 @@ describe("serializeBambu3mf", () => {
       expect(max[0]! - origin[0]!).toBeLessThanOrEqual(256 + 1e-3);
       expect(max[1]! - origin[1]!).toBeLessThanOrEqual(256 + 1e-3);
       expect(min[2]).toBeCloseTo(0, 4);
-      // Out of the 18 × 28 mm corner of the cutter, at the front left of the bed.
-      expect(min[0]! - origin[0]! >= 18 - 1e-3 || min[1]! - origin[1]! >= 28 - 1e-3).toBe(true);
+      // Half a millimetre clear of the 18 × 28 mm corner of the cutter, at the front left of the bed.
+      expect(min[0]! - origin[0]! >= 18.5 - 1e-3 || min[1]! - origin[1]! >= 28.5 - 1e-3).toBe(true);
     });
+  });
+
+  it("moves a centred object half a millimetre clear of the excluded corner, which Bambu Studio refuses to touch", () => {
+    // 230 × 220 mm centred starts at (13, 18), inside the 18 × 28 mm corner: moved along X.
+    const box: TriangleMesh = {
+      positions: new Float32Array([0, 0, 0, 230, 0, 0, 0, 220, 0, 0, 0, 5]),
+      indices: new Uint32Array([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]),
+    };
+    const content = readThreeMf(serializeBambu3mf([{ name: "bin", objects: [{ mesh: box, name: "bin" }] }], OPTIONS));
+    expect(content.placements).toEqual([[18.5, 18, 0]]);
   });
 
   it("keeps the vertices where the engine puts them: only the build items move the objects", async () => {
@@ -108,5 +118,41 @@ describe("serializeBambu3mf", () => {
     ]);
     const roomy = partPlates([{ mesh: box(100, 100), name: "pièce 1" }], clips, PLATE_256);
     expect(roomy.map(({ objects }) => objects.length)).toEqual([2]);
+  });
+
+  it("leaves each object of a rangement where it lies on its plate, with its own description", () => {
+    // Boxes where a rangement put them, from the front left of their plate (#43).
+    const box = (x: number, y: number): TriangleMesh => ({
+      positions: new Float32Array([x, y, 0, x + 10, y, 0, x, y + 10, 0, x, y, 5]),
+      indices: new Uint32Array([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]),
+    });
+    const plates: BambuPlate[] = [
+      { name: "Plateau 1", objects: [{ mesh: box(3, 40), name: "bin (1)", description: "https://example.test/fr/bin?v=1" }, { mesh: box(200, 230), name: "bin (2)" }] },
+      { name: "Plateau 2", objects: [{ mesh: box(120, 100), name: "kit", description: "https://example.test/fr/baseplate?v=1" }] },
+    ];
+    const content = readThreeMf(serializeBambu3mf(plates, { ...OPTIONS, keepPositions: true }));
+    // Not centred, nor moved out of the corner: only the origin of its plate, two columns of plates.
+    expect(content.placements).toEqual([
+      [0, 0, 0],
+      [0, 0, 0],
+      [STRIDE, 0, 0],
+    ]);
+    expect(content.objects.map((object) => object.description)).toEqual(["https://example.test/fr/bin?v=1", undefined, "https://example.test/fr/baseplate?v=1"]);
+    expect(content.metadata.get("Description")).toBe(OPTIONS.shareLink);
+  });
+
+  // Provisional (#43): Bambu Studio has no layer height per plate, but one per object.
+  it("gives the objects of a plate of another layer height than the project's that layer height", () => {
+    const box = (x: number): TriangleMesh => ({
+      positions: new Float32Array([x, 50, 0, x + 10, 50, 0, x, 60, 0, x, 50, 5]),
+      indices: new Uint32Array([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3]),
+    });
+    const plates: BambuPlate[] = [
+      { name: "Plateau 1", layerHeight: 0.2, objects: [{ mesh: box(50), name: "a" }] },
+      { name: "Plateau 2", layerHeight: 0.12, objects: [{ mesh: box(50), name: "b" }, { mesh: box(100), name: "c" }] },
+    ];
+    const files = readZip(serializeBambu3mf(plates, { ...OPTIONS, projectSettings: { ...SETTINGS, layer_height: "0.2" }, keepPositions: true }));
+    const objects = [...text(files, "Metadata/model_settings.config").matchAll(/<object id="(\d+)">([\s\S]*?)<\/object>/g)].map(([, , body]) => /key="layer_height" value="([^"]*)"/.exec(body!)?.[1]);
+    expect(objects).toEqual([undefined, "0.12", "0.12"]);
   });
 });

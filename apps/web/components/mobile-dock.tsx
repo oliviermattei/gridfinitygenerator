@@ -19,6 +19,8 @@ export interface MobileDockProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   download: ReactNode;
+  /** « Ajouter au panier » (#41), under the download, or the buttons of an article being edited. */
+  basket?: ReactNode;
   /** The settings families shown in the sheet. */
   children: ReactNode;
   dockRef: Ref<HTMLDivElement>;
@@ -31,7 +33,7 @@ export interface MobileDockProps {
  * sheet is not modal and only closes on request, so the preview above it stays visible and
  * can be orbited.
  */
-export function MobileDock({ dockReadout, readout, stats, open, onOpenChange, download, children, dockRef, sheetRef }: MobileDockProps) {
+export function MobileDock({ dockReadout, readout, stats, open, onOpenChange, download, basket, children, dockRef, sheetRef }: MobileDockProps) {
   const t = useStrings();
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange} modal={false} disablePointerDismissal>
@@ -51,6 +53,7 @@ export function MobileDock({ dockReadout, readout, stats, open, onOpenChange, do
             </Drawer.Trigger>
             <div className="flex-1">{download}</div>
           </div>
+          {basket && <div className="mt-2">{basket}</div>}
         </div>
       </div>
       <Drawer.Portal>

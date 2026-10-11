@@ -297,8 +297,8 @@ export interface ThreeMfContent {
   metadata: Map<string, string>;
   /** The mesh of the first object, as stored (without the build item transform). */
   mesh: TriangleMesh;
-  /** Every object, its name and its mesh as stored, in order. */
-  objects: { name: string; mesh: TriangleMesh }[];
+  /** Every object, its name, its mesh as stored and its own description (metadata group), in order. */
+  objects: { name: string; mesh: TriangleMesh; description: string | undefined }[];
 }
 
 /** Translation of a 3MF transform (`m00 m01 m02 … m30 m31 m32`), which must not rotate nor scale. */
@@ -336,8 +336,9 @@ export function readThreeMf(bytes: Uint8Array): ThreeMfContent {
   const modelContentType = /<Default\b[^>]*\bExtension="model"[^>]*\bContentType="([^"]+)"/.exec(contentTypes)?.[1];
   const xml = text((modelTarget ?? "").replace(/^\//, ""));
 
+  // The model's own metadata, before its resources; an object's are in its metadata group.
   const metadata = new Map<string, string>();
-  for (const [, name, value] of xml.matchAll(/<metadata\b[^>]*\bname="([^"]+)"[^>]*>([^<]*)<\/metadata>/g)) {
+  for (const [, name, value] of xml.split("<resources>")[0]!.matchAll(/<metadata\b[^>]*\bname="([^"]+)"[^>]*>([^<]*)<\/metadata>/g)) {
     metadata.set(decodeXml(name as string), decodeXml(value as string));
   }
   const meshOf = (objectXml: string): TriangleMesh => {
@@ -351,10 +352,11 @@ export function readThreeMf(bytes: Uint8Array): ThreeMfContent {
     }
     return { positions: new Float32Array(positions), indices: new Uint32Array(indices) };
   };
-  const objects = [...xml.matchAll(/<object\b[^>]*\bname="([^"]*)"[^>]*>([\s\S]*?)<\/object>/g)].map(([, name, body]) => ({
-    name: decodeXml(name as string),
-    mesh: meshOf(body as string),
-  }));
+  const objects = [...xml.matchAll(/<object\b[^>]*\bname="([^"]*)"[^>]*>([\s\S]*?)<\/object>/g)].map(([, name, body]) => {
+    const group = /^<metadatagroup>([\s\S]*?)<\/metadatagroup>/.exec(body as string)?.[1];
+    const description = group && /<metadata\b[^>]*\bname="Description"[^>]*>([^<]*)<\/metadata>/.exec(group)?.[1];
+    return { name: decodeXml(name as string), mesh: meshOf(body as string), description: description === undefined ? undefined : decodeXml(description) };
+  });
   return {
     parts: Object.keys(files),
     modelTarget,

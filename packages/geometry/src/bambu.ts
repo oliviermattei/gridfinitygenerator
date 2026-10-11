@@ -25,6 +25,12 @@ import { zipParts } from "./zip";
 export interface BambuPlate {
   name: string;
   objects: readonly ThreeMfObject[];
+  /**
+   * Provisional (#43): the layer height its objects print at, in millimetres, when it may differ
+   * from the project's (`layer_height` of its settings). Bambu Studio has no layer height per
+   * plate: each object of the plate gets it as its own setting. None by default.
+   */
+  layerHeight?: number;
 }
 
 export interface BambuProjectOptions extends ThreeMfOptions {
@@ -38,6 +44,12 @@ export interface BambuProjectOptions extends ThreeMfOptions {
 
 /** Room left between the objects that share a plate, in millimetres. */
 const PLATE_GAP_MM = 5;
+/**
+ * Room kept between an object and the excluded corner of the bed, in millimetres (ADR 0024):
+ * Bambu Studio refuses to slice an object that touches it (« too close to exclusion area »),
+ * and a box measured on a float32 mesh may start a hair inside it.
+ */
+export const EXCLUDED_CORNER_CLEARANCE_MM = 0.5;
 /** Gap between two plates of Bambu Studio, as a share of the bed (`LOGICAL_PART_PLATE_GAP`, PartPlate.cpp). */
 const PLATE_SPACING = 1 / 5;
 
@@ -112,38 +124,48 @@ const fixed = (value: number) => String(Number(value.toFixed(DECIMALS)));
 /**
  * Translation of the objects of each plate onto that plate: Bambu Studio lays its plates out on
  * a grid, and gives an object to the plate under it. The content of a plate is centred on its
- * bed and set down on it, then moved out of the excluded corner of the bed if it fits beside it.
+ * bed and set down on it, then moved `EXCLUDED_CORNER_CLEARANCE_MM` clear of the excluded corner
+ * of the bed if it fits beside it; with `keep`, it lies on its plate where its vertices put it,
+ * moved by the plate's origin alone.
  */
-function placements(plates: readonly BambuPlate[], [width, depth]: [number, number], [excludeX, excludeY]: [number, number]): string[] {
+function placements(plates: readonly BambuPlate[], [width, depth]: [number, number], [excludeX, excludeY]: [number, number], keep: boolean): string[] {
   const columns = columnCount(plates.length);
   return plates.flatMap((plate, index) => {
-    const { min, max } = boxOf(plate.objects.map(({ mesh }) => mesh));
-    const size = [max[0] - min[0], max[1] - min[1]];
     // Plate origin: columns left to right, rows towards -Y (`compute_shape_position`).
     const originX = (index % columns) * width * (1 + PLATE_SPACING);
     const originY = -Math.floor(index / columns) * depth * (1 + PLATE_SPACING);
+    if (keep) return plate.objects.map(() => `1 0 0 0 1 0 0 0 1 ${[originX, originY, 0].map(fixed).join(" ")}`);
+    const { min, max } = boxOf(plate.objects.map(({ mesh }) => mesh));
+    const size = [max[0] - min[0], max[1] - min[1]];
     let left = (width - size[0]!) / 2;
     let front = (depth - size[1]!) / 2;
-    if (left < excludeX && front < excludeY) {
-      if (excludeX + size[0]! <= width) left = excludeX;
-      else if (excludeY + size[1]! <= depth) front = excludeY;
+    const clearX = excludeX + EXCLUDED_CORNER_CLEARANCE_MM;
+    const clearY = excludeY + EXCLUDED_CORNER_CLEARANCE_MM;
+    if (excludeX > 0 && excludeY > 0 && left < clearX && front < clearY) {
+      if (clearX + size[0]! <= width) left = clearX;
+      else if (clearY + size[1]! <= depth) front = clearY;
     }
     const offset = [originX + left - min[0], originY + front - min[1], -min[2]];
     return plate.objects.map(() => `1 0 0 0 1 0 0 0 1 ${offset.map(fixed).join(" ")}`);
   });
 }
 
-/** `Metadata/model_settings.config`: the name of each object, and the objects of each plate. */
-function modelSettings(plates: readonly BambuPlate[]): string {
+/**
+ * `Metadata/model_settings.config`: the name of each object, its layer height when its plate's
+ * differs from the project's, and the objects of each plate.
+ */
+function modelSettings(plates: readonly BambuPlate[], projectLayer: string): string {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<config>\n';
   let id = 0;
   const platesXml = plates.map((plate, index) => {
+    const layer = plate.layerHeight === undefined ? projectLayer : String(Number(plate.layerHeight.toFixed(3)));
+    const own = layer === projectLayer ? "" : `    <metadata key="layer_height" value="${layer}"/>\n`;
     let entry = `  <plate>\n    <metadata key="plater_id" value="${index + 1}"/>\n`;
     entry += `    <metadata key="plater_name" value="${escapeXml(plate.name)}"/>\n    <metadata key="locked" value="false"/>\n`;
     for (const object of plate.objects) {
       id++;
       const name = escapeXml(object.name);
-      xml += `  <object id="${id}">\n    <metadata key="name" value="${name}"/>\n    <metadata key="extruder" value="1"/>\n`;
+      xml += `  <object id="${id}">\n    <metadata key="name" value="${name}"/>\n    <metadata key="extruder" value="1"/>\n${own}`;
       xml += `    <part id="${id}" subtype="normal_part">\n      <metadata key="name" value="${name}"/>\n`;
       xml += '      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>\n    </part>\n  </object>\n';
       entry += `    <model_instance>\n      <metadata key="object_id" value="${id}"/>\n      <metadata key="instance_id" value="0"/>\n`;
@@ -156,14 +178,15 @@ function modelSettings(plates: readonly BambuPlate[]): string {
 
 /**
  * Serialises plates of objects as a Bambu Studio project: the 3MF of `serialize3mf` (the meshes,
- * their names, the share link), each object on its plate, the plates named, and the settings of
- * the printer, process and filament given in `options.projectSettings`.
+ * their names and descriptions, the share link), each object on its plate (centred, or where it
+ * lies with `options.keepPositions`), the plates named, and the settings of the printer, process
+ * and filament given in `options.projectSettings`.
  */
 export function serializeBambu3mf(plates: readonly BambuPlate[], options: BambuProjectOptions): Uint8Array {
   const { projectSettings } = options;
   const version = String(projectSettings.version ?? "");
   const objects = plates.flatMap((plate) => plate.objects);
-  const transforms = placements(plates, extentOf(projectSettings.printable_area), extentOf(projectSettings.bed_exclude_area));
+  const transforms = placements(plates, extentOf(projectSettings.printable_area), extentOf(projectSettings.bed_exclude_area), options.keepPositions ?? false);
   const metadata =
     `<metadata name="Application">BambuStudio-${escapeXml(version)}</metadata>` + '<metadata name="BambuStudio:3mfVersion">1</metadata>';
   const text = (content: string) => (out: { bytes(bytes: Uint8Array): void }) => out.bytes(encoder.encode(content));
@@ -171,7 +194,7 @@ export function serializeBambu3mf(plates: readonly BambuPlate[], options: BambuP
     ["[Content_Types].xml", text(CONTENT_TYPES)],
     ["_rels/.rels", text(RELATIONSHIPS)],
     [MODEL_PATH, (out) => writeModel(objects, options, out, { transforms, metadata })],
-    ["Metadata/model_settings.config", text(modelSettings(plates))],
+    ["Metadata/model_settings.config", text(modelSettings(plates, String(projectSettings.layer_height ?? "")))],
     ["Metadata/project_settings.config", text(JSON.stringify(projectSettings, null, 4))],
   ]);
 }
