@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clipBlockOf, plateKeyOf, searchPacking, type Packing, type PackingItem, type PackingMode, type PackingProblem } from "../src/index";
+import { clipBlockOf, plateKeyOf, searchPacking, type Packing, type PackingObject, type PackingMode, type PackingProblem } from "../src/index";
 
 // Rangement (#42, ADR 0024), observed through the public interface: rectangles laid on plates.
 
@@ -8,26 +8,26 @@ const EPSILON = 1e-6;
 /** A 1 × 1 bin: one cell of 42 mm, less the 0.5 mm gap of its foot. */
 const BIN_1X1 = 41.5;
 
-function items(count: number, width: number, depth: number, key = "all", prefix = "item"): PackingItem[] {
+function boxes(count: number, width: number, depth: number, key = "all", prefix = "object"): PackingObject[] {
   return Array.from({ length: count }, (_, k) => ({ id: `${prefix}-${k}`, width, depth, key }));
 }
 
 /**
- * The rules of the rangement, checked plate by plate: every item once, as large as asked (turned
+ * The rules of the rangement, checked plate by plate: every object once, as large as asked (turned
  * or not), within the plate, 5 mm (`gap`) from every other one, out of the excluded corner.
  */
 function expectRules(problem: PackingProblem, packing: Packing, { corner = true } = {}) {
   const gap = problem.gap ?? 5;
-  const byId = new Map(problem.items.map((item) => [item.id, item]));
+  const byId = new Map(problem.objects.map((object) => [object.id, object]));
   const seen = new Set<string>();
   for (const plate of packing.plates) {
-    for (const placed of plate.items) {
-      const item = byId.get(placed.id)!;
-      expect(item, placed.id).toBeDefined();
+    for (const placed of plate.objects) {
+      const object = byId.get(placed.id)!;
+      expect(object, placed.id).toBeDefined();
       expect(seen.has(placed.id), `${placed.id} placed twice`).toBe(false);
       seen.add(placed.id);
-      expect(item.key).toBe(plate.key);
-      const [width, depth] = placed.turned ? [item.depth, item.width] : [item.width, item.depth];
+      expect(object.key).toBe(plate.key);
+      const [width, depth] = placed.turned ? [object.depth, object.width] : [object.width, object.depth];
       expect(placed.width).toBeCloseTo(width, 6);
       expect(placed.depth).toBeCloseTo(depth, 6);
       expect(placed.x).toBeGreaterThanOrEqual(-EPSILON);
@@ -40,8 +40,8 @@ function expectRules(problem: PackingProblem, packing: Packing, { corner = true 
         expect(out, `${placed.id} in the excluded corner`).toBe(true);
       }
     }
-    for (const [i, a] of plate.items.entries())
-      for (const b of plate.items.slice(i + 1)) {
+    for (const [i, a] of plate.objects.entries())
+      for (const b of plate.objects.slice(i + 1)) {
         const apart =
           a.x + a.width + gap <= b.x + EPSILON ||
           b.x + b.width + gap <= a.x + EPSILON ||
@@ -50,12 +50,12 @@ function expectRules(problem: PackingProblem, packing: Packing, { corner = true 
         expect(apart, `${a.id} and ${b.id} less than ${gap} mm apart`).toBe(true);
       }
   }
-  expect([...seen, ...packing.unplaced].sort()).toEqual(problem.items.map((item) => item.id).sort());
+  expect([...seen, ...packing.unplaced].sort()).toEqual(problem.objects.map((object) => object.id).sort());
 }
 
 describe("searchPacking", () => {
   it("lays 25 bins 1 × 1 on one plate of 256 × 256, the minimum possible", () => {
-    const problem: PackingProblem = { items: items(25, BIN_1X1, BIN_1X1), plate: PLATE_256 };
+    const problem: PackingProblem = { objects: boxes(25, BIN_1X1, BIN_1X1), plate: PLATE_256 };
     const result = searchPacking(problem);
     expectRules(problem, result.packing);
     expect(result.packing.plates).toHaveLength(1);
@@ -64,7 +64,7 @@ describe("searchPacking", () => {
   });
 
   it("proves 2 plates the minimum for 36 bins 1 × 1, which 5 mm apart take more than one", () => {
-    const problem: PackingProblem = { items: items(36, BIN_1X1, BIN_1X1), plate: PLATE_256 };
+    const problem: PackingProblem = { objects: boxes(36, BIN_1X1, BIN_1X1), plate: PLATE_256 };
     const result = searchPacking(problem);
     expectRules(problem, result.packing);
     expect(result.packing.plates).toHaveLength(2);
@@ -74,44 +74,44 @@ describe("searchPacking", () => {
 
   it("keeps 5 mm between two objects and none at the border", () => {
     // Two halves of 125.5 mm fill 256 mm with exactly the gap between them; 126 mm do not.
-    const tight: PackingProblem = { items: items(2, 125.5, 256), plate: PLATE_256 };
+    const tight: PackingProblem = { objects: boxes(2, 125.5, 256), plate: PLATE_256 };
     expect(searchPacking(tight).packing.plates).toHaveLength(1);
     expectRules(tight, searchPacking(tight).packing);
-    const loose: PackingProblem = { items: items(2, 126, 256), plate: PLATE_256 };
+    const loose: PackingProblem = { objects: boxes(2, 126, 256), plate: PLATE_256 };
     expect(searchPacking(loose).packing.plates).toHaveLength(2);
   });
 
   it("turns an object a quarter when it fits only that way", () => {
-    const problem: PackingProblem = { items: [{ id: "long", width: 250, depth: 100, key: "all" }], plate: { width: 120, depth: 256 } };
+    const problem: PackingProblem = { objects: [{ id: "long", width: 250, depth: 100, key: "all" }], plate: { width: 120, depth: 256 } };
     const [plate] = searchPacking(problem).packing.plates;
-    expect(plate!.items[0]).toMatchObject({ turned: true, width: 100, depth: 250 });
+    expect(plate!.objects[0]).toMatchObject({ turned: true, width: 100, depth: 250 });
     expectRules(problem, searchPacking(problem).packing);
   });
 
   it("centres the content of each plate", () => {
-    const problem: PackingProblem = { items: items(1, 100, 50), plate: PLATE_256 };
+    const problem: PackingProblem = { objects: boxes(1, 100, 50), plate: PLATE_256 };
     const [plate] = searchPacking(problem).packing.plates;
-    expect(plate!.items[0]).toMatchObject({ x: 78, y: 103 });
+    expect(plate!.objects[0]).toMatchObject({ x: 78, y: 103 });
   });
 
   it("keeps out of the excluded corner of a Bambu bed when there is room, beside it", () => {
     const corner = { width: 18, depth: 28 };
     // Centred, 240 mm wide, the content would start at x = 8, in the corner: it moves to x = 18.
-    const problem: PackingProblem = { items: items(1, 220, 240), plate: PLATE_256, excludedCorner: corner };
+    const problem: PackingProblem = { objects: boxes(1, 220, 240), plate: PLATE_256, excludedCorner: corner };
     const [plate] = searchPacking(problem).packing.plates;
     expectRules(problem, searchPacking(problem).packing);
-    expect(plate!.items[0]!.x).toBeGreaterThanOrEqual(18);
+    expect(plate!.objects[0]!.x).toBeGreaterThanOrEqual(18);
     // 25 bins 1 × 1 still take one plate.
-    const bins: PackingProblem = { items: items(25, BIN_1X1, BIN_1X1), plate: PLATE_256, excludedCorner: corner };
+    const bins: PackingProblem = { objects: boxes(25, BIN_1X1, BIN_1X1), plate: PLATE_256, excludedCorner: corner };
     expect(searchPacking(bins).packing.plates).toHaveLength(1);
     expectRules(bins, searchPacking(bins).packing);
   });
 
   it("keeps half a millimetre clear of the excluded corner: Bambu Studio refuses an object touching it", () => {
     // Centred, 220 mm wide, the content would start at x = 18, against the corner (#43, sliced by the CLI).
-    const problem: PackingProblem = { items: items(1, 220, 240), plate: PLATE_256, excludedCorner: { width: 18, depth: 28 } };
+    const problem: PackingProblem = { objects: boxes(1, 220, 240), plate: PLATE_256, excludedCorner: { width: 18, depth: 28 } };
     const [plate] = searchPacking(problem).packing.plates;
-    expect(plate!.items[0]!.x).toBeCloseTo(18.5, 9);
+    expect(plate!.objects[0]!.x).toBeCloseTo(18.5, 9);
   });
 
   it("lays the objects around the excluded corner when the content fills the plate", () => {
@@ -119,7 +119,7 @@ describe("searchPacking", () => {
     // lie; packed again, the smaller one right of the corner and the wide one behind it, they do not.
     const corner = { width: 18, depth: 28 };
     const problem: PackingProblem = {
-      items: [...items(1, 256, 100, "all", "wide"), ...items(1, 200, 150, "all", "small")],
+      objects: [...boxes(1, 256, 100, "all", "wide"), ...boxes(1, 200, 150, "all", "small")],
       plate: PLATE_256,
       excludedCorner: corner,
     };
@@ -129,21 +129,21 @@ describe("searchPacking", () => {
   });
 
   it("bites the excluded corner only when nothing else fits", () => {
-    const problem: PackingProblem = { items: items(1, 256, 256), plate: PLATE_256, excludedCorner: { width: 18, depth: 28 } };
+    const problem: PackingProblem = { objects: boxes(1, 256, 256), plate: PLATE_256, excludedCorner: { width: 18, depth: 28 } };
     const result = searchPacking(problem);
     expect(result.packing.plates).toHaveLength(1);
     expectRules(problem, result.packing, { corner: false });
   });
 
   it("leaves out an object larger than the plate, and lays the others", () => {
-    const problem: PackingProblem = { items: [...items(1, 300, 100, "all", "huge"), ...items(2, 50, 50)], plate: PLATE_256 };
+    const problem: PackingProblem = { objects: [...boxes(1, 300, 100, "all", "huge"), ...boxes(2, 50, 50)], plate: PLATE_256 };
     const result = searchPacking(problem);
     expect(result.packing.unplaced).toEqual(["huge-0"]);
     expectRules(problem, result.packing);
   });
 
   it("never lays two keys on one plate", () => {
-    const problem: PackingProblem = { items: [...items(2, 50, 50, "bins", "bin"), ...items(1, 50, 50, "clips", "clips")], plate: PLATE_256 };
+    const problem: PackingProblem = { objects: [...boxes(2, 50, 50, "bins", "bin"), ...boxes(1, 50, 50, "clips", "clips")], plate: PLATE_256 };
     const result = searchPacking(problem);
     expect(result.packing.plates.map((plate) => plate.key)).toEqual(["bins", "clips"]);
     expect(result.bound).toBe(2);
@@ -153,15 +153,15 @@ describe("searchPacking", () => {
 
 describe("searchPacking, the search for a better rangement", () => {
   /** A pinwheel: four 156 × 95 around a 56 × 56 fill 256 × 256 with 5 mm between them, no guillotine cut. */
-  const pinwheel = (copies: number): PackingItem[] => [...items(4 * copies, 156, 95, "all", "blade"), ...items(copies, 56, 56, "all", "hub")];
+  const pinwheel = (copies: number): PackingObject[] => [...boxes(4 * copies, 156, 95, "all", "blade"), ...boxes(copies, 56, 56, "all", "hub")];
   /** Bins of a basket whose bound the search does not reach in a few thousand nodes. */
   const hard: PackingProblem = {
-    items: [...items(40, 41.5, 83.5, "all", "a"), ...items(10, 125.5, 41.5, "all", "b"), ...items(3, 167.5, 83.5, "all", "c")],
+    objects: [...boxes(40, 41.5, 83.5, "all", "a"), ...boxes(10, 125.5, 41.5, "all", "b"), ...boxes(3, 167.5, 83.5, "all", "c")],
     plate: PLATE_256,
   };
 
   it("finds the plate MaxRects alone loses, and proves it the minimum", () => {
-    const problem: PackingProblem = { items: pinwheel(1), plate: PLATE_256 };
+    const problem: PackingProblem = { objects: pinwheel(1), plate: PLATE_256 };
     const found: number[] = [];
     const result = searchPacking(problem, { onImprove: ({ packing }) => found.push(packing.plates.length) });
     expect(found).toEqual([2, 1]);
@@ -171,9 +171,9 @@ describe("searchPacking, the search for a better rangement", () => {
 
   it("never announces the minimum above the bound", () => {
     for (const problem of [
-      { items: pinwheel(2), plate: PLATE_256 },
-      { items: items(25, 100, 100), plate: PLATE_256 },
-      { items: [...items(12, 100, 100, "all", "square"), ...items(6, 150, 60, "all", "long")], plate: PLATE_256 },
+      { objects: pinwheel(2), plate: PLATE_256 },
+      { objects: boxes(25, 100, 100), plate: PLATE_256 },
+      { objects: [...boxes(12, 100, 100, "all", "square"), ...boxes(6, 150, 60, "all", "long")], plate: PLATE_256 },
     ]) {
       const result = searchPacking(problem);
       expectRules(problem, result.packing);
@@ -182,7 +182,7 @@ describe("searchPacking, the search for a better rangement", () => {
       else expect(result.status).toBe("exhausted");
     }
     // 25 squares of 100 mm: four per plate at most, which the area alone does not tell.
-    expect(searchPacking({ items: items(25, 100, 100), plate: PLATE_256 })).toMatchObject({ bound: 5, status: "exhausted" });
+    expect(searchPacking({ objects: boxes(25, 100, 100), plate: PLATE_256 })).toMatchObject({ bound: 5, status: "exhausted" });
   });
 
   it("stops when asked, with the best rangement found", () => {
@@ -215,11 +215,11 @@ describe("plateKeyOf", () => {
     { id: "clips", category: "clips" },
   ];
   const problemOf = (mode: PackingMode): PackingProblem => ({
-    items: objects.map(({ id, category }) => ({ id, width: 60, depth: 60, key: plateKeyOf(mode, id, category) })),
+    objects: objects.map(({ id, category }) => ({ id, width: 60, depth: 60, key: plateKeyOf(mode, id, category) })),
     plate: PLATE_256,
   });
   const categoriesOf = (packing: Packing) =>
-    packing.plates.map((plate) => [...new Set(plate.items.map((item) => objects.find((o) => o.id === item.id)!.category))]);
+    packing.plates.map((plate) => [...new Set(plate.objects.map((placed) => objects.find((o) => o.id === placed.id)!.category))]);
 
   it("mixes every category in « moins de plateaux », the clips included", () => {
     const { packing } = searchPacking(problemOf("fewest-plates"));
@@ -235,7 +235,7 @@ describe("plateKeyOf", () => {
   it("lays one object per plate in « un objet par plateau », the clips on their own", () => {
     const problem = problemOf("one-per-plate");
     const result = searchPacking(problem);
-    expect(result.packing.plates.map((plate) => plate.items.map((item) => item.id))).toEqual(objects.map(({ id }) => [id]));
+    expect(result.packing.plates.map((plate) => plate.objects.map((placed) => placed.id))).toEqual(objects.map(({ id }) => [id]));
     expect(result.status).toBe("optimal");
     expectRules(problem, result.packing);
   });
@@ -244,11 +244,11 @@ describe("plateKeyOf", () => {
   it("never puts two layer heights on a plate, in any rangement", () => {
     for (const mode of ["fewest-plates", "by-category"] as const) {
       const problem: PackingProblem = {
-        items: objects.map(({ id, category }, k) => ({ id, width: 60, depth: 60, key: plateKeyOf(mode, id, category, k % 2 === 0 ? 0.2 : 0.12) })),
+        objects: objects.map(({ id, category }, k) => ({ id, width: 60, depth: 60, key: plateKeyOf(mode, id, category, k % 2 === 0 ? 0.2 : 0.12) })),
         plate: PLATE_256,
       };
       const { packing } = searchPacking(problem);
-      for (const plate of packing.plates) expect(new Set(plate.items.map((item) => objects.findIndex((o) => o.id === item.id) % 2)).size).toBe(1);
+      for (const plate of packing.plates) expect(new Set(plate.objects.map((placed) => objects.findIndex((o) => o.id === placed.id) % 2)).size).toBe(1);
     }
     expect(plateKeyOf("fewest-plates", "a", "bins", 0.2)).toBe(plateKeyOf("fewest-plates", "b", "baseplates", 0.2));
   });

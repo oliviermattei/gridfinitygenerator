@@ -10,7 +10,7 @@ export const PACKING_GAP_MM = 5;
 export const PACKING_TIME_LIMIT_MS = 60_000;
 
 /** One object to lay on a plate: its bounding box seen from above, in millimetres. */
-export interface PackingItem {
+export interface PackingObject {
   /** Unique in the problem: what the result names it by. */
   id: string;
   width: number;
@@ -24,7 +24,7 @@ export interface PackingItem {
 
 /** What to lay out: the objects, the plate, and the corner of the plate an object must stay out of. */
 export interface PackingProblem {
-  items: readonly PackingItem[];
+  objects: readonly PackingObject[];
   plate: BuildPlate;
   /**
    * Corner of the bed no object may enter when there is room to keep out of it, from the origin
@@ -37,7 +37,7 @@ export interface PackingProblem {
 }
 
 /** An object where it lies on its plate: its box from the origin of the plate (front left). */
-export interface PlacedItem {
+export interface PlacedObject {
   id: string;
   x: number;
   y: number;
@@ -51,7 +51,7 @@ export interface PlacedItem {
 /** One plate of the rangement: the key of its objects, and where each one lies. */
 export interface PackedPlate {
   key: string;
-  items: PlacedItem[];
+  objects: PlacedObject[];
 }
 
 export interface Packing {
@@ -264,22 +264,22 @@ function boundOf(pieces: readonly Piece[], width: number, depth: number): number
   return Math.max(1, byArea, large);
 }
 
-function groupsOf({ items, plate, gap = PACKING_GAP_MM }: PackingProblem): { groups: Group[]; unplaced: string[] } {
+function groupsOf({ objects, plate, gap = PACKING_GAP_MM }: PackingProblem): { groups: Group[]; unplaced: string[] } {
   const width = plate.width + gap;
   const depth = plate.depth + gap;
   const groups = new Map<string, Group>();
   const unplaced: string[] = [];
-  items.forEach((item, index) => {
+  objects.forEach((object, index) => {
     const fits = (w: number, h: number) => w <= plate.width + FIT_EPSILON_MM && h <= plate.depth + FIT_EPSILON_MM;
-    if (!fits(item.width, item.depth) && !fits(item.depth, item.width)) {
-      unplaced.push(item.id);
+    if (!fits(object.width, object.depth) && !fits(object.depth, object.width)) {
+      unplaced.push(object.id);
       return;
     }
-    const w = item.width + gap;
-    const h = item.depth + gap;
-    let group = groups.get(item.key);
-    if (!group) groups.set(item.key, (group = { key: item.key, pieces: [], width, depth, bound: 0 }));
-    group.pieces.push({ index, id: item.id, w, h, area: w * h });
+    const w = object.width + gap;
+    const h = object.depth + gap;
+    let group = groups.get(object.key);
+    if (!group) groups.set(object.key, (group = { key: object.key, pieces: [], width, depth, bound: 0 }));
+    group.pieces.push({ index, id: object.id, w, h, area: w * h });
   });
   for (const group of groups.values()) group.bound = boundOf(group.pieces, width, depth);
   return { groups: [...groups.values()], unplaced };
@@ -294,7 +294,7 @@ export function packingBound(problem: PackingProblem): number {
  * The objects of a sheet set on the plate: their content centred, then moved out of the excluded
  * corner beside it (along X, else along Y) when one of them enters it and there is room.
  */
-function settle(rects: readonly PlacedItem[], plate: BuildPlate, corner: { width: number; depth: number } | null): PlacedItem[] | null {
+function settle(rects: readonly PlacedObject[], plate: BuildPlate, corner: { width: number; depth: number } | null): PlacedObject[] | null {
   const minX = Math.min(...rects.map((r) => r.x));
   const minY = Math.min(...rects.map((r) => r.y));
   const sizeX = Math.max(...rects.map((r) => r.x + r.width)) - minX;
@@ -313,10 +313,10 @@ function settle(rects: readonly PlacedItem[], plate: BuildPlate, corner: { width
   return null;
 }
 
-function rectsOf(sheet: Sheet, items: readonly PackingItem[]): PlacedItem[] {
+function rectsOf(sheet: Sheet, objects: readonly PackingObject[]): PlacedObject[] {
   return sheet.placements.map(({ piece, x, y, turned }) => {
-    const item = items[piece.index]!;
-    return { id: item.id, x, y, width: turned ? item.depth : item.width, depth: turned ? item.width : item.depth, turned };
+    const object = objects[piece.index]!;
+    return { id: object.id, x, y, width: turned ? object.depth : object.width, depth: turned ? object.width : object.depth, turned };
   });
 }
 
@@ -325,11 +325,11 @@ function rectsOf(sheet: Sheet, items: readonly PackingItem[]): PlacedItem[] {
  * room; packed again around the corner when they fill the plate too much to keep out of it as
  * they are; centred in it otherwise.
  */
-function platePlacements(sheet: Sheet, problem: PackingProblem, group: Group): PlacedItem[] {
+function platePlacements(sheet: Sheet, problem: PackingProblem, group: Group): PlacedObject[] {
   const given = problem.excludedCorner;
   const corner =
     given && given.width > 0 && given.depth > 0 ? { width: given.width + EXCLUDED_CORNER_CLEARANCE_MM, depth: given.depth + EXCLUDED_CORNER_CLEARANCE_MM } : null;
-  const rects = rectsOf(sheet, problem.items);
+  const rects = rectsOf(sheet, problem.objects);
   const settled = settle(rects, problem.plate, corner);
   if (settled) return settled;
   const pieces = sheet.placements.map(({ piece }) => piece);
@@ -345,7 +345,7 @@ function platePlacements(sheet: Sheet, problem: PackingProblem, group: Group): P
         around = place(around, piece, candidate);
       }
       if (!around) continue;
-      const packed = rectsOf(around, problem.items);
+      const packed = rectsOf(around, problem.objects);
       return settle(packed, problem.plate, corner) ?? packed;
     }
   return settle(rects, problem.plate, null)!;
@@ -353,7 +353,7 @@ function platePlacements(sheet: Sheet, problem: PackingProblem, group: Group): P
 
 function packingOf(problem: PackingProblem, groups: readonly Group[], solutions: readonly Solution[], unplaced: string[]): Packing {
   const plates = groups.flatMap((group, index) =>
-    [...solutions[index]!].sort((a, b) => b.used - a.used).map((sheet) => ({ key: group.key, items: platePlacements(sheet, problem, group) })),
+    [...solutions[index]!].sort((a, b) => b.used - a.used).map((sheet) => ({ key: group.key, objects: platePlacements(sheet, problem, group) })),
   );
   return { plates, unplaced };
 }
@@ -457,7 +457,7 @@ export const PACKING_MODES = ["fewest-plates", "by-category", "one-per-plate"] a
 export type PackingMode = (typeof PACKING_MODES)[number];
 
 /**
- * The key of an object in a rangement (`PackingItem.key`): one for all in « moins de plateaux »,
+ * The key of an object in a rangement (`PackingObject.key`): one for all in « moins de plateaux »,
  * its category « par catégorie », its own in « un objet par plateau »; and, provisionally (#43),
  * its layer height, since a plate of a Bambu Studio project prints at one layer height: two
  * layer heights never share a plate. Without one, the key is the rangement's alone.

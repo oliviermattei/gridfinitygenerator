@@ -44,7 +44,7 @@ export function useBasketPacking(basket: BasketPacking | null, plate: BuildPlate
   const [state, setState] = useState<SearchState | null>(null);
 
   const problem = useMemo<PackingProblem | null>(
-    () => (basket && basket.items.length > 0 ? { items: basket.items, plate: { width: plate.width, depth: plate.depth }, excludedCorner } : null),
+    () => (basket && basket.objects.length > 0 ? { objects: basket.objects, plate: { width: plate.width, depth: plate.depth }, excludedCorner } : null),
     [basket, plate.width, plate.depth, excludedCorner],
   );
   const key = useMemo(() => (problem ? JSON.stringify(problem) : ""), [problem]);
@@ -180,8 +180,8 @@ export function BasketPackingSection({
               name={plateTitles[index] ?? ""}
               plate={plate}
               excludedCorner={excludedCorner}
-              labelOf={(id) => objectLabel(basket.objects.get(id)!, basket, nameOf, t)}
-              categoryOf={(id) => basket.objects.get(id)!.category}
+              labelOf={(id) => objectLabel(basket.byId.get(id)!, basket, nameOf, t)}
+              categoryOf={(id) => basket.byId.get(id)!.category}
             />
           ))}
         </ol>
@@ -209,25 +209,25 @@ function PlateView({
   const t = useStrings();
   const font = Math.max(plate.width, plate.depth) / 22;
   return (
-    <li data-testid="plate" aria-label={t.basket.packing.plateLabel(name, packed.items.length)}>
+    <li data-testid="plate" aria-label={t.basket.packing.plateLabel(name, packed.objects.length)}>
       <svg viewBox={`0 0 ${plate.width} ${plate.depth}`} className="block w-full rounded-[10px] border border-line bg-sunken" role="img" aria-hidden>
         {excludedCorner && (
           <rect x={0} y={plate.depth - excludedCorner.depth} width={excludedCorner.width} height={excludedCorner.depth} className="fill-line-strong">
             <title>{t.basket.packing.excludedCorner}</title>
           </rect>
         )}
-        {packed.items.map((item) => {
-          const label = labelOf(item.id);
-          const y = plate.depth - item.y - item.depth;
+        {packed.objects.map((placed) => {
+          const label = labelOf(placed.id);
+          const y = plate.depth - placed.y - placed.depth;
           // The name inside its object when it has room for a few letters.
-          const shown = item.width > font * 3 && item.depth > font * 1.4;
+          const shown = placed.width > font * 3 && placed.depth > font * 1.4;
           return (
-            <g key={item.id} data-testid="plate-object">
-              <rect x={item.x} y={y} width={item.width} height={item.depth} rx={Math.min(2, item.width / 4, item.depth / 4)} strokeWidth={1} className={FILLS[categoryOf(item.id)]}>
+            <g key={placed.id} data-testid="plate-object">
+              <rect x={placed.x} y={y} width={placed.width} height={placed.depth} rx={Math.min(2, placed.width / 4, placed.depth / 4)} strokeWidth={1} className={FILLS[categoryOf(placed.id)]}>
                 <title>{label}</title>
               </rect>
               {shown && (
-                <foreignObject x={item.x} y={y} width={item.width} height={item.depth} className="pointer-events-none">
+                <foreignObject x={placed.x} y={y} width={placed.width} height={placed.depth} className="pointer-events-none">
                   <div className="flex h-full w-full items-center justify-center overflow-hidden p-[2px] text-center leading-tight text-ink-soft" style={{ fontSize: font }}>
                     <span className="line-clamp-3 break-words">{label}</span>
                   </div>

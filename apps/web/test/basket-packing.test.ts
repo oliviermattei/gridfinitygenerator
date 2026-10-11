@@ -40,23 +40,23 @@ const names = new Map([
 ]);
 const nameOf = (id: string) => names.get(id) ?? "?";
 
-const pack = (basket: BasketPacking) => searchPacking({ items: basket.items, plate: PLATE }).packing;
+const pack = (basket: BasketPacking) => searchPacking({ objects: basket.objects, plate: PLATE }).packing;
 
 describe("the objects of the basket", () => {
   test("each exemplar of a bin, each piece of a baseplate, and one block of every clip", () => {
     const basket = basketPackingOf([bin, baseplate, clip], measureOf, "fewest-plates")!;
-    expect(basket.items.map((item) => item.id)).toEqual(["bin/1/0", "bin/2/0", "bin/3/0", "plate/1/0", "plate/1/1", "plate/1/2", "clips"]);
+    expect(basket.objects.map((object) => object.id)).toEqual(["bin/1/0", "bin/2/0", "bin/3/0", "plate/1/0", "plate/1/1", "plate/1/2", "clips"]);
     // 4 clips of the baseplate and 2 alone: 6 in one block, 3 × 2.
-    const block = basket.items.at(-1)!;
+    const block = basket.objects.at(-1)!;
     expect(block.width).toBeCloseTo(3 * 2.5 + 2 * 3, 9);
     expect(block.depth).toBeCloseTo(2 * 2.6 + 3, 9);
     expect(basket.clipBlocks.get("clips")!.clips.map((c) => c.id)).toEqual(["plate", "plate", "plate", "plate", "clip", "clip"]);
-    expect(basket.objects.get("plate/1/1")).toMatchObject({ articleId: "plate", exemplar: 1, category: "baseplates", part: { numbers: [2] } });
+    expect(basket.byId.get("plate/1/1")).toMatchObject({ articleId: "plate", exemplar: 1, category: "baseplates", part: { numbers: [2] } });
   });
 
   test("an article that does not fit, or whose computation failed, is left out", () => {
     const basket = basketPackingOf([bin, big, { ...baseplate, id: "broken" }], (a) => (a.id === "broken" ? "failed" : measureOf(a)), "fewest-plates")!;
-    expect(basket.items.map((item) => item.id)).toEqual(["bin/1/0", "bin/2/0", "bin/3/0"]);
+    expect(basket.objects.map((object) => object.id)).toEqual(["bin/1/0", "bin/2/0", "bin/3/0"]);
   });
 
   test("nothing to lay out until every article is measured", () => {
@@ -64,7 +64,7 @@ describe("the objects of the basket", () => {
   });
 
   test("the rangement decides which objects may share a plate", () => {
-    const keys = (mode: Parameters<typeof basketPackingOf>[2]) => new Set(basketPackingOf([bin, baseplate, clip], measureOf, mode)!.items.map((item) => item.key)).size;
+    const keys = (mode: Parameters<typeof basketPackingOf>[2]) => new Set(basketPackingOf([bin, baseplate, clip], measureOf, mode)!.objects.map((object) => object.key)).size;
     expect(keys("fewest-plates")).toBe(1);
     expect(keys("by-category")).toBe(3);
     expect(keys("one-per-plate")).toBe(7);
@@ -76,11 +76,11 @@ describe("the objects of the basket", () => {
     const fineClip: Article = { id: "fineClip", model: "clip", link: "v=1&lh=0.12", quantity: 1 };
     const measures = new Map(MEASURES).set("fine", MEASURES.get("bin")!).set("fineClip", MEASURES.get("clip")!);
     const basket = basketPackingOf([bin, fine, baseplate, fineClip], (a) => measures.get(a.id), "fewest-plates")!;
-    const keyOf = (id: string) => basket.items.find((item) => item.id === id)!.key;
+    const keyOf = (id: string) => basket.objects.find((object) => object.id === id)!.key;
     expect(keyOf("fine/1/0")).not.toBe(keyOf("bin/1/0"));
     expect(keyOf("plate/1/0")).toBe(keyOf("bin/1/0"));
     // The clips of the baseplate at 0.2 mm, the clip alone at 0.12 mm: two blocks.
-    expect(basket.items.filter((item) => basket.objects.get(item.id)!.category === "clips").map((item) => item.id)).toEqual(["clips", "clips-2"]);
+    expect(basket.objects.filter((object) => basket.byId.get(object.id)!.category === "clips").map((object) => object.id)).toEqual(["clips", "clips-2"]);
     expect(basket.clipBlocks.get("clips")!.clips.map((c) => c.id)).toEqual(["plate", "plate", "plate", "plate"]);
     expect(basket.clipBlocks.get("clips-2")!.clips.map((c) => c.id)).toEqual(["fineClip"]);
     expect(keyOf("clips-2")).toBe(keyOf("fine/1/0"));
@@ -130,6 +130,6 @@ describe("names of the plates and of their objects", () => {
 
   test("an object is named after its article, its piece or its stack", () => {
     const stacked = basketPackingOf([{ ...baseplate, quantity: 2 }], () => measure([part("stack", [1, 2, 3], 210, 110)]), "fewest-plates")!;
-    expect(objectLabel(stacked.objects.get("plate/2/0")!, stacked, nameOf, t)).toBe("Baseplate 562 × 470 — pile des pièces 1-3 (2)");
+    expect(objectLabel(stacked.byId.get("plate/2/0")!, stacked, nameOf, t)).toBe("Baseplate 562 × 470 — pile des pièces 1-3 (2)");
   });
 });

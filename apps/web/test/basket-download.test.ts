@@ -36,7 +36,7 @@ beforeAll(async () => {
   measures = new Map();
   for (const article of articles) measures.set(article.id, await measureArticle(article, PLATE));
   basket = basketPackingOf(articles, (article) => measures.get(article.id), "fewest-plates")!;
-  plates = searchPacking({ items: basket.items, plate: PLATE, excludedCorner: { width: 18, depth: 28 } }).packing.plates;
+  plates = searchPacking({ objects: basket.objects, plate: PLATE, excludedCorner: { width: 18, depth: 28 } }).packing.plates;
   plan = basketDownloadPlan(articles, basket, plates, "fewest-plates", { nameOf, linkOf, t, basketLink: `${ORIGIN}/fr/panier?p=1.x` });
 }, 120_000);
 
@@ -85,7 +85,7 @@ function bambuPlatesOf(config: string): { name: string; objects: number[] }[] {
 
 /** The boxes the rangement gives the objects of a plate, as the file should lay them: the clips by article. */
 function expectedBoxes(plate: PackedPlate) {
-  return plate.items.map(({ x, y, width, depth }) => ({ x, y, width, depth }));
+  return plate.objects.map(({ x, y, width, depth }) => ({ x, y, width, depth }));
 }
 
 describe("the Bambu Studio project of a mixed basket", { timeout: 120_000 }, () => {
@@ -107,7 +107,7 @@ describe("the Bambu Studio project of a mixed basket", { timeout: 120_000 }, () 
   test("one plate per plate of the rangement, named as on the page", () => {
     const read = bambuPlatesOf(strFromU8(files["Metadata/model_settings.config"]!));
     expect(read.map((plate) => plate.name)).toEqual(plates.map((_, k) => `Plateau ${k + 1}`));
-    expect(read.map((plate) => plate.objects.length)).toEqual(plates.map((plate) => plate.items.length));
+    expect(read.map((plate) => plate.objects.length)).toEqual(plates.map((plate) => plate.objects.length));
     expect(name).toBe(`panier-${plates.length}-plateaux`);
     expect(extension).toBe("3mf");
   });
@@ -122,7 +122,7 @@ describe("the Bambu Studio project of a mixed basket", { timeout: 120_000 }, () 
         expect(z).toBeCloseTo(0, 4);
         return { x: x - origin[0]!, y: y - origin[1]!, width, depth };
       });
-      // One object per item of the rangement, in its box: here the block holds the clips of one article.
+      // One object of the file per object of the rangement, in its box: here the block holds the clips of one article.
       onPlate.forEach((box, k) => {
         const expected = expectedBoxes(plate)[k]!;
         for (const key of ["x", "y", "width", "depth"] as const) expect(box[key]).toBeCloseTo(expected[key], 3);
@@ -219,7 +219,7 @@ describe("the plan of the download", () => {
     const one: Article = { id: "one", model: "bin", link: "v=1", quantity: 1 };
     const measure = await measureArticle(one, PLATE);
     const single = basketPackingOf([one], () => measure, "fewest-plates")!;
-    const turned: PackedPlate[] = [{ key: "plate", items: [{ id: "one/1/0", x: 100, y: 50, width: measure.dimensions.depth, depth: measure.dimensions.width, turned: true }] }];
+    const turned: PackedPlate[] = [{ key: "plate", objects: [{ id: "one/1/0", x: 100, y: 50, width: measure.dimensions.depth, depth: measure.dimensions.width, turned: true }] }];
     const file = await writeBasketDownload(
       basketDownloadPlan([one], single, turned, "fewest-plates", { nameOf, linkOf, t, basketLink: "" }),
       { buildPlate: PLATE, stack: null, format: "3mf", bambu: null },
@@ -240,7 +240,7 @@ describe("the plan of the download", () => {
     const known = new Map<string, ArticleMeasure>();
     for (const article of both) known.set(article.id, await measureArticle(article, PLATE));
     const mixed = basketPackingOf(both, (article) => known.get(article.id), "fewest-plates")!;
-    const packed = searchPacking({ items: mixed.items, plate: PLATE }).packing.plates;
+    const packed = searchPacking({ objects: mixed.objects, plate: PLATE }).packing.plates;
     expect(packed).toHaveLength(2);
     const names = (id: string) => (id === "fine" ? "Bin fin" : "Bin");
     const file = await writeBasketDownload(

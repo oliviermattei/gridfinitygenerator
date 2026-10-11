@@ -1,4 +1,4 @@
-import { clipBlockOf, plateKeyOf, type ClipBlock, type PackedPlate, type PackingItem, type PackingMode } from "@repo/geometry";
+import { clipBlockOf, plateKeyOf, type ClipBlock, type PackedPlate, type PackingObject, type PackingMode } from "@repo/geometry";
 import { articleLayerHeight, categoryOf, type Article, type Category } from "./basket";
 import type { ArticleMeasure, ArticlePart } from "./engine/article-measure";
 import type { BasketDownloadPlan, DownloadObject } from "./engine/basket-download";
@@ -32,8 +32,9 @@ export interface BasketObject {
 
 export interface BasketPacking {
   /** The objects as the rangement takes them, their keys those of the mode (`plateKeyOf`). */
-  items: PackingItem[];
-  objects: ReadonlyMap<string, BasketObject>;
+  objects: PackingObject[];
+  /** What each object comes from, by its id. */
+  byId: ReadonlyMap<string, BasketObject>;
   /** Each block of clips by its id: where each clip lies in it, with the article it comes from. */
   clipBlocks: ReadonlyMap<string, ClipBlock>;
   /** Quantity of each article laid out, to tell its exemplars apart. */
@@ -46,8 +47,8 @@ export interface BasketPacking {
  * computation failed, is left out, as it is of the download.
  */
 export function basketPackingOf(articles: readonly Article[], measureOf: (article: Article) => ArticleMeasure | "failed" | undefined, mode: PackingMode): BasketPacking | null {
-  const items: PackingItem[] = [];
-  const objects = new Map<string, BasketObject>();
+  const objects: PackingObject[] = [];
+  const byId = new Map<string, BasketObject>();
   const quantities = new Map<string, number>();
   // The clips of each layer height (provisional, #43: a plate prints at one), in the basket's order.
   const clips = new Map<number, { id: string; width: number; depth: number; count: number }[]>();
@@ -61,8 +62,8 @@ export function basketPackingOf(articles: readonly Article[], measureOf: (articl
     for (let exemplar = 1; exemplar <= article.quantity; exemplar++)
       measure.parts.forEach((part, index) => {
         const id = `${article.id}/${exemplar}/${index}`;
-        objects.set(id, { id, category, articleId: article.id, exemplar, part, index });
-        items.push({ id, width: part.width, depth: part.depth, key: plateKeyOf(mode, id, category, layer) });
+        byId.set(id, { id, category, articleId: article.id, exemplar, part, index });
+        objects.push({ id, width: part.width, depth: part.depth, key: plateKeyOf(mode, id, category, layer) });
       });
     if (measure.clips) clips.set(layer, [...(clips.get(layer) ?? []), { id: article.id, width: measure.clips.width, depth: measure.clips.depth, count: measure.clips.count * article.quantity }]);
   }
@@ -72,10 +73,10 @@ export function basketPackingOf(articles: readonly Article[], measureOf: (articl
     if (!block) continue;
     const id = clipBlocks.size === 0 ? CLIP_BLOCK_ID : `${CLIP_BLOCK_ID}-${clipBlocks.size + 1}`;
     clipBlocks.set(id, block);
-    objects.set(id, { id, category: "clips", articleId: null, exemplar: 1, part: null, index: 0 });
-    items.push({ id, width: block.width, depth: block.depth, key: plateKeyOf(mode, id, "clips", layer) });
+    byId.set(id, { id, category: "clips", articleId: null, exemplar: 1, part: null, index: 0 });
+    objects.push({ id, width: block.width, depth: block.depth, key: plateKeyOf(mode, id, "clips", layer) });
   }
-  return { items, objects, clipBlocks, quantities };
+  return { objects, byId, clipBlocks, quantities };
 }
 
 /** Piece numbers as runs: 1-4, or 1, 3. */
@@ -120,7 +121,7 @@ export function plateNames(plates: readonly PackedPlate[], mode: PackingMode, ba
   const names = t.basket.packing;
   const counts = new Map<Category, number>();
   return plates.map((plate, index) => {
-    const objects = plate.items.map((item) => basket.objects.get(item.id)!);
+    const objects = plate.objects.map((placed) => basket.byId.get(placed.id)!);
     if (mode === "fewest-plates") return names.plate(index + 1);
     if (mode === "one-per-plate") return objectLabel(objects[0]!, basket, nameOf, t);
     const category = objects[0]!.category;
@@ -152,16 +153,16 @@ export function basketDownloadPlan(
   const byId = new Map(articles.map((article) => [article.id, article]));
   const used = new Set<string>();
   const titles = plateNames(plates, mode, basket, nameOf, t);
-  const objectsOf = (item: PackedPlate["items"][number]): DownloadObject[] => {
-    const object = basket.objects.get(item.id)!;
-    const place = { x: item.x, y: item.y, turned: item.turned };
+  const objectsOf = (placed: PackedPlate["objects"][number]): DownloadObject[] => {
+    const object = basket.byId.get(placed.id)!;
+    const place = { x: placed.x, y: placed.y, turned: placed.turned };
     if (object.articleId !== null && object.part !== null) {
       used.add(object.articleId);
       const description = linkOf(byId.get(object.articleId)!);
       return [{ name: objectLabel(object, basket, nameOf, t), description, articleId: object.articleId, source: { kind: "part", index: object.index }, ...place, frame: null }];
     }
     // The clips of each article apart, each object in the frame of the block.
-    const block = basket.clipBlocks.get(item.id)!;
+    const block = basket.clipBlocks.get(placed.id)!;
     const sources = new Map<string, { x: number; y: number }[]>();
     for (const { id, x, y } of block.clips) sources.set(id, [...(sources.get(id) ?? []), { x, y }]);
     return [...sources].map(([articleId, at]) => {
@@ -176,6 +177,6 @@ export function basketDownloadPlan(
       };
     });
   };
-  const planPlates = plates.map((plate, index) => ({ name: titles[index]!, objects: plate.items.flatMap(objectsOf) }));
+  const planPlates = plates.map((plate, index) => ({ name: titles[index]!, objects: plate.objects.flatMap(objectsOf) }));
   return { articles: articles.filter((article) => used.has(article.id)).map(({ id, model, link }) => ({ id, model, link })), plates: planPlates, link: basketLink };
 }
