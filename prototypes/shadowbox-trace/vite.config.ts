@@ -2,7 +2,8 @@
 // et public/models (SlimSAM), déposés par `pnpm assets`.
 export default {
   optimizeDeps: { exclude: ["manifold-3d", "@huggingface/transformers"] },
-  server: { port: 5179 },
+  // Page isolée (COOP/COEP) : sans elle, pas de SharedArrayBuffer, donc le WASM d'ORT sur un seul fil.
+  server: { port: 5179, headers: { "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Embedder-Policy": "require-corp" } },
   build: { target: "es2022" },
   test: { include: ["bench.test.ts"], testTimeout: 600_000 },
 };

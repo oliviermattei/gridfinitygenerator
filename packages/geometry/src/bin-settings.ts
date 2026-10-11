@@ -14,6 +14,16 @@ export type StackingLip = "normal" | "reduced" | "none";
 
 export const STACKING_LIPS: readonly StackingLip[] = ["normal", "reduced", "none"];
 
+/** A side of a compartment, seen from above: the front is towards the user (−Y). */
+export type BinSide = "front" | "back" | "left" | "right";
+
+export const BIN_SIDES: readonly BinSide[] = ["front", "back", "left", "right"];
+
+/** The side across a compartment from `side`. */
+export function oppositeSide(side: BinSide): BinSide {
+  return ({ front: "back", back: "front", left: "right", right: "left" } as const)[side];
+}
+
 export interface BinSettings {
   /** Size of the bin in cells, along X (width) and Y (depth). */
   columns: number;
@@ -26,10 +36,16 @@ export interface BinSettings {
   lip: StackingLip;
   /** Fillet between the inner floor and the walls, and in the vertical corners (congé). */
   fillet: boolean;
-  /** Scoop against the front wall of each row of compartments (pelle). */
+  /** Scoop at the bottom of each compartment (pelle), against `scoopSide`. */
   scoop: boolean;
-  /** Label tab against the back wall of each row of compartments (onglet d'étiquette). */
+  /** Side of the scoop, the same for every compartment; front by default. */
+  scoopSide: BinSide;
+  /** Label tab at the top of each compartment (onglet d'étiquette), across from the scoop. */
   labelTab: boolean;
+  /** Side of the label tab without a scoop; with one, the tab always takes the opposite side. */
+  labelSide: BinSide;
+  /** Depth of the label tab from its wall, in millimetres: the height of the label stuck on it. */
+  labelDepth: number;
   /** Pitch of the grid the bin sits on, in millimetres; 42 in the standard. */
   cellSize: number;
   /** Print settings the walls follow (shared with the baseplate). */
@@ -50,7 +66,10 @@ export const BIN_SETTINGS = {
   lip: { options: STACKING_LIPS, default: "normal" } as ChoiceSetting<StackingLip>,
   fillet: { default: true } as FlagSetting,
   scoop: { default: false } as FlagSetting,
+  scoopSide: { options: BIN_SIDES, default: "front" } as ChoiceSetting<BinSide>,
   labelTab: { default: false } as FlagSetting,
+  labelSide: { options: BIN_SIDES, default: "back" } as ChoiceSetting<BinSide>,
+  labelDepth: { min: 6, max: 20, default: 12, integer: false },
   cellSize: { min: 20, max: 80, default: STANDARD_CELL_SIZE_MM, integer: false },
   layerHeight: { min: 0.12, max: 0.28, default: 0.2, integer: false },
   lineWidth: { min: 0.1, max: 1.2, default: 0.4, integer: false },
@@ -83,4 +102,9 @@ export function clampBinSettings(settings: Partial<BinSettings>): BinSettings {
   result.compartmentColumns = Math.min(result.compartmentColumns, result.columns * MAX_COMPARTMENTS_PER_CELL);
   result.compartmentRows = Math.min(result.compartmentRows, result.rows * MAX_COMPARTMENTS_PER_CELL);
   return result;
+}
+
+/** The side of the label tab of a bin: across from its scoop when it has one, its own side otherwise. */
+export function labelSideOf(settings: Pick<BinSettings, "scoop" | "scoopSide" | "labelSide">): BinSide {
+  return settings.scoop ? oppositeSide(settings.scoopSide) : settings.labelSide;
 }

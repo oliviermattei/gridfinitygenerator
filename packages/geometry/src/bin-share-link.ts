@@ -12,7 +12,8 @@ const BIN_LINK_VERSION = 1;
 
 /**
  * Every setting a v1 bin link carries, by its link key, with its v1 range and default:
- * frozen. A change of default or range makes a new version with its own table.
+ * frozen. A change of default or range makes a new version with its own table; a new
+ * setting may join it, with the default that keeps the links written before it.
  */
 const V1 = {
   /** Size in cells, height in U. */
@@ -28,6 +29,10 @@ const V1 = {
   fi: flag(true),
   sc: flag(false),
   lt: flag(false),
+  /** Side of the scoop, side of the label tab without a scoop, and depth of the label tab (mm). */
+  ss: choice(["front", "back", "left", "right"], "front"),
+  ls: choice(["front", "back", "left", "right"], "back"),
+  ld: number(6, 20, 12),
   /** Advanced: cell size, in millimetres. */
   cs: number(20, 80, 42),
   /** Print: layer height and line width, in millimetres. */
@@ -51,6 +56,9 @@ const LINK_KEYS = {
   fillet: "fi",
   scoop: "sc",
   labelTab: "lt",
+  scoopSide: "ss",
+  labelSide: "ls",
+  labelDepth: "ld",
   cellSize: "cs",
   layerHeight: "lh",
   lineWidth: "lw",

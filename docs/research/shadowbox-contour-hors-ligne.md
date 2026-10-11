@@ -24,6 +24,7 @@
 | H2 | `preprocessor_config.json` de `Xenova/slimsam-77-uniform` et de `onnx-community/sam2.1-hiera-tiny-ONNX` | taille d'entrée du modèle |
 | L1 | Fichiers `LICENSE` sur la branche par défaut, lus le 2026-09-30 | `facebookresearch/segment-anything`, `facebookresearch/sam2`, `facebookresearch/sam3`, `czg1225/SlimSAM`, `ChaoningZhang/MobileSAM`, `yformer/EfficientSAM`, `xuebinqin/DIS` (+ `README.md` l. 170), `xuebinqin/U-2-Net`, `ZhengPeng7/BiRefNet`, `danielgatis/rembg` |
 | L2 | `facebookresearch/segment-anything`, `segment_anything/modeling/sam.py` l. 94 | « shape BxCxHxW, where H=W=256 » (masques basse résolution) |
+| L3 | Licence des poids d'IS-Net, lu le 2026-10-02 | `xuebinqin/DIS` : `README.md` l. 28, 33, 145 et 170, `DIS5K-Dataset-Terms-of-Use.pdf`, issue #150 ; `danielgatis/rembg` issue #837 ; fiches, historique et empreintes LFS de `onnx-community/ISNet-ONNX` (révision `3fe6e3db`) et de `imgly/isnet-general-onnx` (révision `440dea96`) ; licence du dépôt `imgly/background-removal-js` |
 | R1 | `danielgatis/rembg`, `rembg/sessions/{dis_general_use,birefnet_general,u2netp}.py` | taille d'entrée des modèles utilisés par Tracefinity |
 | X1 | `@huggingface/transformers@4.3.0` (npm, publié le 2026-09-16) : `README.md`, `package.json`, `dist/transformers.web.js` | `env` l. 132-146 ; chemins WASM l. 8731-8741 ; `post_process_masks` l. 17346-17374 |
 | X2 | `onnxruntime-web@1.30.0` (npm, publié le 2026-09-14) : `README.md` (tableau de compatibilité), `package.json` (`exports`), `dist/*.wasm` | |
@@ -145,12 +146,27 @@ Tailles lues dans les dépôts Hugging Face (H1), en Mo décimaux. « Encodeur �
 | MobileSAM | Apache-2.0 (`ChaoningZhang/MobileSAM`) | aucun dépôt transformers.js ; dépôts ONNX communautaires sans garantie ; le script officiel `export_onnx_model.py` exporte le décodeur SAM | — | — | — | [V] licence ; export [I] |
 | EfficientSAM | Apache-2.0 (`yformer/EfficientSAM`) | ONNX dans le Space `yunyangx/EfficientSAM` : Ti = 24,8 + 16,6 = 41,4 ; S = 89,6 + 16,6 = 106,2 ; pas de dépôt transformers.js | 41,4 (Ti) | — | — | [V] |
 | U²-Net / U²-Netp (saillance, pas de clic) | Apache-2.0 (`xuebinqin/U-2-Net`) | via `rembg` (entrée 320 × 320) | — | — | — | [V] L1, R1 |
-| IS-Net `isnet-general-use` (saillance) | code Apache-2.0 (`xuebinqin/DIS`), mais « Terms of use for our DIS5K dataset » à part (`README.md` l. 170) ; `onnx-community/ISNet-ONNX` étiqueté **AGPL-3.0**, `imgly/isnet-general-onnx` étiqueté MIT | `onnx-community/ISNet-ONNX` (transformers.js, pipeline `background-removal`) | 176,1 | 88,1 | 44,3 | [V] ; licence **ambiguë** |
+| IS-Net `isnet-general-use` (saillance) | code Apache-2.0 (`xuebinqin/DIS`), mais « Terms of use for our DIS5K dataset » à part (`README.md` l. 170) ; `onnx-community/ISNet-ONNX` étiqueté **AGPL-3.0**, `imgly/isnet-general-onnx` étiqueté MIT | `onnx-community/ISNet-ONNX` (transformers.js, pipeline `background-removal`) | 176,1 | 88,1 | 44,3 | [V] ; **poids sans licence de leurs auteurs**, voir plus bas |
 | BiRefNet Lite (saillance) | MIT (`ZhengPeng7/BiRefNet` ; fiche `license: mit`) | `onnx-community/BiRefNet_lite-ONNX` | 224,0 | 114,5 | — | [V] |
 | RMBG-1.4 (BRIA) | `bria-rmbg-1.4` : « available as a source-available model for non-commercial use » | `briaai/RMBG-1.4` | 176,2 | 88,2 | 44,4 | [V] ; **exclu** (non commercial) |
 | RMBG-2.0 (BRIA) | `bria-rmbg-2.0` → **CC BY-NC 4.0**, accès contrôlé : « open source for non commercial use only » | `briaai/RMBG-2.0` | 1 024,3 | 513,6 | q4f16 : 233,8 | [V] ; **exclu** |
 
 Les modèles de **saillance** (U²-Net, IS-Net, BiRefNet, RMBG) détourent « l'objet le plus saillant » sans clic : Tracefinity doit recadrer sur la feuille pour que ce ne soit pas la feuille elle-même [V T1]. Les modèles **SAM** détourent ce qu'on désigne par un clic, ce qui colle à l'UX « cliquer sur chaque outil » [V T3, T4].
+
+**Licence des poids d'IS-Net (L3, 2026-10-02) : aucune source ne la donne.**
+
+| Point | Constat | Statut |
+|---|---|---|
+| Ce que les auteurs licencient | « Our code and evaluation metric use Apache License 2.0 » : le code et la métrique, pas les poids | [V] `xuebinqin/DIS` `README.md` l. 170 |
+| Les poids `isnet-general-use.pth` | publiés sur Google Drive et Baidu Pan, sans licence jointe ; « for general use, this is NOT DIS V2.0 » ; leurs données d'entraînement ne sont pas dites | [V] `README.md` l. 28, 33, 145 |
+| Le jeu DIS5K | « available for non-commercial use in research or educational purpose » ; usage commercial interdit sans l'accord des auteurs | [V] `DIS5K-Dataset-Terms-of-Use.pdf`, art. 2 |
+| Question posée aux auteurs | issue #150 du 2026-08-20, « Commercial use permission request — isnet-general-use model weights », relancée le 2026-09-12 : **sans réponse** | [V] `xuebinqin/DIS` #150 |
+| rembg | « rembg's MIT license covers the source code in this repository only. It does not cover the model files. I am not the rightsholder » ; pour IS-Net il renvoie à `xuebinqin/DIS` | [V] `danielgatis/rembg` #837, réponse du mainteneur le 2026-08-03 |
+| `onnx-community/ISNet-ONNX` (celui du prototype) | étiqueté AGPL-3.0 depuis sa première fiche (2025-03-07), sans explication ni discussion ; le dépôt n'est pas celui des auteurs | [V] historique du dépôt |
+| `imgly/isnet-general-onnx` | étiqueté MIT, sans explication ; un autre export (empreintes différentes de celles d'`onnx-community`) ; la bibliothèque `imgly/background-removal-js` est, elle, AGPL-3.0 | [V] fiches et empreintes LFS |
+| D'où vient l'étiquette AGPL-3.0 | de la licence de la bibliothèque d'imgly | [I] |
+
+Les deux étiquettes (AGPL-3.0, MIT) se contredisent et viennent de tiers qui ne sont pas les ayants droit. En l'état, embarquer ces poids dans le site, qui devrait les servir depuis sa propre origine, n'a pas de base de licence établie.
 
 Temps d'inférence : aucun chiffre **navigateur** de première main n'a été trouvé pour ces modèles. Chiffres publiés par les auteurs, hors navigateur : MobileSAM « around 12ms per image: 8ms on the image encoder and 4ms on the mask decoder » sur un GPU [V `MobileSAM/README.md` l. 36] ; `gridfinity-tracer`, SAM 2.1 tiny en ONNX CPU sur Apple M5 : ~1 s d'encodage, ~50 ms par clic [V T4]. `tooltrace-designer` parle de « a few seconds of compute per image » pour SlimSAM dans le navigateur [V T3, valeur I]. **À mesurer dans le prototype.**
 

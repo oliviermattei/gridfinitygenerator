@@ -15,7 +15,15 @@ import {
   type WebGLRenderer,
 } from "three";
 import { Framing, type ViewInsets } from "./framing";
+import { creasedNormals } from "./normals";
 import { Backdrop, BasicLights, ClearForContactShadows, Floor, StudioLights, type StageColors } from "./studio";
+
+/**
+ * Facets meeting at less than this angle are shaded as one smooth surface: the steps of a
+ * fillet (about 11°) and the segments of a rounded corner (under 3°) are, the 45° slopes of a
+ * pocket against its flat, and every right angle, stay sharp.
+ */
+const CREASE_DEGREES = 30;
 
 /**
  * Indexed triangle mesh to display, in millimetres, Z up. Structurally the same as the
@@ -96,9 +104,11 @@ export function MeshPreview({ mesh, color, insets, recenter = 0, className, fall
 
   const geometry = useMemo(() => {
     if (!mesh) return null;
+    // Smooth across the facets of the fillets and the rounded corners, sharp across real edges.
+    const { positions, normals } = creasedNormals(mesh.positions, mesh.indices, CREASE_DEGREES);
     const next = new BufferGeometry();
-    next.setAttribute("position", new BufferAttribute(mesh.positions, 3));
-    next.setIndex(new BufferAttribute(mesh.indices, 1));
+    next.setAttribute("position", new BufferAttribute(positions, 3));
+    next.setAttribute("normal", new BufferAttribute(normals, 3));
     next.computeBoundingBox();
     return next;
   }, [mesh]);
@@ -195,9 +205,8 @@ function Model({ geometry, color, studio }: { geometry: BufferGeometry; color: s
             metalness: 0,
             clearcoat: 0.2,
             clearcoatRoughness: 0.42,
-            flatShading: true,
           })
-        : new MeshStandardMaterial({ roughness: 0.55, metalness: 0, flatShading: true }),
+        : new MeshStandardMaterial({ roughness: 0.55, metalness: 0 }),
     [studio],
   );
   useEffect(() => () => plastic.dispose(), [plastic]);

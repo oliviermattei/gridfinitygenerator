@@ -8,7 +8,9 @@ import {
   encodeBinSettings,
   generateBin,
   maxBinCells,
+  labelSideOf,
   openingBinSettings,
+  oppositeSide,
   type TriangleMesh,
 } from "../src/index";
 import { checkMesh } from "./support/measure";
@@ -183,5 +185,46 @@ describe("the share link of a bin", () => {
     expect(decodeBinSettings("v=1&x=99&h=abc&lip=wide")).toEqual({ ...DEFAULT_BIN_SETTINGS, columns: 20 });
     expect(decodeBinSettings("x=3")).toBeNull();
     expect(openingBinSettings("", "v=1&x=4")).toEqual({ ...DEFAULT_BIN_SETTINGS, columns: 4 });
+  });
+});
+
+describe("the scoop and the label tab (grilling of the finishes)", () => {
+  it.each(["front", "back", "left", "right"] as const)("the scoop on the %s side, the label tab across from it, both valid solids", async (scoopSide) => {
+    const bin = await generateBin({ columns: 2, rows: 2, units: 4, compartmentColumns: 2, compartmentRows: 2, scoop: true, scoopSide, labelTab: true, labelSide: scoopSide }, "final");
+    expect(bin.layout.scoopSide).toBe(scoopSide);
+    expect(bin.layout.labelSide).toBe(oppositeSide(scoopSide));
+    expect((await checkMesh(bin.mesh)).status).toBe("NoError");
+  });
+
+  it("without a scoop, the label tab takes its own side", () => {
+    expect(labelSideOf({ scoop: false, scoopSide: "front", labelSide: "left" })).toBe("left");
+    expect(labelSideOf({ scoop: true, scoopSide: "left", labelSide: "left" })).toBe("right");
+  });
+
+  it("the scoop rises from the floor on its side, and turns into its two corners", async () => {
+    const bin = await generateBin({ columns: 1, rows: 1, units: 4, scoop: true, scoopSide: "front" }, "final");
+    const { floor, scoop, fillet } = bin.layout;
+    expect(scoop).toBe(12);
+    // 2 mm above the floor, the inside sets in by the arc of the scoop at the front, of the fillet at the back.
+    const z = floor + 2;
+    const check = await checkMesh(bin.mesh, [z]);
+    const inner = (check.sections.get(z) ?? []).reduce((a, b) => (Math.max(...a.map(([x]) => x)) - Math.min(...a.map(([x]) => x)) < Math.max(...b.map(([x]) => x)) - Math.min(...b.map(([x]) => x)) ? a : b));
+    const ys = inner.map(([, y]) => y);
+    const arc = (r: number, h: number) => r - Math.sqrt(r * r - (r - h) * (r - h));
+    const half = 41.5 / 2 - bin.layout.wall;
+    expectWithin(Math.min(...ys), -half + arc(scoop, 2), 0.05);
+    expectWithin(Math.max(...ys), half - arc(fillet, 2), 0.05);
+  });
+
+  it("the label tab is as deep as asked, and costs a console per cell", async () => {
+    const settings = { columns: 3, rows: 1, units: 4, labelTab: true } as const;
+    const deep = await generateBin({ ...settings, labelDepth: 16 }, "final");
+    expect(deep.layout.labelTab).toBe(16);
+    const plain = await generateBin({ ...settings, labelTab: false }, "final");
+    const tab = (deep.stats.volume as number) - (plain.stats.volume as number);
+    // A ribbed shelf, far from a solid wedge (16² / 2 × 123 mm ≈ 15.7 cm³).
+    expect(tab).toBeGreaterThan(1000);
+    expect(tab).toBeLessThan(5000);
+    expect(encodeBinSettings(clampBinSettings({ ...settings, labelDepth: 16, scoop: true, scoopSide: "left" }))).toBe("v=1&x=3&h=4&sc=1&lt=1&ss=left&ld=16");
   });
 });

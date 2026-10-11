@@ -4,8 +4,10 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("../public/", import.meta.url).pathname;
+// fileURLToPath, pas .pathname : sous Windows ce dernier donne "/E:/…", que join change en "E:\E:\…".
+const root = fileURLToPath(new URL("../public/", import.meta.url));
 
 async function download(url, to) {
   if (existsSync(to)) return console.log(`déjà là  ${to}`);
@@ -20,15 +22,18 @@ await download("https://docs.opencv.org/4.13.0/opencv.js", join(root, "vendor/op
 // Le banc le charge sous Node avec require : script CommonJS dans un paquet "type": "module".
 writeFileSync(join(root, "vendor/package.json"), '{ "type": "commonjs" }\n');
 
-const MODEL = "Xenova/slimsam-77-uniform";
-const REVISION = "5850ab4"; // sha lu dans la note de recherche (H1)
-const files = [
-  "config.json",
-  "preprocessor_config.json",
-  ...["vision_encoder", "prompt_encoder_mask_decoder"].flatMap((name) => ["", "_fp16", "_quantized"].map((suffix) => `onnx/${name}${suffix}.onnx`)),
+const variants = (names, suffixes) => names.flatMap((name) => suffixes.map((suffix) => `onnx/${name}${suffix}.onnx`));
+// Révisions épinglées : sha lus sur huggingface.co (SlimSAM : note de recherche, H1).
+const MODELS = [
+  { model: "Xenova/slimsam-77-uniform", revision: "5850ab4", onnx: variants(["vision_encoder", "prompt_encoder_mask_decoder"], ["", "_fp16", "_quantized"]) },
+  { model: "onnx-community/BiRefNet_lite-ONNX", revision: "de15b22ba131738a16dff04aab8bdf8dc32e3ac1", onnx: variants(["model"], ["", "_fp16"]) },
+  // Étiqueté AGPL-3.0 sur huggingface.co : bon pour ce banc, à trancher avant tout usage dans le site (MIT).
+  { model: "onnx-community/ISNet-ONNX", revision: "3fe6e3db3e32c69aadde61fe388ddb1a0574440c", onnx: variants(["model"], ["", "_fp16", "_quantized"]) },
 ];
-for (const file of files) {
-  await download(`https://huggingface.co/${MODEL}/resolve/${REVISION}/${file}`, join(root, "models", MODEL, file));
+for (const { model, revision, onnx } of MODELS) {
+  for (const file of ["config.json", "preprocessor_config.json", ...onnx]) {
+    await download(`https://huggingface.co/${model}/resolve/${revision}/${file}`, join(root, "models", model, file));
+  }
 }
 
 // Le runtime WASM qu'attend transformers.js est celui de sa propre dépendance onnxruntime-web.
