@@ -105,3 +105,24 @@ export {
   type StackingLip,
 } from "./bin-settings";
 export { decodeBinSettings, encodeBinSettings, openingBinSettings } from "./bin-share-link";
+export {
+  PACKING_GAP_MM,
+  clipBlockOf,
+  type ClipBlock,
+  type ClipSource,
+  PACKING_MODES,
+  PACKING_TIME_LIMIT_MS,
+  plateKeyOf,
+  packingBound,
+  searchPacking,
+  type PackedPlate,
+  type Packing,
+  type PackingItem,
+  type PackingMode,
+  type PackingProblem,
+  type PackingProgress,
+  type PackingSearch,
+  type PackingSearchOptions,
+  type PackingStatus,
+  type PlacedItem,
+} from "./packing";
