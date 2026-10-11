@@ -17,7 +17,7 @@ function boxes(count: number, width: number, depth: number, key = "all", prefix 
  * or not), within the plate, 5 mm (`gap`) from every other one, out of the excluded corner.
  */
 function expectRules(problem: PackingProblem, packing: Packing, { corner = true } = {}) {
-  const gap = problem.gap ?? 5;
+  const gap = 5;
   const byId = new Map(problem.objects.map((object) => [object.id, object]));
   const seen = new Set<string>();
   for (const plate of packing.plates) {

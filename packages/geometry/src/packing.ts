@@ -32,8 +32,6 @@ export interface PackingProblem {
    * `EXCLUDED_CORNER_CLEARANCE_MM` clear. None by default.
    */
   excludedCorner?: { width: number; depth: number } | null;
-  /** Room between two objects, `PACKING_GAP_MM` by default. */
-  gap?: number;
 }
 
 /** An object where it lies on its plate: its box from the origin of the plate (front left). */
@@ -264,7 +262,8 @@ function boundOf(pieces: readonly Piece[], width: number, depth: number): number
   return Math.max(1, byArea, large);
 }
 
-function groupsOf({ objects, plate, gap = PACKING_GAP_MM }: PackingProblem): { groups: Group[]; unplaced: string[] } {
+function groupsOf({ objects, plate }: PackingProblem): { groups: Group[]; unplaced: string[] } {
+  const gap = PACKING_GAP_MM;
   const width = plate.width + gap;
   const depth = plate.depth + gap;
   const groups = new Map<string, Group>();
