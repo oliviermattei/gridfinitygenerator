@@ -300,6 +300,24 @@ _Avoid_: poids (sauf dans l'interface anglaise), grammage, estimation
 Le logiciel qui découpe le fichier 3MF ou STL en couches pour l'imprimante (PrusaSlicer, Bambu Studio, OrcaSlicer, Cura).
 _Avoid_: slicer, slicer 3D
 
+### Panier
+
+**Panier**:
+La liste de ce qu'on veut imprimer d'un coup, commune à tous les générateurs (bins, baseplates, kits de test, clips seuls) et gardée dans ce navigateur ; elle se télécharge d'un coup, ses objets répartis sur des plateaux par le rangement (ADR 0024). Rien ne s'y achète : le site est gratuit.
+_Avoid_: cart, commande, lot, liste d'impression
+
+**Article**:
+Une ligne du panier : les réglages d'un modèle et une quantité. Le modèle est recalculé au téléchargement, et l'article se rouvre dans son générateur pour être modifié. Quatre bins identiques font un article de quantité 4 ; une baseplate découpée en pièces reste un article.
+_Avoid_: item, élément, produit
+
+**Catégorie**:
+Le genre d'objet d'un article ou d'une partie d'article : **bins**, **baseplates** (kits de test compris) ou **clips** (ceux d'une baseplate découpée comme les clips seuls). Une baseplate découpée met donc ses pièces dans les baseplates et ses clips dans les clips.
+_Avoid_: type (réservé au type de baseplate), famille, générateur
+
+**Rangement**:
+La façon dont le téléchargement du panier répartit ses objets sur les plateaux, au choix : **moins de plateaux** (par défaut, toutes catégories mêlées), **par catégorie** (le moins de plateaux, sans mêler deux catégories sur un plateau) ou **un objet par plateau**. Les clips restent toujours ensemble.
+_Avoid_: optimisation (sauf pour le décrire), nesting, disposition, arrangement
+
 ### Contexte d'usage
 
 **Tiroir**:
