@@ -55,6 +55,13 @@ const fr = {
     fewerUnits: "Une U de moins",
     moreUnits: "Une U de plus",
     sizeHint: "En cellules de la grille, la hauteur en U de 7 mm : la première U est le socle, sous le fond.",
+    sizeFloor: (height: string) => `fond intérieur à ${height} mm`,
+    floorHeight: "Hauteur du fond intérieur",
+    floorHeightHint: "Depuis le dessous des pieds, à son point le plus bas : 7 mm dans le standard. Plus bas, il se creuse dans le socle et le bin gagne en profondeur ; plus haut, il en perd.",
+    floorClamped: (height: string) => `Limitée à ${height} mm : le compartiment garde 2 mm de hauteur.`,
+    floorTooThin: (left: string, min: string) =>
+      `Fond intérieur trop bas : il ne reste que ${left} mm de matière sous lui, au plus mince, moins des ${min} mm qu'il lui faut. Remontez-le.`,
+    floorThrough: "Fond intérieur trop bas : il traverse le socle, le bin est ouvert dessous. Remontez-le.",
     plateLimit: (short: number, long: number) =>
       short === long
         ? `Votre plateau prend au plus ${short} cellules de côté. Les bins découpés arriveront plus tard.`
@@ -77,8 +84,11 @@ const fr = {
     filletOffHint: "Un fond plat, à angle droit contre les parois.",
     scoop: "Pelle",
     scoopOff: "Désactivée",
-    scoopSummary: (side: string) => `Côté ${side}`,
+    scoopSummary: (side: string, radius: string) => `Côté ${side}, ${radius} mm`,
     scoopSide: "Côté de la pelle",
+    scoopRadius: "Rayon de la pelle",
+    scoopRadiusHint: "Plus il est grand, plus la pelle est ronde et monte haut contre sa paroi.",
+    scoopClamped: (radius: string) => `Ramené à ${radius} mm : plus grand, la pelle ne tiendrait pas dans le compartiment.`,
     scoopHint:
       "Une rampe arrondie au fond de chaque compartiment, contre le côté choisi, qui tourne dans ses deux coins : le contenu glisse vers la main. L'étiquette se met en face.",
     labelTab: "Étiquette",
@@ -529,6 +539,13 @@ const en: Strings = {
     fewerUnits: "One U less",
     moreUnits: "One U more",
     sizeHint: "In cells of the grid, the height in U of 7 mm: the first U is the socle, under the floor.",
+    sizeFloor: (height: string) => `inner floor at ${height} mm`,
+    floorHeight: "Height of the inner floor",
+    floorHeightHint: "From the bottom of the feet, at its lowest point: 7 mm in the standard. Lower, it digs into the socle and the bin gets deeper; higher, it gets shallower.",
+    floorClamped: (height: string) => `Limited to ${height} mm: the compartment keeps 2 mm of height.`,
+    floorTooThin: (left: string, min: string) =>
+      `Inner floor too low: only ${left} mm of material is left under it, at the thinnest, less than the ${min} mm it needs. Raise it.`,
+    floorThrough: "Inner floor too low: it goes through the socle, the bin is open underneath. Raise it.",
     plateLimit: (short: number, long: number) =>
       short === long
         ? `Your build plate takes at most ${short} cells a side. Cut bins will come later.`
@@ -551,8 +568,11 @@ const en: Strings = {
     filletOffHint: "A flat floor, square against the walls.",
     scoop: "Scoop",
     scoopOff: "Off",
-    scoopSummary: (side: string) => `${side.charAt(0).toUpperCase()}${side.slice(1)} side`,
+    scoopSummary: (side: string, radius: string) => `${side.charAt(0).toUpperCase()}${side.slice(1)} side, ${radius} mm`,
     scoopSide: "Side of the scoop",
+    scoopRadius: "Radius of the scoop",
+    scoopRadiusHint: "The larger, the rounder the scoop, and the higher it rises against its wall.",
+    scoopClamped: (radius: string) => `Brought down to ${radius} mm: any larger, the scoop would not fit the compartment.`,
     scoopHint:
       "A rounded ramp at the bottom of each compartment, against the chosen side, turning into its two corners: the contents slide towards the hand. The label goes across from it.",
     labelTab: "Label",

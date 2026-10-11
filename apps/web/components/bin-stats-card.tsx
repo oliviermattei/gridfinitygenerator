@@ -4,7 +4,7 @@ import type { BuildPlate } from "@repo/geometry";
 import { TriangleAlert } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import { useFormats, useStrings } from "@/lib/locale";
-import type { BinSummary } from "./bin-panel";
+import { thinFloorWarning, type BinSummary } from "./bin-panel";
 
 export interface BinStatsCardProps {
   /** The bin shown, null until its first computation answers. */
@@ -29,6 +29,7 @@ export function BinStatsCard({ summary, layerHeight, final, buildPlate, fits, ad
   const f = useFormats();
   const stats = summary?.stats;
   const titleId = useId();
+  const thinFloor = thinFloorWarning(stats?.thinFloor, t, f);
   const cm3 = (mm3: number | null | undefined) => (mm3 != null ? `${f.volumes.format(mm3 / 1000)} cm³` : null);
   return (
     <section aria-labelledby={titleId} className={className}>
@@ -66,6 +67,7 @@ export function BinStatsCard({ summary, layerHeight, final, buildPlate, fits, ad
         </Stat>
       </dl>
       {!fits && <Warning>{t.bin.tooBig(f.footprint(buildPlate))}</Warning>}
+      {thinFloor && <Warning>{thinFloor}</Warning>}
       {advancedChanged && <Warning>{t.bin.advancedWarning}</Warning>}
     </section>
   );

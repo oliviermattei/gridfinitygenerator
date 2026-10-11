@@ -160,6 +160,14 @@ _Avoid_: base, semelle, plancher
 Le dessus du socle, sur lequel reposent les objets rangés dans un bin. À ne pas confondre avec le fond d'un Tray, ni avec le fond du tiroir.
 _Avoid_: fond (seul), plancher, floor
 
+**Hauteur du fond intérieur**:
+La hauteur du fond intérieur à son point le plus bas, depuis le dessous des pieds : 7 mm dans le standard (la première U), réglable de 1 à 30 mm. Plus bas, il se creuse dans le socle et le bin gagne en profondeur ; plus haut, il en perd. Le compartiment garde toujours 2 mm de hauteur sous le haut de l'espace utile : sur un bin de 3 U au rebord normal, le fond intérieur monte au plus à 16,4 mm.
+_Avoid_: hauteur du fond, épaisseur du socle, floor height
+
+**Épaisseur sous le fond**:
+La matière la plus mince entre les compartiments et l'air sous le socle (autour des pieds, entre eux, et dans leur creux pour un socle creux), mesurée sur les solides. Elle doit rester d'au moins 1,2 mm, l'épaisseur de la dalle d'un socle creux (banc #34) ; en dessous, le générateur avertit, avec la matière qui reste, ou dit que le fond intérieur traverse le socle. Le dessous de la dalle, entre deux pieds, est à 4,75 mm : un compartiment qui passe au-dessus de ce creux (le bin par défaut, 2 × 1 cellules d'un seul compartiment) garde 2,25 mm au fond intérieur standard, et passe sous 1,2 mm avec un fond intérieur sous 5,95 mm. Sur une seule cellule avec congé, le fond intérieur descend jusqu'à 2,35 mm en gardant 1,2 mm ; sans congé, l'angle du fond contre la paroi s'approche de la pente du pied, et il faut au moins 5,25 mm.
+_Avoid_: épaisseur du fond, épaisseur du socle
+
 **Paroi**:
 Le mur qui fait le tour d'un bin, du socle au rebord d'empilage ; son épaisseur se déduit de la buse. À ne pas confondre avec le mur extérieur de la marge d'une baseplate.
 _Avoid_: mur (seul), wall
@@ -177,7 +185,7 @@ L'arrondi qui raccorde le fond intérieur aux parois et aux séparateurs, et les
 _Avoid_: fond arrondi, fillet, arrondi (seul)
 
 **Pelle**:
-Une rampe arrondie au fond de chaque compartiment, contre un côté au choix, le même pour tout le bin (avant par défaut), qui fait glisser le contenu vers la main ; elle prolonge le congé de ce côté et tourne dans ses deux coins.
+Une rampe arrondie au fond de chaque compartiment, contre un côté au choix, le même pour tout le bin (avant par défaut), qui fait glisser le contenu vers la main ; elle prolonge le congé de ce côté et tourne dans ses deux coins. Son rayon se règle de 3 à 40 mm (12 par défaut) : plus il est grand, plus elle est ronde et monte haut. Le générateur le ramène à ce que le compartiment permet, la moitié du compartiment en travers de son côté et 1 mm sous le haut de l'espace utile, et le dit : 10,4 mm sur un bin de 3 U au rebord normal et au fond intérieur standard.
 _Avoid_: scoop, rampe (seule)
 
 **Onglet d'étiquette**:

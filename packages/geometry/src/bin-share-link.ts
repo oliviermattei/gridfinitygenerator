@@ -20,6 +20,8 @@ const V1 = {
   x: number(1, 20, 2, true),
   y: number(1, 20, 1, true),
   h: number(2, 20, 3, true),
+  /** Height of the inner floor, in millimetres. */
+  fh: number(1, 30, 7),
   /** Compartments along X and Y (at most 3 per cell each way). */
   dx: number(1, 60, 1, true),
   dy: number(1, 60, 1, true),
@@ -29,8 +31,9 @@ const V1 = {
   fi: flag(true),
   sc: flag(false),
   lt: flag(false),
-  /** Side of the scoop, side of the label tab without a scoop, and depth of the label tab (mm). */
+  /** Side and radius of the scoop (mm), side of the label tab without a scoop, and depth of the label tab (mm). */
   ss: choice(["front", "back", "left", "right"], "front"),
+  rs: number(3, 40, 12),
   ls: choice(["front", "back", "left", "right"], "back"),
   ld: number(6, 20, 12),
   /** Advanced: cell size, in millimetres. */
@@ -50,6 +53,7 @@ const LINK_KEYS = {
   columns: "x",
   rows: "y",
   units: "h",
+  floorHeight: "fh",
   compartmentColumns: "dx",
   compartmentRows: "dy",
   lip: "lip",
@@ -57,6 +61,7 @@ const LINK_KEYS = {
   scoop: "sc",
   labelTab: "lt",
   scoopSide: "ss",
+  scoopRadius: "rs",
   labelSide: "ls",
   labelDepth: "ld",
   cellSize: "cs",

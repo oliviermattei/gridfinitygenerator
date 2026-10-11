@@ -30,6 +30,11 @@ export interface BinSettings {
   rows: number;
   /** Height of the bin in U of 7 mm, without its stacking lip; the first U is its socle. */
   units: number;
+  /**
+   * Height of the inner floor at its lowest point, in millimetres from the bottom of the feet:
+   * 7 in the standard (the first U); lower, it digs into the socle.
+   */
+  floorHeight: number;
   /** Compartments along X and Y, in a regular grid: 1 to 3 per cell each way. */
   compartmentColumns: number;
   compartmentRows: number;
@@ -40,6 +45,8 @@ export interface BinSettings {
   scoop: boolean;
   /** Side of the scoop, the same for every compartment; front by default. */
   scoopSide: BinSide;
+  /** Radius of the scoop, in millimetres: the higher, the rounder; brought down by the engine when it does not fit the compartment. */
+  scoopRadius: number;
   /** Label tab at the top of each compartment (onglet d'étiquette), across from the scoop. */
   labelTab: boolean;
   /** Side of the label tab without a scoop; with one, the tab always takes the opposite side. */
@@ -61,12 +68,14 @@ export const BIN_SETTINGS = {
   columns: { min: 1, max: 20, default: 2, integer: true },
   rows: { min: 1, max: 20, default: 1, integer: true },
   units: { min: 2, max: 20, default: 3, integer: true },
+  floorHeight: { min: 1, max: 30, default: 7, integer: false },
   compartmentColumns: { min: 1, max: 20 * MAX_COMPARTMENTS_PER_CELL, default: 1, integer: true },
   compartmentRows: { min: 1, max: 20 * MAX_COMPARTMENTS_PER_CELL, default: 1, integer: true },
   lip: { options: STACKING_LIPS, default: "normal" } as ChoiceSetting<StackingLip>,
   fillet: { default: true } as FlagSetting,
   scoop: { default: false } as FlagSetting,
   scoopSide: { options: BIN_SIDES, default: "front" } as ChoiceSetting<BinSide>,
+  scoopRadius: { min: 3, max: 40, default: 12, integer: false },
   labelTab: { default: false } as FlagSetting,
   labelSide: { options: BIN_SIDES, default: "back" } as ChoiceSetting<BinSide>,
   labelDepth: { min: 6, max: 20, default: 12, integer: false },

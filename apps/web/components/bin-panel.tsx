@@ -1,10 +1,23 @@
 "use client";
 
-import { BIN_SETTINGS, BIN_SIDES, FILLET_RADIUS_MM, MAX_COMPARTMENTS_PER_CELL, STACKING_LIPS, labelSideOf, type Bin, type BinSettings, type BinSide, type StackingLip } from "@repo/geometry";
-import { NumberStepper, Segmented, ToggleSwitch } from "@repo/ui";
+import {
+  BIN_SETTINGS,
+  BIN_SIDES,
+  FILLET_RADIUS_MM,
+  MAX_COMPARTMENTS_PER_CELL,
+  MIN_FLOOR_THICKNESS_MM,
+  STACKING_LIPS,
+  labelSideOf,
+  type Bin,
+  type BinSettings,
+  type BinSide,
+  type StackingLip,
+} from "@repo/geometry";
+import { NumberStepper, Segmented, SliderField, ToggleSwitch } from "@repo/ui";
 import { TriangleAlert } from "lucide-react";
 import type { Formats } from "@/lib/format";
 import { useFormats, useStrings } from "@/lib/locale";
+import type { Strings } from "@/lib/strings";
 import { AdvancedIcon, CompartmentIcon, FinishIcon, LabelIcon, LipIcon, ScoopIcon, SizeIcon } from "./illustrations";
 import { FamilyItem } from "./settings-panel";
 
@@ -45,6 +58,17 @@ export function BinReadout({ summary, settings, live = false }: { summary: BinSu
 }
 
 /** Short lines above the dock's buttons (mobile), with a warning when the bin does not fit on the build plate. */
+/**
+ * What the engine measured under the inner floor, when it is too low: the material left at the
+ * thinnest (rounded down, never shown as the 1.2 mm it lacks), or a floor through the socle.
+ */
+export function thinFloorWarning(thinFloor: number | null | undefined, t: Strings, f: Formats): string | null {
+  if (thinFloor == null) return null;
+  // manifold measures in single precision: 0.75 comes back as 0.7499999.
+  const left = Math.floor(thinFloor * 100 + 1e-2) / 100;
+  return left === 0 ? t.bin.floorThrough : t.bin.floorTooThin(f.fine.format(left), f.fine.format(MIN_FLOOR_THICKNESS_MM));
+}
+
 export function BinDockReadout({ summary, settings, fits }: { summary: BinSummary | null; settings: BinSettings; fits: boolean }) {
   const t = useStrings();
   const f = useFormats();
@@ -109,6 +133,8 @@ export function BinFamilies({ settings, onSettingsChange, summary, maxCells, ope
     />
   );
   const compartment = summary?.stats.compartment;
+  const thinFloor = thinFloorWarning(summary?.stats.thinFloor, t, f);
+  const scoopRadius = summary?.layout.scoop || settings.scoopRadius;
   const compartmentSize = compartment ? `${f.lengths.format(compartment.width)} × ${f.lengths.format(compartment.depth)} mm` : "…";
   return (
     <div className="flex flex-col gap-1">
@@ -116,7 +142,9 @@ export function BinFamilies({ settings, onSettingsChange, summary, maxCells, ope
         {...bind("size")}
         icon={<SizeIcon className="size-[18px]" />}
         title={t.size}
-        summary={`${summary ? `${footprint(summary, f)}, ` : ""}${t.bin.cells(settings.columns, settings.rows, settings.units)}`}
+        summary={`${summary ? `${footprint(summary, f)}, ` : ""}${t.bin.cells(settings.columns, settings.rows, settings.units)}${
+          settings.floorHeight === BIN_SETTINGS.floorHeight.default ? "" : `, ${t.bin.sizeFloor(f.fine.format(summary?.layout.floor ?? settings.floorHeight))}`
+        }`}
       >
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-2.5">
@@ -125,6 +153,30 @@ export function BinFamilies({ settings, onSettingsChange, summary, maxCells, ope
           </div>
           {stepper("units", t.bin.units, t.bin.fewerUnits, t.bin.moreUnits, BIN_SETTINGS.units.max, "U")}
           <p className="text-[12px] leading-snug text-muted">{t.bin.sizeHint}</p>
+          <div className="flex flex-col gap-1.5">
+            <SliderField
+              label={t.bin.floorHeight}
+              hint={t.bin.floorHeightHint}
+              value={settings.floorHeight}
+              min={BIN_SETTINGS.floorHeight.min}
+              max={BIN_SETTINGS.floorHeight.max}
+              step={0.1}
+              unit="mm"
+              locale={t.locale}
+              onChange={(floorHeight) => onSettingsChange({ floorHeight })}
+            />
+            {summary && summary.layout.floor < settings.floorHeight - 1e-6 && (
+              <p className="text-[12px] leading-snug font-medium text-accent-strong" data-testid="floor-clamped">
+                {t.bin.floorClamped(f.fine.format(summary.layout.floor))}
+              </p>
+            )}
+            {thinFloor && (
+              <p className="flex gap-1.5 text-[12px] leading-snug font-medium text-accent-strong" data-testid="floor-thin">
+                <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
+                {thinFloor}
+              </p>
+            )}
+          </div>
           <p className="text-[12px] leading-snug text-muted" data-testid="plate-limit">
             {t.bin.plateLimit(maxCells.short, maxCells.long)}
           </p>
@@ -164,7 +216,7 @@ export function BinFamilies({ settings, onSettingsChange, summary, maxCells, ope
         {...bind("scoop")}
         icon={<ScoopIcon className="size-[18px]" />}
         title={t.bin.scoop}
-        summary={settings.scoop ? t.bin.scoopSummary(t.bin.sides[settings.scoopSide]) : t.bin.scoopOff}
+        summary={settings.scoop ? t.bin.scoopSummary(t.bin.sides[settings.scoopSide], f.fine.format(scoopRadius)) : t.bin.scoopOff}
         on={settings.scoop}
         control={
           <ToggleSwitch
@@ -180,6 +232,22 @@ export function BinFamilies({ settings, onSettingsChange, summary, maxCells, ope
       >
         <div className="flex flex-col gap-2.5">
           <SideChoice label={t.bin.scoopSide} value={settings.scoopSide} onChange={(scoopSide) => onSettingsChange({ scoopSide, scoop: true })} />
+          <SliderField
+            label={t.bin.scoopRadius}
+            hint={t.bin.scoopRadiusHint}
+            value={settings.scoopRadius}
+            min={BIN_SETTINGS.scoopRadius.min}
+            max={BIN_SETTINGS.scoopRadius.max}
+            step={0.5}
+            unit="mm"
+            locale={t.locale}
+            onChange={(radius) => onSettingsChange({ scoopRadius: radius, scoop: true })}
+          />
+          {summary && settings.scoop && summary.layout.scoop > 0 && summary.layout.scoop < settings.scoopRadius - 1e-6 && (
+            <p className="text-[12px] leading-snug font-medium text-accent-strong" data-testid="scoop-clamped">
+              {t.bin.scoopClamped(f.fine.format(summary.layout.scoop))}
+            </p>
+          )}
           <p className="text-[12px] leading-snug text-muted">{t.bin.scoopHint}</p>
         </div>
       </FamilyItem>
