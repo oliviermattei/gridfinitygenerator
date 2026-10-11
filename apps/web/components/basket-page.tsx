@@ -14,8 +14,9 @@ import { indexPath } from "@/lib/i18n";
 import { useFormats, useLocale, useStrings } from "@/lib/locale";
 import { gramsText, massOf } from "@/lib/mass";
 import { usePreferences, type StackPreference } from "@/lib/preferences";
-import { PRINTER_EXCLUDED_CORNERS } from "@/lib/printers/bambu";
+import { PRINTER_EXCLUDED_CORNERS, bambuTargetOf } from "@/lib/printers/bambu";
 import { useHydrated } from "@/lib/saved-settings";
+import { BasketDownload } from "./basket-download";
 import { BasketLink } from "./basket-link";
 import { BasketPackingSection, useBasketPacking } from "./basket-packing";
 import { CopyBasketLinkButton, OpenBasketLink } from "./basket-share";
@@ -92,7 +93,7 @@ export function BasketPage() {
   const locale = useLocale();
   const hydrated = useHydrated();
   const { articles } = useBasket();
-  const [{ buildPlate, filament, stack: stackPreference, printer, packingMode }, setPreferences] = usePreferences();
+  const [{ buildPlate, filament, stack: stackPreference, printer, nozzle, packingMode }, setPreferences] = usePreferences();
   const stack = useMemo(() => stackChoiceOf(stackPreference), [stackPreference]);
   const measures = useMeasures(articles, buildPlate, stack, hydrated);
 
@@ -203,6 +204,17 @@ export function BasketPage() {
               </dl>
               {totals !== null && totals.excluded > 0 && <p className="mt-1 text-[12.5px] text-muted">{t.basket.excluded(totals.excluded)}</p>}
             </section>
+
+            <BasketDownload
+              articles={articles}
+              packing={packing}
+              mode={packingMode}
+              nameOf={nameOf}
+              buildPlate={buildPlate}
+              stack={stack}
+              bambu={bambuTargetOf({ printer, nozzle, filament })}
+              excluded={totals?.excluded ?? 0}
+            />
 
             <div className="mt-4 flex flex-wrap gap-2">
               <CopyBasketLinkButton articles={articles} />

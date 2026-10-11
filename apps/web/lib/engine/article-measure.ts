@@ -16,6 +16,7 @@ import {
   type BaseplateSettings,
   type BuildPlate,
   type StackOptions,
+  type TriangleMesh,
 } from "@repo/geometry";
 import { articleBaseplateSettings, articleBinSettings, type Article } from "../basket";
 import type { Material } from "../mass";
@@ -59,76 +60,104 @@ export interface ArticlePart {
 /** How the pieces of a cut baseplate print stacked (the preference), or null for side by side. */
 export type StackChoice = Pick<StackOptions, "ears" | "pins">;
 
-const whole = ({ width, depth }: { width: number; depth: number }): ArticlePart[] => [{ kind: "whole", numbers: [], width, depth }];
+/** An article computed: its measure, and the meshes of what it lays on the plates (#43: the download). */
+export interface ComputedArticle {
+  measure: ArticleMeasure;
+  /** The mesh of each of its `measure.parts`, in order, as it prints. */
+  parts: TriangleMesh[];
+  /** One of its clips, as it prints; null without. */
+  clip: TriangleMesh | null;
+}
+
+/** The objects of a model printed whole: itself. */
+const whole = (mesh: TriangleMesh, { width, depth }: { width: number; depth: number }) => ({
+  parts: [{ kind: "whole", numbers: [], width, depth }] as ArticlePart[],
+  meshes: [mesh],
+});
 
 /**
  * The objects a baseplate prints in: itself uncut; its pieces as `printPieces` lays them; its
  * stacks as `printStacks` makes them when stacked and the baseplate allows it (the export's way).
  */
-async function baseplateParts(baseplate: Baseplate, settings: BaseplateSettings, stack: StackChoice | null): Promise<ArticlePart[]> {
-  if (baseplate.pieces.length <= 1) return whole(baseplate.stats.dimensions);
+async function baseplateParts(baseplate: Baseplate, settings: BaseplateSettings, stack: StackChoice | null): Promise<{ parts: ArticlePart[]; meshes: TriangleMesh[] }> {
+  if (baseplate.pieces.length <= 1) return whole(baseplate.mesh, baseplate.stats.dimensions);
   if (stack && stackRuleOf(settings, baseplate.layout).blockers.length === 0) {
     const plan = await orientStacks(baseplate, stackPlanOf(baseplate.layout, baseplate.stats.dimensions.height, settings.layerHeight));
     const stacks = await printStacks(baseplate, plan, { ...stack, layerHeight: settings.layerHeight, lineWidth: settings.lineWidth });
-    return stacks.map(({ mesh, pieces }) => ({ kind: "stack", numbers: pieces, ...meshDimensions(mesh) }));
+    return { parts: stacks.map(({ mesh, pieces }) => ({ kind: "stack", numbers: pieces, ...meshDimensions(mesh) })), meshes: stacks.map(({ mesh }) => mesh) };
   }
-  return printPieces(baseplate).map((mesh, index) => ({ kind: "piece", numbers: [baseplate.pieces[index]?.number ?? index + 1], ...meshDimensions(mesh) }));
+  const meshes = printPieces(baseplate);
+  return { parts: meshes.map((mesh, index) => ({ kind: "piece", numbers: [baseplate.pieces[index]?.number ?? index + 1], ...meshDimensions(mesh) })), meshes };
 }
 
 /**
- * Measures an article, a baseplate cut for `buildPlate` as its generator cuts it, and its pieces
- * stacked as `stack` asks when it allows it.
+ * Computes an article in final quality, a baseplate cut for `buildPlate` as its generator cuts
+ * it, and its pieces stacked as `stack` asks when it allows it: what it measures, and its meshes.
  */
-export async function measureArticle({ model, link }: Pick<Article, "model" | "link">, buildPlate: BuildPlate, stack: StackChoice | null = null): Promise<ArticleMeasure> {
+export async function computeArticle({ model, link }: Pick<Article, "model" | "link">, buildPlate: BuildPlate, stack: StackChoice | null = null): Promise<ComputedArticle> {
   const article = { id: "", model, link, quantity: 1 };
   switch (model) {
     case "bin": {
       const settings = articleBinSettings(article);
-      const { stats } = await generateBin(settings, "final");
+      const { stats, mesh } = await generateBin(settings, "final");
+      const { parts, meshes } = whole(mesh, stats.dimensions);
       return {
-        dimensions: stats.dimensions,
-        material: { volume: stats.volume as number, clips: 0 },
-        pieces: 1,
-        fits: binFitsOn(settings, buildPlate),
-        parts: whole(stats.dimensions),
-        clips: null,
+        measure: { dimensions: stats.dimensions, material: { volume: stats.volume as number, clips: 0 }, pieces: 1, fits: binFitsOn(settings, buildPlate), parts, clips: null },
+        parts: meshes,
+        clip: null,
       };
     }
     case "baseplate": {
       const settings = articleBaseplateSettings(article);
       const baseplate = await generateBaseplate(settings, "final", { buildPlate });
       const { stats, pieces, clip } = baseplate;
+      const { parts, meshes } = await baseplateParts(baseplate, settings, stack);
+      const clips = clip && stats.clips > 0 ? clip : null;
       return {
-        dimensions: stats.dimensions,
-        material: { volume: stats.volume as number, clips: stats.clipsVolume as number },
-        pieces: stats.pieces,
-        fits: pieces.every((piece) => fitsOnBuildPlate(piece.dimensions, buildPlate)),
-        parts: await baseplateParts(baseplate, settings, stack),
-        clips: clip && stats.clips > 0 ? { ...meshDimensions(clip), count: stats.clips } : null,
+        measure: {
+          dimensions: stats.dimensions,
+          material: { volume: stats.volume as number, clips: stats.clipsVolume as number },
+          pieces: stats.pieces,
+          fits: pieces.every((piece) => fitsOnBuildPlate(piece.dimensions, buildPlate)),
+          parts,
+          clips: clips ? { ...meshDimensions(clips), count: stats.clips } : null,
+        },
+        parts: meshes,
+        clip: clips,
       };
     }
     case "test-kit": {
-      const { stats } = await generateTestKit(articleBaseplateSettings(article), "final");
+      const { stats, mesh } = await generateTestKit(articleBaseplateSettings(article), "final");
+      const { parts, meshes } = whole(mesh, stats.dimensions);
       return {
-        dimensions: stats.dimensions,
-        material: { volume: stats.volume as number, clips: 0 },
-        pieces: 1,
-        fits: fitsOnBuildPlate(stats.dimensions, buildPlate),
-        parts: whole(stats.dimensions),
-        clips: null,
+        measure: { dimensions: stats.dimensions, material: { volume: stats.volume as number, clips: 0 }, pieces: 1, fits: fitsOnBuildPlate(stats.dimensions, buildPlate), parts, clips: null },
+        parts: meshes,
+        clip: null,
       };
     }
     case "clip": {
       const clip = await generateClip(articleBaseplateSettings(article));
       const dimensions = meshDimensions(clip);
       return {
-        dimensions,
-        material: { volume: 0, clips: meshVolume(clip) },
-        pieces: 1,
-        fits: fitsOnBuildPlate(dimensions, buildPlate),
+        measure: {
+          dimensions,
+          material: { volume: 0, clips: meshVolume(clip) },
+          pieces: 1,
+          fits: fitsOnBuildPlate(dimensions, buildPlate),
+          parts: [],
+          clips: { width: dimensions.width, depth: dimensions.depth, count: 1 },
+        },
         parts: [],
-        clips: { width: dimensions.width, depth: dimensions.depth, count: 1 },
+        clip,
       };
     }
   }
+}
+
+/**
+ * Measures an article, a baseplate cut for `buildPlate` as its generator cuts it, and its pieces
+ * stacked as `stack` asks when it allows it.
+ */
+export async function measureArticle(article: Pick<Article, "model" | "link">, buildPlate: BuildPlate, stack: StackChoice | null = null): Promise<ArticleMeasure> {
+  return (await computeArticle(article, buildPlate, stack)).measure;
 }

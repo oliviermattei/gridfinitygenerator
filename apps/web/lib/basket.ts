@@ -127,7 +127,7 @@ export function categoryOf(model: ArticleModel): Category {
 }
 
 /** The bin settings of a bin article, read with the defaults of its link's version. */
-export function articleBinSettings(article: Article): BinSettings {
+export function articleBinSettings(article: Pick<Article, "link">): BinSettings {
   return decodeBinSettings(article.link) ?? DEFAULT_BIN_SETTINGS;
 }
 
@@ -135,7 +135,7 @@ export function articleBinSettings(article: Article): BinSettings {
  * The baseplate settings of a baseplate, test kit or clip article: the test kit and the clip
  * take theirs from them, as their downloads do.
  */
-export function articleBaseplateSettings(article: Article): BaseplateSettings {
+export function articleBaseplateSettings(article: Pick<Article, "link">): BaseplateSettings {
   return decodeSettings(article.link) ?? DEFAULT_SETTINGS;
 }
 
@@ -157,6 +157,19 @@ export function articleName(article: Article, t: Strings, lengths: Intl.NumberFo
     case "clip":
       return names.clip;
   }
+}
+
+/** The layer height an article prints at, in millimetres: that of its settings (0.2 mm by default). */
+export function articleLayerHeight(article: Pick<Article, "model" | "link">): number {
+  return article.model === "bin" ? articleBinSettings(article).layerHeight : articleBaseplateSettings(article).layerHeight;
+}
+
+/**
+ * The absolute share link of an article, as its generator copies it (`?` and its settings), on
+ * the site at `origin`: what its objects carry in a downloaded file (#43).
+ */
+export function articleShareLink(article: Pick<Article, "model" | "link">, origin: string, locale: Locale): string {
+  return `${origin}${article.model === "bin" ? binPath(locale) : baseplatePath(locale)}?${article.link}`;
 }
 
 /** Fragment of a generator's address that names the article it edits. */

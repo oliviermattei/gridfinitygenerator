@@ -468,6 +468,21 @@ const fr = {
       stack: (pieces: string) => `pile des ${pieces}`,
       withPart: (name: string, part: string) => `${name} — ${part}`,
       exemplar: (name: string, number: number) => `${name} (${number})`,
+      /** The clips of one article in the block of clips, an object of the downloaded file (#43). */
+      clipsOf: (name: string, count: number) => `${name} — clips × ${count}`,
+    },
+    /** The download of the basket (#43). */
+    download: {
+      bambu: "Télécharger le projet Bambu",
+      threeMf: "Télécharger les 3MF",
+      stl: "Télécharger les STL",
+      bambuDescription: "Un projet Bambu Studio : un plateau par plateau du rangement, avec la config de l'imprimante, de la buse et du filament.",
+      threeMfDescription: "Un ZIP d'un 3MF par plateau, chaque objet à sa place sur le plateau.",
+      stlDescription: "Un ZIP d'un STL par plateau, déjà rangé.",
+      progress: (done: number, total: number) => `Calcul des articles : ${done} / ${total}`,
+      cancel: "Annuler",
+      excluded: (count: number) =>
+        count > 1 ? `${count} articles ne tiennent pas sur le plateau : ils ne sont pas téléchargés.` : "Un article ne tient pas sur le plateau : il n'est pas téléchargé.",
     },
     help:
       "Chaque article garde ses réglages, pas son modèle : ses dimensions et sa masse sont mesurées sur le modèle recalculé en qualité finale, avec le plateau et le filament de vos paramètres. Changez de plateau, et tout le panier suit.",
@@ -913,6 +928,18 @@ const en: Strings = {
       stack: (pieces: string) => `stack of ${pieces}`,
       withPart: (name: string, part: string) => `${name} — ${part}`,
       exemplar: (name: string, number: number) => `${name} (${number})`,
+      clipsOf: (name: string, count: number) => `${name} — clips × ${count}`,
+    },
+    download: {
+      bambu: "Download the Bambu project",
+      threeMf: "Download the 3MFs",
+      stl: "Download the STLs",
+      bambuDescription: "A Bambu Studio project: one plate per plate of the arrangement, with the settings of the printer, the nozzle and the filament.",
+      threeMfDescription: "A ZIP of one 3MF per plate, each object in its place on the plate.",
+      stlDescription: "A ZIP of one STL per plate, already arranged.",
+      progress: (done: number, total: number) => `Computing the articles: ${done} / ${total}`,
+      cancel: "Cancel",
+      excluded: (count: number) => (count > 1 ? `${count} articles do not fit on the build plate: they are not downloaded.` : "One article does not fit on the build plate: it is not downloaded."),
     },
     help:
       "Each article keeps its settings, not its model: its dimensions and its mass are measured on the model computed again in final quality, with the build plate and the filament of your parameters. Change the build plate, and the whole basket follows.",
